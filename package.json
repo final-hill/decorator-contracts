@@ -1,0 +1,33 @@
+{
+  "name": "ts-code-contracts",
+  "version": "0.0.0",
+  "description": "Design By Contract for TypeScript and ECMAScript classes",
+  "main": "index.js",
+  "scripts": {
+    "prebuild": "npm run clean",
+    "build": "node build-scripts\\commands.js build",
+    "clean": "node build-scripts\\commands.js clean",
+    "clean-full": "node build-scripts\\commands.js clean-full",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://thenewobjective@dev.azure.com/thenewobjective/ts-code-contracts/_git/ts-code-contracts"
+  },
+  "keywords": [
+    "contract",
+    "contracts",
+    "Dbc",
+    "test",
+    "assert",
+    "require",
+    "invariant"
+  ],
+  "author": "Michael L Haufe",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "commander": "^2.20.0",
+    "fs-extra": "^8.1.0",
+    "typescript": "^3.5.3"
+  }
+}

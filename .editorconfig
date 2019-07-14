@@ -1,0 +1,11 @@
+# EditorConfig: https://EditorConfig.org
+
+# top-most EditorConfig file
+root = true
+
+[*.{js,ts,json,config,css}]
+charset = utf-8
+end_of_line = crlf
+indent_size = 4
+indent_style = space
+trim_trailing_whitespace = true
