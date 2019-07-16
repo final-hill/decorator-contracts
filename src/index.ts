@@ -1,3 +1,9 @@
 import assertion from './assertion'
+import requires from './requires'
 
-export {assertion}
+export default function(debugMode: boolean) {
+    return {
+        assert: assertion(debugMode),
+        requires: requires(debugMode)
+    }
+}
