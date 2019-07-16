@@ -29,7 +29,5 @@ function prodAssert(condition: boolean, message: string = "Assertion failure"): 
  * @param debugMode - The flag representing mode of the library
  */
 export default function(debugMode: boolean) {
-    let assert = debugMode ? debugAssert : prodAssert
-
-    return assert
+    return debugMode ? debugAssert : prodAssert
 }

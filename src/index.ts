@@ -1,1 +1,3 @@
-console.log("Hello World")
+import assertion from './assertion'
+
+export {assertion}

@@ -8,7 +8,7 @@
     "build": "node build-scripts\\commands.js build",
     "clean": "node build-scripts\\commands.js clean",
     "clean-full": "node build-scripts\\commands.js clean-full",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest"
   },
   "repository": {
     "type": "git",
@@ -23,11 +23,15 @@
     "require",
     "invariant"
   ],
-  "author": "Michael L Haufe",
+  "author": "Michael L Haufe <tno@thenewobjective.com> (https://thenewobjective.com)",
   "license": "UNLICENSED",
   "devDependencies": {
+    "@types/jest": "^24.0.15",
     "commander": "^2.20.0",
     "fs-extra": "^8.1.0",
+    "jest": "^24.8.0",
+    "ts-jest": "^24.0.2",
     "typescript": "^3.5.3"
-  }
+  },
+  "dependencies": {}
 }

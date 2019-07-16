@@ -36,10 +36,12 @@ program
             path.join(__dirname, '../dist'),
         )
 
-        // TODO: assumes windows
+        // TODO: assumes windows. use npx?
         let tscPath = path.join(__dirname, '../node_modules/.bin/tsc.cmd')
         let tscRunner = new Runner(tscPath, ['-p', './tsconfig.json'])
         tscRunner.run()
+
+
 
         // TODO: copy, clean, and remove devDependencies from package.json
     })
