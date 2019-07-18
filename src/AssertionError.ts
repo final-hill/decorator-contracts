@@ -1,7 +1,7 @@
 class AssertionError extends Error {
     constructor(message: string) {
-        super(message)
+        super(message);
     }
 }
 
-export default AssertionError
+export default AssertionError;
