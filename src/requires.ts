@@ -1,4 +1,4 @@
-import AssertionError from "./AssertionError";
+import AssertionError from './AssertionError';
 
 /**
  * Requires is an assertion of a precondition.
@@ -9,7 +9,7 @@ function requiresDebug<Self>(
     fnCondition: (self: Self, ...args: any[]) => boolean,
     message: string = 'Precondition failed') {
     return function(_target: any, _propertyKey: string, descriptor: PropertyDescriptor) {
-        let {value, get, set} = descriptor
+        let {value, get, set} = descriptor;
 
         if(value != undefined) {
             descriptor.value = function (this: Self, ...args: any[]) {
@@ -29,7 +29,7 @@ function requiresDebug<Self>(
                     } else {
                         return get!.apply(this);
                     }
-                }
+                };
             }
             if(set != undefined) {
                 descriptor.set = function(this: Self, arg: any) {
@@ -39,15 +39,15 @@ function requiresDebug<Self>(
                     } else {
                         return set!.call(this, arg);
                     }
-                }
+                };
             }
         }
-    }
+    };
 }
 
 // @ts-ignore: ignoring unused
 function requiresProd<Self>(fnCondition: (self: Self, ...args: any[]) => boolean, message: string = 'Precondition failed') {
-    return function(_target: any, _propertyKey: string, _descriptor: PropertyDescriptor) {}
+    return function(_target: any, _propertyKey: string, _descriptor: PropertyDescriptor) {};
 }
 
 /**
@@ -55,7 +55,7 @@ function requiresProd<Self>(fnCondition: (self: Self, ...args: any[]) => boolean
  * @param debugMode
  */
 export default function(debugMode: boolean) {
-    let requires = debugMode ? requiresDebug : requiresProd
+    let requires = debugMode ? requiresDebug : requiresProd;
 
-    return requires
+    return requires;
 }
