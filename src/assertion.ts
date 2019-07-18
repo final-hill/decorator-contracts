@@ -1,4 +1,4 @@
-import AssertionError from "./AssertionError";
+import AssertionError from './AssertionError';
 
 /**
  * Tests the provided condition. If the condition is false an AssertionError is raised with an optional message.
@@ -13,14 +13,14 @@ import AssertionError from "./AssertionError";
  * let x = 15;
  * assert(x > 5, `Expected: x > 5. Actual: x = ${x}`)
  */
-function debugAssert(condition: boolean, message: string = "Assertion failure"): void {
+function debugAssert(condition: boolean, message: string = 'Assertion failure'): void {
     if(!condition) {
-        throw new AssertionError(message)
+        throw new AssertionError(message);
     }
 }
 
 // @ts-ignore : ignoring unused variable warning
-function prodAssert(condition: boolean, message: string = "Assertion failure"): void {}
+function prodAssert(condition: boolean, message: string = 'Assertion failure'): void {}
 
 /**
  * Returns a reference to the appropriate assertion implementation based on debugMode.
@@ -29,5 +29,5 @@ function prodAssert(condition: boolean, message: string = "Assertion failure"): 
  * @param debugMode - The flag representing mode of the library
  */
 export default function(debugMode: boolean) {
-    return debugMode ? debugAssert : prodAssert
+    return debugMode ? debugAssert : prodAssert;
 }

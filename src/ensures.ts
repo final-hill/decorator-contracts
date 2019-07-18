@@ -1,4 +1,4 @@
-import AssertionError from "./AssertionError";
+import AssertionError from './AssertionError';
 
 /**
  * Ensures is an assertion of a postcondition.
@@ -9,7 +9,7 @@ function ensuresDebug<Self>(
     fnCondition: (self: Self, returnValue: any) => boolean,
     message: string = 'Postcondition failed') {
     return function(_target: any, _propertyKey: string, descriptor: PropertyDescriptor) {
-        let {value, get, set} = descriptor
+        let {value, get, set} = descriptor;
 
         if(value != undefined) {
             descriptor.value = function (this: Self, ...args: any[]) {
@@ -18,20 +18,20 @@ function ensuresDebug<Self>(
                 if (!assertion) {
                     throw new AssertionError(message);
                 } else {
-                    return result
+                    return result;
                 }
             };
         } else {
             if(get != undefined) {
                 descriptor.get = function(this: Self) {
-                    let result = get!.apply(this)
+                    let result = get!.apply(this);
                     let assertion = fnCondition(this, result);
                     if (!assertion) {
                         throw new AssertionError(message);
                     } else {
-                        return result
+                        return result;
                     }
-                }
+                };
             }
             if(set != undefined) {
                 descriptor.set = function(this: Self, arg: any) {
@@ -40,17 +40,17 @@ function ensuresDebug<Self>(
                     if (!assertion) {
                         throw new AssertionError(message);
                     } else {
-                        return result
+                        return result;
                     }
-                }
+                };
             }
         }
-    }
+    };
 }
 
 // @ts-ignore: ignoring unused
 function ensuresProd<Self>(fnCondition: (self: Self, ...args: any[]) => boolean, message: string = 'Precondition failed') {
-    return function(_target: any, _propertyKey: string, _descriptor: PropertyDescriptor) {}
+    return function(_target: any, _propertyKey: string, _descriptor: PropertyDescriptor) {};
 }
 
 /**
@@ -58,7 +58,7 @@ function ensuresProd<Self>(fnCondition: (self: Self, ...args: any[]) => boolean,
  * @param debugMode
  */
 export default function(debugMode: boolean) {
-    let ensures = debugMode ? ensuresDebug : ensuresProd
+    let ensures = debugMode ? ensuresDebug : ensuresProd;
 
-    return ensures
+    return ensures;
 }

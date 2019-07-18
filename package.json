@@ -2,13 +2,17 @@
   "name": "ts-code-contracts",
   "version": "0.0.0",
   "description": "Design By Contract for TypeScript and ECMAScript classes",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
-    "prebuild": "npm run clean",
-    "build": "node build-scripts\\commands.js build",
-    "clean": "node build-scripts\\commands.js clean",
-    "clean-full": "node build-scripts\\commands.js clean-full",
-    "test": "jest"
+    "prebuild": "npm run clean && npm run lint",
+    "build": "npm run build-types && parcel build src/index.ts",
+    "build-types": "tsc -p tsconfig.json --emitDeclarationOnly --outDir dist",
+    "clean": "rimraf dist",
+    "clean-full": "rimraf dist && rimraf .cache && rimraf node_modules",
+    "prelint": "npm run type-check",
+    "lint": "tslint --project tsconfig.json --fix -e \"node_modules\"",
+    "test": "jest",
+    "type-check": "tsc -p tsconfig.json --noEmit"
   },
   "repository": {
     "type": "git",
@@ -25,12 +29,16 @@
   ],
   "author": "Michael L Haufe <tno@thenewobjective.com> (https://thenewobjective.com)",
   "license": "UNLICENSED",
+  "jest": {
+    "preset": "ts-jest"
+  },
   "devDependencies": {
     "@types/jest": "^24.0.15",
-    "commander": "^2.20.0",
-    "fs-extra": "^8.1.0",
     "jest": "^24.8.0",
+    "parcel-bundler": "^1.12.3",
+    "rimraf": "^2.6.3",
     "ts-jest": "^24.0.2",
+    "tslint": "^5.18.0",
     "typescript": "^3.5.3"
   },
   "dependencies": {}
