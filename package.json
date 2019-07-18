@@ -4,13 +4,15 @@
   "description": "Design By Contract for TypeScript and ECMAScript classes",
   "main": "dist/index.js",
   "scripts": {
-    "prebuild": "npm run clean && npm run type-check && npm run build-types",
-    "build": "parcel build src/index.ts",
-    "build-types": "tsc --emitDeclarationOnly --outDir dist",
+    "prebuild": "npm run clean && npm run lint",
+    "build": "npm run build-types && parcel build src/index.ts",
+    "build-types": "tsc -p tsconfig.json --emitDeclarationOnly --outDir dist",
     "clean": "rimraf dist",
     "clean-full": "rimraf dist && rimraf .cache && rimraf node_modules",
+    "prelint": "npm run type-check",
+    "lint": "tslint --project tsconfig.json --fix -e \"node_modules\"",
     "test": "jest",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc -p tsconfig.json --noEmit"
   },
   "repository": {
     "type": "git",
@@ -36,6 +38,7 @@
     "parcel-bundler": "^1.12.3",
     "rimraf": "^2.6.3",
     "ts-jest": "^24.0.2",
+    "tslint": "^5.18.0",
     "typescript": "^3.5.3"
   },
   "dependencies": {}
