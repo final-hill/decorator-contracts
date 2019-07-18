@@ -1,4 +1,4 @@
-import AssertionError from './AssertionError';
+import assertion from './assertion';
 
 /**
  * Requires is an assertion of a precondition.
@@ -8,37 +8,30 @@ import AssertionError from './AssertionError';
 function requiresDebug<Self>(
     fnCondition: (self: Self, ...args: any[]) => boolean,
     message: string = 'Precondition failed') {
+    let assert = assertion(true);
+
     return function(_target: any, _propertyKey: string, descriptor: PropertyDescriptor) {
         let {value, get, set} = descriptor;
 
         if(value != undefined) {
             descriptor.value = function (this: Self, ...args: any[]) {
-                let assertion = fnCondition(this, ...args);
-                if (!assertion) {
-                    throw new AssertionError(message);
-                } else {
-                    return value.apply(this, args);
-                }
+                assert(fnCondition(this, ...args), message);
+
+                return value.apply(this, args);
             };
         } else {
             if(get != undefined) {
                 descriptor.get = function(this: Self) {
-                    let assertion = fnCondition(this);
-                    if (!assertion) {
-                        throw new AssertionError(message);
-                    } else {
-                        return get!.apply(this);
-                    }
+                    assert(fnCondition(this), message);
+
+                    return get!.apply(this);
                 };
             }
             if(set != undefined) {
                 descriptor.set = function(this: Self, arg: any) {
-                    let assertion = fnCondition(this);
-                    if (!assertion) {
-                        throw new AssertionError(message);
-                    } else {
-                        return set!.call(this, arg);
-                    }
+                    assert(fnCondition(this), message);
+
+                    return set!.call(this, arg);
                 };
             }
         }
