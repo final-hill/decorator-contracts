@@ -34,9 +34,7 @@
         "encoding": true,
         "eofline": false,
         "file-header": [
-            false,
-            "Copyright © \\d{4} Foo",
-            "Copyright © 2019 Foo"
+            false
         ],
         "import-spacing": true,
         "indent": [
