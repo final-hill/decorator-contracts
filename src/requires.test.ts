@@ -1,3 +1,7 @@
+/*!
+ * SPDX-License-Identifier: GPL-2.0-only
+ */
+
 import requiresFactory from './requires';
 import AssertionError from './AssertionError';
 
@@ -40,7 +44,7 @@ describe('Test preconditions', () => {
     }
 
     // @ts-ignore
-    let stack: Stack<number>
+    let stack: Stack<number>;
 
     test('Define preconditions', () => {
         let requires = debugRequires;
@@ -62,31 +66,31 @@ describe('Test preconditions', () => {
             }
         }
 
-        let stackPush = Object.getOwnPropertyDescriptor(Stack.prototype, 'push')!
-        let myStackPush = Object.getOwnPropertyDescriptor(MyStack.prototype, 'push')!
-        expect(typeof myStackPush.value).toEqual('function')
-        expect(myStackPush.value).not.toBe(stackPush.value)
+        let stackPush = Object.getOwnPropertyDescriptor(Stack.prototype, 'push')!;
+        let myStackPush = Object.getOwnPropertyDescriptor(MyStack.prototype, 'push')!;
+        expect(typeof myStackPush.value).toEqual('function');
+        expect(myStackPush.value).not.toBe(stackPush.value);
 
-        let stackPop = Object.getOwnPropertyDescriptor(Stack.prototype, 'pop')!
-        let myStackPop = Object.getOwnPropertyDescriptor(MyStack.prototype, 'pop')!
-        expect(typeof myStackPop.value).toEqual('function')
-        expect(myStackPop.value).not.toBe(stackPop.value)
+        let stackPop = Object.getOwnPropertyDescriptor(Stack.prototype, 'pop')!;
+        let myStackPop = Object.getOwnPropertyDescriptor(MyStack.prototype, 'pop')!;
+        expect(typeof myStackPop.value).toEqual('function');
+        expect(myStackPop.value).not.toBe(stackPop.value);
 
-        let stackPeek = Object.getOwnPropertyDescriptor(Stack.prototype, 'peek')!
-        let myStackPeek = Object.getOwnPropertyDescriptor(MyStack.prototype, 'peek')!
-        expect(typeof myStackPeek.value).toEqual('function')
-        expect(myStackPeek.value).not.toBe(stackPeek.value)
+        let stackPeek = Object.getOwnPropertyDescriptor(Stack.prototype, 'peek')!;
+        let myStackPeek = Object.getOwnPropertyDescriptor(MyStack.prototype, 'peek')!;
+        expect(typeof myStackPeek.value).toEqual('function');
+        expect(myStackPeek.value).not.toBe(stackPeek.value);
 
-        stack = new MyStack(3)
+        stack = new MyStack(3);
     });
 
     test('Test preconditions', () => {
 
-        expect(() => stack.pop()).toThrow(AssertionError)
+        expect(() => stack.pop()).toThrow(AssertionError);
 
-        expect(() => stack.push(1)).not.toThrow()
-        expect(() => stack.push(2)).not.toThrow()
-        expect(() => stack.push(3)).not.toThrow()
-        expect(() => stack.push(4)).toThrow(AssertionError)
-    })
+        expect(() => stack.push(1)).not.toThrow();
+        expect(() => stack.push(2)).not.toThrow();
+        expect(() => stack.push(3)).not.toThrow();
+        expect(() => stack.push(4)).toThrow(AssertionError);
+    });
 });

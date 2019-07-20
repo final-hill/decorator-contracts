@@ -1,3 +1,7 @@
+/*!
+ * SPDX-License-Identifier: GPL-2.0-only
+ */
+
 import assertion from './assertion';
 import ensures from './ensures';
 import requires from './requires';

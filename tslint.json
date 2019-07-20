@@ -34,9 +34,11 @@
         "encoding": true,
         "eofline": false,
         "file-header": [
-            false,
-            "Copyright © \\d{4} Foo",
-            "Copyright © 2019 Foo"
+            true,
+            {
+                "match": "SPDX-License-Identifier: GPL-2\\.0-only",
+                "default": "SPDX-License-Identifier: GPL-2.0-only"
+            }
         ],
         "import-spacing": true,
         "indent": [
