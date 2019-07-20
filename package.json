@@ -1,5 +1,5 @@
 {
-  "name": "ts-code-contracts",
+  "name": "decorator-contracts",
   "version": "0.0.0",
   "description": "Design By Contract for TypeScript and ECMAScript classes",
   "main": "dist/index.js",
