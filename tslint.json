@@ -34,11 +34,7 @@
         "encoding": true,
         "eofline": false,
         "file-header": [
-            true,
-            {
-                "match": "SPDX-License-Identifier: GPL-2\\.0-only",
-                "default": "SPDX-License-Identifier: GPL-2.0-only"
-            }
+            false
         ],
         "import-spacing": true,
         "indent": [

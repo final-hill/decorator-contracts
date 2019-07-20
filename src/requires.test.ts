@@ -1,4 +1,5 @@
 /*!
+ * Decorator Contracts v0.0.0 | Copyright (C) 2019 Michael L Haufe
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
