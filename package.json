@@ -4,6 +4,7 @@
   "description": "Design By Contract for TypeScript and ECMAScript classes",
   "main": "dist/index.js",
   "scripts": {
+    "prepack": "npm run build && npm run test",
     "prebuild": "npm run clean && npm run lint",
     "build": "npm run build-types && parcel build src/index.ts",
     "build-types": "tsc -p tsconfig.json --emitDeclarationOnly --outDir dist",
@@ -16,7 +17,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://thenewobjective@dev.azure.com/thenewobjective/ts-code-contracts/_git/ts-code-contracts"
+    "url": "https://thenewobjective@dev.azure.com/thenewobjective/decorator-contracts/_git/decorator-contracts"
   },
   "keywords": [
     "contract",
@@ -43,5 +44,6 @@
     "tslint": "^5.18.0",
     "typescript": "^3.5.3"
   },
-  "dependencies": {}
+  "dependencies": {},
+  "files": ["dist"]
 }
