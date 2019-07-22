@@ -1,0 +1,46 @@
+pool:
+  name: Hosted Windows Container
+  demands: npm
+
+steps:
+- task: Npm@1
+  displayName: 'npm install'
+  inputs:
+    workingDir: ./
+    verbose: false
+
+- task: Npm@1
+  displayName: 'npm audit'
+  inputs:
+    command: custom
+    workingDir: ./
+    verbose: false
+    customCommand: audit
+
+- task: Npm@1
+  displayName: 'npm test'
+  inputs:
+    command: custom
+    workingDir: ./
+    verbose: false
+    customCommand: test
+
+- task: Npm@1
+  displayName: 'npm pack'
+  inputs:
+    command: custom
+    workingDir: ./
+    verbose: false
+    customCommand: pack
+
+- task: CopyFiles@2
+  displayName: 'Stage npm package'
+  inputs:
+    SourceFolder: '$(Build.SourcesDirectory)'
+    Contents: '*.tgz'
+    TargetFolder: '$(Build.ArtifactStagingDirectory)'
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Artifacts'
+  inputs:
+    ArtifactName: npm
