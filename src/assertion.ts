@@ -11,21 +11,26 @@ import AssertionError from './AssertionError';
  *
  * @param condition - The condition to test
  * @param message - A descriptive message to associate with the AssertionError
- * @throws - Throws an AssertionError when the condition is false
+ * @param ErrorConstructor - The constructor of the Error to use
+ * @throws {Error} - When the condition is false
  * @see AssertionError
  *
  * @example
  * let x = 15;
  * assert(x > 5, `Expected: x > 5. Actual: x = ${x}`)
+ *
+ * @example
+ * let name = "Tom"
+ * assert(name.trim().length > 0, 'Name is required', TypeError)
  */
-function debugAssert(condition: boolean, message: string = 'Assertion failure'): void {
+function debugAssert(condition: boolean, message: string = 'Assertion failure', ErrorConstructor: Constructor<Error> = AssertionError): void {
     if(!condition) {
-        throw new AssertionError(message);
+        throw new ErrorConstructor(message);
     }
 }
 
 // @ts-ignore : ignoring unused variable warning
-function prodAssert(condition: boolean, message: string = 'Assertion failure'): void {}
+function prodAssert(condition: boolean, message: string = 'Assertion failure', ErrorConstructor: Constructor<Error> = AssertionError): void {}
 
 /**
  * Returns a reference to the appropriate assertion implementation based on debugMode.
