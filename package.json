@@ -4,7 +4,6 @@
   "description": "Design By Contract for TypeScript and ECMAScript classes",
   "main": "dist/index.js",
   "scripts": {
-    "prepack": "npm run build && npm run test",
     "prebuild": "npm run clean && npm run lint",
     "build": "npm run build-types && parcel build src/index.ts",
     "build-types": "tsc -p tsconfig.json --emitDeclarationOnly --outDir dist",

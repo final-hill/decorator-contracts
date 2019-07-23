@@ -23,6 +23,14 @@ steps:
     customCommand: audit
 
 - task: Npm@1
+  displayName: 'npm build'
+  inputs:
+    command: custom
+    workingDir: ./
+    verbose: false
+    customCommand: build
+
+- task: Npm@1
   displayName: 'npm test'
   inputs:
     command: custom
