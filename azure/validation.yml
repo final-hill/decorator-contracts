@@ -1,3 +1,5 @@
+name: Validation
+
 pool:
   name: Hosted Windows Container
   demands: npm
