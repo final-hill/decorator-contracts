@@ -1,3 +1,5 @@
+name: Build
+
 pool:
   name: Hosted Windows Container
   demands: npm
