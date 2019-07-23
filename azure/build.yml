@@ -1,5 +1,8 @@
 name: Build
 
+trigger:
+  - master
+
 pool:
   name: Hosted Windows Container
   demands: npm
