@@ -20,7 +20,7 @@ steps:
 - script: |
     npm run build
   workingDirectory: ./
-  displayName: 'npm run audit'
+  displayName: 'npm run build'
 
 - script: |
     npm run test
