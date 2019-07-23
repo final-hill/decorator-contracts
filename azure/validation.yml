@@ -1,0 +1,38 @@
+name: Validation
+
+trigger: none
+
+pool:
+  name: Hosted Windows Container
+  demands: npm
+
+steps:
+- task: Npm@1
+  displayName: 'npm install'
+  inputs:
+    workingDir: ./
+    verbose: false
+
+- task: Npm@1
+  displayName: 'npm audit'
+  inputs:
+    command: custom
+    workingDir: ./
+    verbose: false
+    customCommand: audit
+
+- task: Npm@1
+  displayName: 'npm build'
+  inputs:
+    command: custom
+    workingDir: ./
+    verbose: false
+    customCommand: build
+
+- task: Npm@1
+  displayName: 'npm test'
+  inputs:
+    command: custom
+    workingDir: ./
+    verbose: false
+    customCommand: test
