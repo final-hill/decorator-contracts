@@ -6,7 +6,7 @@
 import assertion from './assertion';
 
 let assert = assertion(true);
-const OVERRIDE_SYMBOL = Symbol('override assigned');
+export const OVERRIDE_SYMBOL = Symbol('override assigned');
 const MSG_NO_SUPER = `This class member does not override an ancestor member`;
 const MSG_INVALID_ARG_LENGTH = `An overridden method must have an equal or greater number of arguments than its ancestor method`;
 const MSG_NO_MATCHING_METHOD = `This method does not override an ancestor method. The ancestor is not a method`;
@@ -31,7 +31,7 @@ const MSG_NO_STATIC = `Only instance members can be overridden, not static membe
 function findAncestorMember(targetProto: any, propertyKey: string): PropertyDescriptor {
     let proto = Object.getPrototypeOf(targetProto);
     assert(proto != null, MSG_NO_SUPER);
-    let ancestorMember = Object.getOwnPropertyDescriptor(targetProto, propertyKey);
+    let ancestorMember = Object.getOwnPropertyDescriptor(proto, propertyKey);
 
     return ancestorMember != undefined ? ancestorMember : findAncestorMember(proto, propertyKey);
 }
@@ -48,12 +48,16 @@ function findAncestorMember(targetProto: any, propertyKey: string): PropertyDesc
  * @throws {TypeError} - if this decorator is applied more than once on a class member
  * @see AssertionError
  */
-function overrideDebug(target: any, propertyKey: string, currentDescriptor: PropertyDescriptor) {
+export type IOverrideDecorator = (target: any, propertyKey: string, currentDescriptor: PropertyDescriptor) => void;
+
+let overrideProd: IOverrideDecorator = function(_target: any, _propertyKey: string, _currentDescriptor: PropertyDescriptor): void {};
+
+let overrideDebug: IOverrideDecorator = function (target: any, propertyKey: string, currentDescriptor: PropertyDescriptor): void {
     assert(typeof target != 'function', MSG_NO_STATIC, TypeError);
     assert(currentDescriptor != undefined, MSG_OVERRIDE_METHOD_ACCESSOR_ONLY);
-    // TODO: throw TypeError
     assert(!Boolean((currentDescriptor as any)[OVERRIDE_SYMBOL]), MSG_MULTIPLE_OVERRIDE, TypeError);
 
+    let isMethodDecorator = currentDescriptor.value != undefined;
     let ancestorDescriptor = findAncestorMember(target, propertyKey);
 
     // TODO: check as part of dynamic contract assignment API
@@ -65,8 +69,7 @@ function overrideDebug(target: any, propertyKey: string, currentDescriptor: Prop
     if(currentDescriptor.writable){}
     */
 
-    // Method decorator if the currentDescriptor is present due to assertion above
-    if(currentDescriptor.value != undefined) {
+    if(isMethodDecorator) {
         assert(typeof currentDescriptor.value == 'function', MSG_OVERRIDE_METHOD_ACCESSOR_ONLY);
         assert(typeof ancestorDescriptor.value == 'function', MSG_NO_MATCHING_METHOD);
         assert(currentDescriptor.value.length >= ancestorDescriptor.value!.length, MSG_INVALID_ARG_LENGTH);
@@ -83,9 +86,7 @@ function overrideDebug(target: any, propertyKey: string, currentDescriptor: Prop
     }
 
     (currentDescriptor as any)[OVERRIDE_SYMBOL] = true;
-}
-
-function overrideProd(_targetProto: any, _propertyKey: string, _descriptor: PropertyDescriptor) {}
+};
 
 /**
  * Returns an instance of the 'override' decorator in the specified mode.
@@ -93,8 +94,6 @@ function overrideProd(_targetProto: any, _propertyKey: string, _descriptor: Prop
  *
  * @param debugMode - A flag representing mode of the decorator
  */
-export default function overrideFactory(debugMode: boolean) {
+export default function overrideFactory(debugMode: boolean): IOverrideDecorator {
     return debugMode ? overrideDebug : overrideProd;
 }
-
-export {OVERRIDE_SYMBOL};
