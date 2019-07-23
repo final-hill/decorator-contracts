@@ -40,18 +40,19 @@ function findAncestorMember(targetProto: any, propertyKey: string): PropertyDesc
  * The 'override' decorator asserts that the current class member is a specialized instance of
  * an ancestor class's member of the same name.
  *
- * @throws {AssertionError} - if the current member does not have an ancestor
- * @throws {AssertionError} - if the current member is not a method nor an accessor
- * @throws {AssertionError} - if the current member is a method but the ancestor member is not
- * @throws {AssertionError} - if the current member is a method and method.length < ancestorMethod.length
- * @throws {AssertionError} - if this decorator is applied more than once on a class member
+ * @throws {AssertionError} - If the current member does not have an ancestor
+ * @throws {AssertionError} - If the current member is not a method nor an accessor
+ * @throws {AssertionError} - If the current member is a method but the ancestor member is not
+ * @throws {AssertionError} - If the current member is a method and method.length < ancestorMethod.length
+ * @throws {TypeError} - If the decorator is applied to a static member
+ * @throws {TypeError} - if this decorator is applied more than once on a class member
  * @see AssertionError
  */
 function overrideDebug(target: any, propertyKey: string, currentDescriptor: PropertyDescriptor) {
-    assert(typeof target != 'function', MSG_NO_STATIC);
+    assert(typeof target != 'function', MSG_NO_STATIC, TypeError);
     assert(currentDescriptor != undefined, MSG_OVERRIDE_METHOD_ACCESSOR_ONLY);
     // TODO: throw TypeError
-    assert(!Boolean((currentDescriptor as any)[OVERRIDE_SYMBOL]), MSG_MULTIPLE_OVERRIDE);
+    assert(!Boolean((currentDescriptor as any)[OVERRIDE_SYMBOL]), MSG_MULTIPLE_OVERRIDE, TypeError);
 
     let ancestorDescriptor = findAncestorMember(target, propertyKey);
 
