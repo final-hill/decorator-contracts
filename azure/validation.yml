@@ -7,32 +7,23 @@ pool:
   demands: npm
 
 steps:
-- task: Npm@1
+- script: |
+    npm install
+  workingDirectory: ./
   displayName: 'npm install'
-  inputs:
-    workingDir: ./
-    verbose: false
 
-- task: Npm@1
+- script: |
+    npm audit
+  workingDirectory: ./
   displayName: 'npm audit'
-  inputs:
-    command: custom
-    workingDir: ./
-    verbose: false
-    customCommand: audit
 
-- task: Npm@1
-  displayName: 'npm build'
-  inputs:
-    command: custom
-    workingDir: ./
-    verbose: false
-    customCommand: build
+- script: |
+    npm run build
+  workingDirectory: ./
+  displayName: 'npm run audit'
 
-- task: Npm@1
-  displayName: 'npm test'
-  inputs:
-    command: custom
-    workingDir: ./
-    verbose: false
-    customCommand: test
+- script: |
+    npm run test
+  workingDirectory: ./
+  displayName: 'npm run test'
+  
