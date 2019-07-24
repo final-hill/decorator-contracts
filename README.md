@@ -88,8 +88,6 @@ The development dependencies are as follows:
 |:-----------------|:------------------------------------------------------|
 | `@types/jest`    | Type Definitions for `ts-jest` support                |
 | `jest`           | JavaScript Unit testing library                       |
-| `json`           | json editing library for the CLI                      |
-| `ncp`            | Recursive file-copy utility                           |
 | `parcel-bundler` | Web Application bundler                               |
 | `rimraf`         | OS-Agnostic remove command for deleting files/folders |
 | `ts-jest`        | TypeScript support for `jest`                         |
