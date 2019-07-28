@@ -22,15 +22,26 @@ import AssertionError from './AssertionError';
  * @example
  * let name = "Tom"
  * assert(name.trim().length > 0, 'Name is required', TypeError)
+ *
+ * @example
+ * let s: boolean = ...;
+ * while(assert(q(s), 'message')) {
+ *     ...
+ *     s = ...;
+ * }
  */
-function debugAssert(condition: boolean, message: string = 'Assertion failure', ErrorConstructor: Constructor<Error> = AssertionError): void {
+function debugAssert(condition: boolean, message: string = 'Assertion failure', ErrorConstructor: Constructor<Error> = AssertionError): boolean {
     if(!condition) {
         throw new ErrorConstructor(message);
     }
+
+    return true;
 }
 
 // @ts-ignore : ignoring unused variable warning
-function prodAssert(condition: boolean, message: string = 'Assertion failure', ErrorConstructor: Constructor<Error> = AssertionError): void {}
+function prodAssert(condition: boolean, message: string = 'Assertion failure', ErrorConstructor: Constructor<Error> = AssertionError): boolean {
+    return true;
+}
 
 /**
  * Returns a reference to the appropriate assertion implementation based on debugMode.
