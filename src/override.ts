@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
-import Assertion from './assertion';
+import Assertion from './assertion.temp';
 
 let assert = new Assertion(true).assert;
 export const OVERRIDE_SYMBOL = Symbol('override assigned');

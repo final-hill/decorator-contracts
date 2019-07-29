@@ -6,7 +6,7 @@
  * Unit testing for the assertion function
  */
 
-import Assertion from './assertion';
+import Assertion from './assertion.temp';
 import AssertionError from './AssertionError';
 
 describe('debug assertions should execute', () => {

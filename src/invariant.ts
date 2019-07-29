@@ -7,7 +7,7 @@
  * This condition is checked after the associated class is constructed and also before and after every method execution.
  */
 
-import Assertion from './assertion';
+import Assertion from './assertion.temp';
 
 let assert = new Assertion(true).assert;
 
