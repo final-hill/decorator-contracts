@@ -4,14 +4,14 @@
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
-import assertion from './assertion';
+import Assertion from './assertion';
 import ensures from './ensures';
 import requires from './requires';
 import overrideFactory from './override';
 
 export default function contracts(debugMode: boolean) {
     return {
-        assert: assertion(debugMode),
+        assert: new Assertion(debugMode).assert,
         ensures: ensures(debugMode),
         requires: requires(debugMode),
         override: overrideFactory(debugMode)

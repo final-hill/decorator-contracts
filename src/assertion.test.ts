@@ -6,11 +6,11 @@
  * Unit testing for the assertion function
  */
 
-import assertion from './assertion';
+import Assertion from './assertion';
 import AssertionError from './AssertionError';
 
 describe('debug assertions should execute', () => {
-    let assert = assertion(true);
+    let assert = new Assertion(true).assert;
 
     const X = 15;
 
@@ -28,7 +28,7 @@ describe('debug assertions should execute', () => {
 });
 
 describe('prod assertions should be NOOPs', () => {
-    let assert = assertion(false);
+    let assert = new Assertion(false).assert;
 
     const X = 15;
 

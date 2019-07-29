@@ -7,9 +7,9 @@
  * This condition is checked after the associated class is constructed and also before and after every method execution.
  */
 
-import assertion from './assertion';
+import Assertion from './assertion';
 
-let assert = assertion(true);
+let assert = new Assertion(true).assert;
 
 // TODO: what about static members?
 

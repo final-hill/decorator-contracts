@@ -7,12 +7,12 @@
  * It expresses a condition that must be true after the associated class member is executed.
  */
 
-import assertion from './assertion';
+import Assertion from './assertion';
 
 function ensuresDebug<Self>(
     fnCondition: (self: Self, returnValue: any) => boolean,
     message: string = 'Postcondition failed') {
-    let assert = assertion(true);
+    let assert = new Assertion(true).assert;
 
     return function(_target: any, _propertyKey: string, descriptor: PropertyDescriptor) {
         let {value, get, set} = descriptor;

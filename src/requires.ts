@@ -7,12 +7,12 @@
  * It expresses a condition that must be true before the associated class member is executed.
  */
 
-import assertion from './assertion';
+import Assertion from './assertion';
 
 function requiresDebug<Self>(
     fnCondition: (self: Self, ...args: any[]) => boolean,
     message: string = 'Precondition failed') {
-    let assert = assertion(true);
+    let assert = new Assertion(true).assert;
 
     return function(_target: any, _propertyKey: string, descriptor: PropertyDescriptor) {
         let {value, get, set} = descriptor;

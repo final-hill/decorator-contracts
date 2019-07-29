@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
-import assertion from './assertion';
+import Assertion from './assertion';
 
-let assert = assertion(true);
+let assert = new Assertion(true).assert;
 export const OVERRIDE_SYMBOL = Symbol('override assigned');
 const MSG_NO_SUPER = `This class member does not override an ancestor member`;
 const MSG_INVALID_ARG_LENGTH = `An overridden method must have an equal or greater number of arguments than its ancestor method`;
