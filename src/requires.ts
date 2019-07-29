@@ -53,7 +53,7 @@ function requiresProd<Self>(fnCondition: (self: Self, ...args: any[]) => boolean
  *
  * @param debugMode
  */
-export default function(debugMode: boolean) {
+export default function requiresFactory(debugMode: boolean) {
     let requires = debugMode ? requiresDebug : requiresProd;
 
     return requires;

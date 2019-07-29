@@ -56,7 +56,7 @@ function ensuresProd<Self>(fnCondition: (self: Self, ...args: any[]) => boolean,
  *
  * @param debugMode
  */
-export default function(debugMode: boolean) {
+export default function ensuresFactory(debugMode: boolean) {
     let ensures = debugMode ? ensuresDebug : ensuresProd;
 
     return ensures;

@@ -67,7 +67,7 @@ function invariantProd(fnCondition: () => boolean, message: string = 'Invariant 
     return function<T extends new(...args: any[]) => {}>(_Constructor: T) { };
 }
 
-export default function(debugMode: boolean) {
+export default function invariantFactory(debugMode: boolean) {
     let invariant = debugMode ? invariantDebug : invariantProd;
 
     return invariant;

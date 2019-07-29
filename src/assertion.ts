@@ -50,6 +50,6 @@ function prodAssert(condition: boolean, message: string = 'Assertion failure', E
  *
  * @param debugMode - The flag representing mode of the library
  */
-export default function(debugMode: boolean) {
+export default function assertionFactory(debugMode: boolean) {
     return debugMode ? debugAssert : prodAssert;
 }
