@@ -7,7 +7,7 @@
  * It expresses a condition that must be true after the associated class member is executed.
  */
 
-import Assertion from './assertion.temp';
+import Assertion from './Assertion';
 
 function ensuresDebug<Self>(
     fnCondition: (self: Self, returnValue: any) => boolean,

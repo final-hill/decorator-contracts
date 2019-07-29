@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
-import Assertion from './assertion.temp';
+import Assertion from './Assertion';
 import ensures from './ensures';
 import requires from './requires';
 import overrideFactory from './override';

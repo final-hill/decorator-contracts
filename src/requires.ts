@@ -7,7 +7,7 @@
  * It expresses a condition that must be true before the associated class member is executed.
  */
 
-import Assertion from './assertion.temp';
+import Assertion from './Assertion';
 
 function requiresDebug<Self>(
     fnCondition: (self: Self, ...args: any[]) => boolean,
