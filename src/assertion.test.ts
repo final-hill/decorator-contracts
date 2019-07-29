@@ -1,6 +1,9 @@
-/*!
- * Decorator Contracts v0.0.0 | Copyright (C) 2019 Michael L Haufe
+/**
+ * @license
+ * Copyright (C) 2019 Michael L Haufe
  * SPDX-License-Identifier: GPL-2.0-only
+ *
+ * Unit testing for the assertion function
  */
 
 import assertion from './assertion';

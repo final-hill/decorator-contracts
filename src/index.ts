@@ -1,5 +1,6 @@
-/*!
- * Decorator Contracts v0.0.0 | Copyright (C) 2019 Michael L Haufe
+/**
+ * @license
+ * Copyright (C) 2019 Michael L Haufe
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
@@ -8,7 +9,7 @@ import ensures from './ensures';
 import requires from './requires';
 import overrideFactory from './override';
 
-export default function(debugMode: boolean) {
+export default function contracts(debugMode: boolean) {
     return {
         assert: assertion(debugMode),
         ensures: ensures(debugMode),

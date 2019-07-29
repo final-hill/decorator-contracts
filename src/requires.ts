@@ -1,15 +1,14 @@
-/*!
- * Decorator Contracts v0.0.0 | Copyright (C) 2019 Michael L Haufe
+/**
+ * @license
+ * Copyright (C) 2019 Michael L Haufe
  * SPDX-License-Identifier: GPL-2.0-only
+ *
+ * The requires decorator is an assertion of a precondition.
+ * It expresses a condition that must be true before the associated class member is executed.
  */
 
 import assertion from './assertion';
 
-/**
- * Requires is an assertion of a precondition.
- * It expresses a condition that must be true before the associated class member is executed.
- *
- */
 function requiresDebug<Self>(
     fnCondition: (self: Self, ...args: any[]) => boolean,
     message: string = 'Precondition failed') {
@@ -52,7 +51,7 @@ function requiresProd<Self>(fnCondition: (self: Self, ...args: any[]) => boolean
  *
  * @param debugMode
  */
-export default function(debugMode: boolean) {
+export default function requiresFactory(debugMode: boolean) {
     let requires = debugMode ? requiresDebug : requiresProd;
 
     return requires;

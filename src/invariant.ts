@@ -1,6 +1,10 @@
-/*!
- * Decorator Contracts v0.0.0 | Copyright (C) 2019 Michael L Haufe
+/**
+ * @license
+ * Copyright (C) 2019 Michael L Haufe
  * SPDX-License-Identifier: GPL-2.0-only
+ *
+ * The invariant decorator is an assertion of conditions that must be maintained by all members of a class.
+ * This condition is checked after the associated class is constructed and also before and after every method execution.
  */
 
 import assertion from './assertion';
@@ -66,7 +70,7 @@ function invariantProd(fnCondition: () => boolean, message: string = 'Invariant 
     return function<T extends new(...args: any[]) => {}>(_Constructor: T) { };
 }
 
-export default function(debugMode: boolean) {
+export default function invariantFactory(debugMode: boolean) {
     let invariant = debugMode ? invariantDebug : invariantProd;
 
     return invariant;
