@@ -32,7 +32,7 @@ import AssertionError from './AssertionError';
 export default class Assertion {
     /**
      * Constructs an instance of the Assertion class in the specified mode.
-     * Enanled when debugMode is true, and disabled otherwise
+     * Enabled when debugMode is true, and disabled otherwise
      *
      * @param debugMode - The flag representing mode of the assertion
      */

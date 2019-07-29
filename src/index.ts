@@ -5,15 +5,20 @@
  */
 
 import Assertion from './Assertion';
-import ensures from './ensures';
-import requires from './requires';
-import overrideFactory from './override';
+import EnsuresDecorator from './EnsuresDecorator';
+import RequiresDecorator from './RequiresDecorator';
+import OverrideDecorator from './OverrideDecorator';
 
-export default function contracts(debugMode: boolean) {
-    return {
-        assert: new Assertion(debugMode).assert,
-        ensures: ensures(debugMode),
-        requires: requires(debugMode),
-        override: overrideFactory(debugMode)
-    };
+export default class Contracts {
+    assert: typeof Assertion.prototype.assert;
+    ensures: typeof EnsuresDecorator.prototype.ensures;
+    requires: typeof RequiresDecorator.prototype.requires;
+    override: typeof OverrideDecorator.prototype.override;
+
+    constructor(protected debugMode: boolean) {
+        this.assert = new Assertion(debugMode).assert;
+        this.ensures = new EnsuresDecorator(debugMode).ensures;
+        this.requires = new RequiresDecorator(debugMode).requires;
+        this.override = new OverrideDecorator(debugMode).override;
+    }
 }
