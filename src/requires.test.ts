@@ -2,6 +2,8 @@
  * @license
  * Copyright (C) 2019 Michael L Haufe
  * SPDX-License-Identifier: GPL-2.0-only
+ *
+ * Unit testing for the requires decorator
  */
 
 import requiresFactory from './requires';

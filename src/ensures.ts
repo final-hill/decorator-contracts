@@ -2,15 +2,13 @@
  * @license
  * Copyright (C) 2019 Michael L Haufe
  * SPDX-License-Identifier: GPL-2.0-only
+ *
+ * The ensures decorator is an assertion of a postcondition.
+ * It expresses a condition that must be true after the associated class member is executed.
  */
 
 import assertion from './assertion';
 
-/**
- * Ensures is an assertion of a postcondition.
- * It expresses a condition that must be true after the associated class member is executed.
- *
- */
 function ensuresDebug<Self>(
     fnCondition: (self: Self, returnValue: any) => boolean,
     message: string = 'Postcondition failed') {

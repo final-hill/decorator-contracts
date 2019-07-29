@@ -2,6 +2,10 @@
  * @license
  * Copyright (C) 2019 Michael L Haufe
  * SPDX-License-Identifier: GPL-2.0-only
+ *
+ * An assertion is an expression of a property that must be true at a particular
+ * point of step of program execution. It consists of a boolean expression
+ * and a message.
  */
 
 import AssertionError from './AssertionError';
