@@ -21,9 +21,13 @@ export default class InvariantDecorator {
         fnCondition: (self: Self) => boolean,
         message: string = 'Invariant violated'
     ) => {
-        let assert = this._assert;
+        let assert = this._assert,
+            debugMode = this.debugMode;
 
         return function<T extends new(...args: any[]) => {}>(Constructor: T) {
+            if(!debugMode) {
+                return Constructor;
+            }
             let InvariantClass = class extends Constructor {
                 constructor(...args: any[]) {
                     super(...args);

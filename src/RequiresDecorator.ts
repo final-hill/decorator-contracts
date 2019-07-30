@@ -26,9 +26,13 @@ export default class RequiresDecorator {
         fnCondition: (self: Self, ...args: any[]) => boolean,
         message: string = 'Precondition failed'
     ) => {
-        let assert = this._assert;
+        let assert = this._assert,
+            debugMode = this.debugMode;
 
         return function(_target: any, _propertyKey: string, descriptor: PropertyDescriptor) {
+            if(!debugMode) {
+                return;
+            }
             let {value, get, set} = descriptor;
 
             if(value != undefined) {

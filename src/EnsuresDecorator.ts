@@ -17,9 +17,13 @@ export default class EnsuresDecorator {
     }
 
     ensures = <Self>(fnCondition: (self: Self, returnValue: any) => boolean, message: string = 'Postcondition failed') => {
-        let assert = this._assert;
+        let assert = this._assert,
+            debugMode = this.debugMode;
 
         return function(_target: any, _propertyKey: string, descriptor: PropertyDescriptor) {
+            if(!debugMode) {
+                return;
+            }
             let {value, get, set} = descriptor;
 
             if(value != undefined) {

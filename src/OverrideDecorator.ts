@@ -63,6 +63,9 @@ export default class OverrideDecorator {
      * @see AssertionError
      */
     override = (target: any, propertyKey: string, currentDescriptor: PropertyDescriptor): void => {
+        if(!this.debugMode) {
+            return;
+        }
         let assert = this._assert;
         assert(typeof target != 'function', MSG_NO_STATIC, TypeError);
         assert(currentDescriptor != undefined, MSG_OVERRIDE_METHOD_ACCESSOR_ONLY);
