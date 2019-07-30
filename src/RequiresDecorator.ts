@@ -10,19 +10,23 @@
 import Assertion from './Assertion';
 
 export default class RequiresDecorator {
+    protected _assert: typeof Assertion.prototype.assert;
+
     /**
      * Constructs a new instance of the RequiresDecorator int he specified mode
      * Enabled when debugMode is true, and disabled otherwise
      *
      * @param debugMode - The flag representing mode of the assertion
      */
-    constructor(protected debugMode: boolean) {}
+    constructor(protected debugMode: boolean) {
+        this._assert =  new Assertion(debugMode).assert;
+    }
 
     requires = <Self>(
         fnCondition: (self: Self, ...args: any[]) => boolean,
         message: string = 'Precondition failed'
     ) => {
-        let assert = new Assertion(this.debugMode).assert;
+        let assert = this._assert;
 
         return function(_target: any, _propertyKey: string, descriptor: PropertyDescriptor) {
             let {value, get, set} = descriptor;
