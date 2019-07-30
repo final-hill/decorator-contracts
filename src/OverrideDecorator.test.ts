@@ -6,11 +6,11 @@
  * Unit tests for the override decorator
  */
 
-import overrideFactory from './override';
+import OverrideDecorator from './OverrideDecorator';
 import AssertionError from './AssertionError';
 
 describe('debugMode @override', () => {
-    let override = overrideFactory(true);
+    let override = new OverrideDecorator(true).override;
 
     test('Override on Base class should throw', () => {
         expect(() => {
@@ -53,7 +53,7 @@ describe('debugMode @override', () => {
 });
 
 describe('prodMode @override', () => {
-    let override = overrideFactory(false);
+    let override = new OverrideDecorator(false).override;
 
     test('Override on Base class should not throw', () => {
         expect(() => {
