@@ -1,6 +1,10 @@
 name: Validation
 
-trigger: none
+trigger:
+  branches:
+    include:
+    - master
+    - releases/*
 
 pool:
   name: Hosted Windows Container
