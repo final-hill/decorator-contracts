@@ -1,18 +1,24 @@
-/*!
- * Decorator Contracts v0.0.0 | Copyright (C) 2019 Michael L Haufe
+/**
+ * @license
+ * Copyright (C) 2019 Michael L Haufe
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
-import assertion from './assertion';
-import ensures from './ensures';
-import requires from './requires';
-import overrideFactory from './override';
+import Assertion from './Assertion';
+import EnsuresDecorator from './EnsuresDecorator';
+import RequiresDecorator from './RequiresDecorator';
+import OverrideDecorator from './OverrideDecorator';
 
-export default function(debugMode: boolean) {
-    return {
-        assert: assertion(debugMode),
-        ensures: ensures(debugMode),
-        requires: requires(debugMode),
-        override: overrideFactory(debugMode)
-    };
+export default class Contracts {
+    assert: typeof Assertion.prototype.assert;
+    ensures: typeof EnsuresDecorator.prototype.ensures;
+    requires: typeof RequiresDecorator.prototype.requires;
+    override: typeof OverrideDecorator.prototype.override;
+
+    constructor(protected debugMode: boolean) {
+        this.assert = new Assertion(debugMode).assert;
+        this.ensures = new EnsuresDecorator(debugMode).ensures;
+        this.requires = new RequiresDecorator(debugMode).requires;
+        this.override = new OverrideDecorator(debugMode).override;
+    }
 }

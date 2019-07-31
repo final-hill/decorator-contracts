@@ -1,12 +1,15 @@
-/*!
- * Decorator Contracts v0.0.0 | Copyright (C) 2019 Michael L Haufe
+/**
+ * @license
+ * Copyright (C) 2019 Michael L Haufe
  * SPDX-License-Identifier: GPL-2.0-only
+ *
+ * Unit testing for the requires decorator
  */
 
-import requiresFactory from './requires';
+import RequiresDecorator from './RequiresDecorator';
 import AssertionError from './AssertionError';
 
-let debugRequires = requiresFactory(true);
+let requires = new RequiresDecorator(true).requires;
 // let prodRequires = requiresFactory(false)
 
 describe('Test preconditions', () => {
@@ -48,8 +51,6 @@ describe('Test preconditions', () => {
     let stack: Stack<number>;
 
     test('Define preconditions', () => {
-        let requires = debugRequires;
-
         class MyStack<T> extends Stack<T> {
             @requires<MyStack<T>>(self => !self.isFull())
             push(value: T) {
