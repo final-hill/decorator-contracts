@@ -1,7 +1,9 @@
 name: Build
 
 trigger:
-  - master
+  branches:
+    include:
+    - master
 
 pool:
   name: Hosted Windows Container
