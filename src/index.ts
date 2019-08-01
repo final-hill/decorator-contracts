@@ -22,6 +22,3 @@ export default class Contracts {
         this.override = new OverrideDecorator(debugMode).override;
     }
 }
-
-// Adding error for testing merge validation on Azure
-let foo = class;
