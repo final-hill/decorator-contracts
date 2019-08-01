@@ -24,4 +24,4 @@ export default class Contracts {
 }
 
 // Adding error for testing merge validation on Azure
-let foo = ;
+let foo = class;
