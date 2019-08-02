@@ -46,3 +46,14 @@ steps:
   displayName: 'Publish Artifacts'
   inputs:
     ArtifactName: npm
+
+- task: PublishTestResults@2
+  condition: succeededOrFailed()
+  inputs:
+    testRunner: JUnit
+    testResultsFiles: './coverage/junit.xml'
+
+- task: PublishCodeCoverageResults@1
+  inputs: 
+    summaryFileLocation: './clover.xml'
+    reportDirectory: './coverage'

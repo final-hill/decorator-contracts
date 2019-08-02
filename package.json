@@ -7,11 +7,11 @@
     "prebuild": "npm run clean && npm run lint",
     "build": "npm run build-types && parcel build src/index.ts",
     "build-types": "tsc -p tsconfig.json --emitDeclarationOnly --outDir dist",
-    "clean": "rimraf dist",
+    "clean": "rimraf dist && rimraf coverage",
     "clean-full": "rimraf dist && rimraf .cache && rimraf node_modules",
     "prelint": "npm run type-check",
     "lint": "tslint --project tsconfig.json --fix -e \"node_modules\"",
-    "test": "jest",
+    "test": "jest --coverage",
     "type-check": "tsc -p tsconfig.json --noEmit"
   },
   "repository": {
@@ -30,11 +30,16 @@
   "author": "Michael L Haufe <tno@thenewobjective.com> (https://thenewobjective.com)",
   "license": "GPL-2.0-only",
   "jest": {
-    "preset": "ts-jest"
+    "preset": "ts-jest",
+    "reporters": [ "default", "jest-junit" ]
+  },
+  "jest-junit": {
+    "outputDirectory": "./coverage"
   },
   "devDependencies": {
     "@types/jest": "^24.0.15",
     "jest": "^24.8.0",
+    "jest-junit": "^7.0.0",
     "parcel-bundler": "^1.12.3",
     "rimraf": "^2.6.3",
     "ts-jest": "^24.0.2",
