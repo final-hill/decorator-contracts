@@ -7,7 +7,7 @@
     "prebuild": "npm run clean && npm run lint",
     "build": "npm run build-types && parcel build src/index.ts",
     "build-types": "tsc -p tsconfig.json --emitDeclarationOnly --outDir dist",
-    "clean": "rimraf dist",
+    "clean": "rimraf dist && rimraf coverage",
     "clean-full": "rimraf dist && rimraf .cache && rimraf node_modules",
     "prelint": "npm run type-check",
     "lint": "tslint --project tsconfig.json --fix -e \"node_modules\"",
@@ -32,6 +32,9 @@
   "jest": {
     "preset": "ts-jest",
     "reporters": [ "default", "jest-junit" ]
+  },
+  "jest-junit": {
+    "outputDirectory": "./coverage"
   },
   "devDependencies": {
     "@types/jest": "^24.0.15",
