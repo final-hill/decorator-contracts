@@ -30,11 +30,13 @@
   "author": "Michael L Haufe <tno@thenewobjective.com> (https://thenewobjective.com)",
   "license": "GPL-2.0-only",
   "jest": {
-    "preset": "ts-jest"
+    "preset": "ts-jest",
+    "reporters": [ "default", "jest-junit" ]
   },
   "devDependencies": {
     "@types/jest": "^24.0.15",
     "jest": "^24.8.0",
+    "jest-junit": "^7.0.0",
     "parcel-bundler": "^1.12.3",
     "rimraf": "^2.6.3",
     "ts-jest": "^24.0.2",
