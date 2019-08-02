@@ -2,6 +2,12 @@ name: Validation
 
 trigger: none
 
+pr:
+  branches:
+    include:
+    - master
+    - releases/*
+
 pool:
   name: Hosted Windows Container
   demands: npm
@@ -27,3 +33,13 @@ steps:
   workingDirectory: ./
   displayName: 'npm run test'
   
+- task: PublishTestResults@2
+  condition: succeededOrFailed()
+  inputs:
+    testRunner: JUnit
+    testResultsFiles: './coverage/junit.xml'
+
+- task: PublishCodeCoverageResults@1
+  inputs: 
+    summaryFileLocation: './clover.xml'
+    reportDirectory: './coverage'

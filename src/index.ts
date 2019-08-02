@@ -6,19 +6,22 @@
 
 import Assertion from './Assertion';
 import EnsuresDecorator from './EnsuresDecorator';
-import RequiresDecorator from './RequiresDecorator';
+import InvariantDecorator from './InvariantDecorator';
 import OverrideDecorator from './OverrideDecorator';
+import RequiresDecorator from './RequiresDecorator';
 
 export default class Contracts {
     assert: typeof Assertion.prototype.assert;
     ensures: typeof EnsuresDecorator.prototype.ensures;
-    requires: typeof RequiresDecorator.prototype.requires;
+    invariant: typeof InvariantDecorator.prototype.invariant;
     override: typeof OverrideDecorator.prototype.override;
+    requires: typeof RequiresDecorator.prototype.requires;
 
     constructor(protected debugMode: boolean) {
         this.assert = new Assertion(debugMode).assert;
         this.ensures = new EnsuresDecorator(debugMode).ensures;
-        this.requires = new RequiresDecorator(debugMode).requires;
+        this.invariant = new InvariantDecorator(debugMode).invariant;
         this.override = new OverrideDecorator(debugMode).override;
+        this.requires = new RequiresDecorator(debugMode).requires;
     }
 }
