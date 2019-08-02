@@ -11,7 +11,7 @@
     "clean-full": "rimraf dist && rimraf .cache && rimraf node_modules",
     "prelint": "npm run type-check",
     "lint": "tslint --project tsconfig.json --fix -e \"node_modules\"",
-    "test": "jest",
+    "test": "jest --coverage",
     "type-check": "tsc -p tsconfig.json --noEmit"
   },
   "repository": {
