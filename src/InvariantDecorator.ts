@@ -7,8 +7,10 @@
 import Assertion from './Assertion';
 
 /**
- * The invariant decorator is an assertion of conditions that must be maintained by all members of a class.
- * This condition is checked after the associated class is constructed and also before and after every method execution.
+ * The invariant decorator is an assertion of conditions that must be maintained
+ * by all members of a class. This condition is checked after the associated
+ * class is constructed, before and after every method execution, and before
+ * and after every property assignment
  */
 export default class InvariantDecorator {
     protected _assert: typeof Assertion.prototype.assert;
@@ -24,53 +26,42 @@ export default class InvariantDecorator {
         let assert = this._assert,
             debugMode = this.debugMode;
 
-        return function<T extends new(...args: any[]) => {}>(Constructor: T) {
-            if(!debugMode) {
-                return Constructor;
-            }
-            let InvariantClass = class extends Constructor {
-                constructor(...args: any[]) {
-                    super(...args);
-                    assert(fnCondition(this as any), message);
-                }
-            };
-
-            // Decorate every
-            const props = Object.getOwnPropertyDescriptors(Constructor.prototype);
-            Object.entries(props).filter(([key, _]: [string, PropertyDescriptor]) => {
-                return key !== 'constructor';
-            }).forEach(([_key, descriptor]: [string, PropertyDescriptor]) => {
-                let {value, get, set} = descriptor;
-
-                if(value != undefined) {
-                    descriptor.value = function (this: Self, ...args: any[]) {
-                        assert(fnCondition(this), message);
-                        let result = value.apply(this, args);
-                        assert(fnCondition(this), message);
+        const invariantHandler = {
+            get(target: any, prop: any) {
+                let feature = target[prop];
+                if(typeof feature == 'function') {
+                    return function() {
+                        assert(fnCondition(target), message);
+                        let result = feature.apply(target, arguments);
+                        assert(fnCondition(target), message);
 
                         return result;
                     };
                 } else {
-                    if(get != undefined) {
-                        descriptor.get = function(this: Self) {
-                            assert(fnCondition(this), message);
-                            let result = get!.apply(this);
-                            assert(fnCondition(this), message);
-
-                            return result;
-                        };
-                    }
-                    if(set != undefined) {
-                        descriptor.set = function(this: Self, arg: any) {
-                            assert(fnCondition(this), message);
-                            let result = set!.call(this, arg);
-                            assert(fnCondition(this), message);
-
-                            return result;
-                        };
-                    }
+                    return feature;
                 }
-            });
+            },
+            set(target: any, prop: any, value: any) {
+                assert(fnCondition(target), message);
+                target[prop] = value;
+                assert(fnCondition(target), message);
+
+                return true;
+            }
+        };
+
+        return function<T extends new(...args: any[]) => {}>(Constructor: T) {
+            if(!debugMode) {
+                return Constructor;
+            }
+            class InvariantClass extends Constructor {
+                constructor(...args: any[]) {
+                    super(...args);
+                    assert(fnCondition(this as any), message);
+
+                    return new Proxy(this, invariantHandler);
+                }
+            }
 
             return InvariantClass;
         };
