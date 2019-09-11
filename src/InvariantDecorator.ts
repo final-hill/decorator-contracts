@@ -51,10 +51,15 @@ export default class InvariantDecorator {
         };
 
         return function<T extends new(...args: any[]) => {}>(Constructor: T) {
+            // TODO: if invariantRegistry, update and return
+
             if(!debugMode) {
                 return Constructor;
             }
             class InvariantClass extends Constructor {
+                // TODO: requiresRegistry
+                // TODO: rescueRegistry
+                // TODO: ensuresRegistry
                 constructor(...args: any[]) {
                     super(...args);
                     assert(fnCondition(this as any), message);
