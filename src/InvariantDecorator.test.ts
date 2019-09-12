@@ -8,7 +8,7 @@ import AssertionError from './AssertionError';
  *
  * Unit tests for the invariant decorator
  */
-
+// TODO: tie back to requirements. That's what is being tested
 describe('@invariant debug mode', () => {
     let {invariant} = new Contracts(true);
 
