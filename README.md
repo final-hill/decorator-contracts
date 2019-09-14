@@ -8,6 +8,51 @@ TODO:
 
 TODO:
 
+## Usage
+
+### Invariants
+
+The `@invariant` decorator describes and enforces the semantics of a class
+via a provided assertion. This assertion is checked after the associated class
+is constructed, before and after every method execution, and before and after
+every property usage (get/set). An example of this is given below using a 
+Stack:
+
+```typescript
+@invariant((self: Stack<any>) => self.size >= 0 && self.size <= self.maxSize)
+@invariant((self: Stack<any>) => self.isEmpty() == (self.size == 0))
+@invariant((self: Stack<any>) => self.isFull() == (self.size == self.maxSize))
+class Stack<T>{
+    protected _implementation: Array<T> = []
+
+    constructor(readonly maxSize: number) {}
+
+    isEmpty(): boolean {
+        return this._implementation.length == 0
+    }
+
+    isFull(): boolean {
+        return this._implementation.length == this.maxSize
+    }
+
+    pop(): T {
+        return this._implementation.pop()!
+    }
+
+    push(item: T): void {
+        this._implementation.push(item)
+    }
+
+    get size(): number {
+        return this._implementation.length
+    }
+
+    top(): T {
+        return this._implementation[this._implementation.length - 1];
+    }
+}
+```
+
 ## Contributing
 
 Due to current licensing restrictions, contributions are not being accepted currently.

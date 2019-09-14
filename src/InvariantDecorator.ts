@@ -6,9 +6,40 @@
 
 import Assertion from './Assertion';
 
+class InvariantHandler {
+    constructor(
+        protected _assert: typeof Assertion.prototype.assert,
+        protected _predicate: (self: any) => boolean,
+        protected _message: string
+    ) {}
+    protected _decorated(feature: any, target: any) {
+        this._assert(this._predicate(target), this._message);
+        let result = feature.apply(target, arguments);
+        this._assert(this._predicate(target), this._message);
+
+        return result;
+    }
+    get(target: any, prop: any) {
+        let feature = target[prop];
+
+        return typeof feature == 'function' ?
+            this._decorated.bind(this, feature, target) :
+            feature;
+    }
+    set(target: any, prop: any, value: any) {
+        this._assert(this._predicate(target), this._message);
+        target[prop] = value;
+        this._assert(this._predicate(target), this._message);
+
+        return true;
+    }
+}
+
 /**
- * The invariant decorator is an assertion of conditions that must be maintained by all members of a class.
- * This condition is checked after the associated class is constructed and also before and after every method execution.
+ * The `@invariant` decorator describes and enforces the properties of a class
+ * via a provided assertion. This assertion is checked after the associated class
+ * is constructed, before and after every method execution, and before and after
+ * every property usage (get/set).
  */
 export default class InvariantDecorator {
     protected _assert: typeof Assertion.prototype.assert;
@@ -24,53 +55,25 @@ export default class InvariantDecorator {
         let assert = this._assert,
             debugMode = this.debugMode;
 
+        const invariantHandler = new InvariantHandler(assert, fnCondition, message);
+
         return function<T extends new(...args: any[]) => {}>(Constructor: T) {
+            // TODO: if invariantRegistry, update and return
+
             if(!debugMode) {
                 return Constructor;
             }
-            let InvariantClass = class extends Constructor {
+            class InvariantClass extends Constructor {
+                // TODO: requiresRegistry
+                // TODO: rescueRegistry
+                // TODO: ensuresRegistry
                 constructor(...args: any[]) {
                     super(...args);
                     assert(fnCondition(this as any), message);
+
+                    return new Proxy(this, invariantHandler);
                 }
-            };
-
-            // Decorate every
-            const props = Object.getOwnPropertyDescriptors(Constructor.prototype);
-            Object.entries(props).filter(([key, _]: [string, PropertyDescriptor]) => {
-                return key !== 'constructor';
-            }).forEach(([_key, descriptor]: [string, PropertyDescriptor]) => {
-                let {value, get, set} = descriptor;
-
-                if(value != undefined) {
-                    descriptor.value = function (this: Self, ...args: any[]) {
-                        assert(fnCondition(this), message);
-                        let result = value.apply(this, args);
-                        assert(fnCondition(this), message);
-
-                        return result;
-                    };
-                } else {
-                    if(get != undefined) {
-                        descriptor.get = function(this: Self) {
-                            assert(fnCondition(this), message);
-                            let result = get!.apply(this);
-                            assert(fnCondition(this), message);
-
-                            return result;
-                        };
-                    }
-                    if(set != undefined) {
-                        descriptor.set = function(this: Self, arg: any) {
-                            assert(fnCondition(this), message);
-                            let result = set!.call(this, arg);
-                            assert(fnCondition(this), message);
-
-                            return result;
-                        };
-                    }
-                }
-            });
+            }
 
             return InvariantClass;
         };

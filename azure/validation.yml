@@ -18,10 +18,10 @@ steps:
   workingDirectory: ./
   displayName: 'npm install'
 
-- script: |
-    npm audit
-  workingDirectory: ./
-  displayName: 'npm audit'
+#- script: |
+#    npm audit
+#  workingDirectory: ./
+#  displayName: 'npm audit'
 
 - script: |
     npm run build

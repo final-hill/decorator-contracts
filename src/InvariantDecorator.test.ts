@@ -1,18 +1,45 @@
-import Contracts from './';
-import AssertionError from './AssertionError';
-
 /**
  * @license
  * Copyright (C) 2019 Michael L Haufe
  * SPDX-License-Identifier: GPL-2.0-only
  *
- * Unit tests for the @invariant decorator
+ * Unit tests for the invariant decorator
  */
+import Contracts from './';
+import AssertionError from './AssertionError';
 
+/**
+ * Requirement 132
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/132
+ */
+describe('The invariant decorator MUST be class decorator only', () => {
+    let {invariant} = new Contracts(true);
+
+    test('Define invariant', () => {
+        expect(() => {
+            @invariant<Foo>(self => self instanceof Foo)
+            class Foo {}
+
+            return Foo;
+        }).not.toThrow();
+
+        expect(() => {
+            class Foo {
+                // @ts-ignore : Raises a type error as expected.
+                @invariant<Foo>(self => self instanceof Foo)
+                baz() {}
+            }
+
+            return Foo;
+        }).toThrow();
+    });
+});
+
+//TODO
 describe('@invariant debug mode', () => {
-    let {invariant, ensures, requires} = new Contracts(true);
+    let {invariant} = new Contracts(true);
 
-    test('define invariant', () => {
+    test('Construction does not throw', () => {
         expect(() => {
             @invariant<Foo>(self => self instanceof Foo)
             class Foo {}
@@ -21,60 +48,7 @@ describe('@invariant debug mode', () => {
         }).not.toThrow();
     });
 
-    @invariant<Stack<any>>(self => 0 <= self.size() && self.size() <= self.maxSize())
-    @invariant<Stack<any>>(self => self.isEmpty() == (self.size() == 0))
-    class Stack<T> {
-        protected _maxSize: number;
-        protected _implementation: T[] = [];
-
-        constructor(maxSize: number) {
-            this._maxSize = maxSize;
-        }
-
-        isEmpty(): boolean {
-            return this._implementation.length == 0;
-        }
-
-        isFull(): boolean {
-            return this._implementation.length == this._maxSize;
-        }
-
-        maxSize(): number {
-            return this._maxSize;
-        }
-
-        @requires<Stack<T>>(self => !self.isEmpty())
-        @ensures<Stack<T>>(self => !self.isFull())
-        //TODO: @ensures<Stack<T>>(self => self.size() == oldSelf.size() - 1)
-        pop(): T {
-            return this._implementation.pop()!;
-        }
-
-        @requires<Stack<T>>(self => !self.isFull())
-        @ensures<Stack<T>>(self => !self.isEmpty())
-        // TODO: @ensures<Stack<T>>(self => self.top() === item)
-        push(item: T) {
-            this._implementation.push(item);
-        }
-
-        size(): number {
-            return this._implementation.length;
-        }
-
-        @requires<Stack<T>>(self => !self.isEmpty())
-        top() {
-            return this._implementation[this._implementation.length - 1];
-        }
-    }
-
-    test('Construction does not throw', () => {
-        expect(() => {
-            let myStack = new Stack<number>(5);
-            myStack.push(3);
-        }).not.toThrow();
-    });
-
-    test('Falsey invariant throws', () => {
+    test('Falsey invariant throws on construction', () => {
         @invariant(self => self instanceof Array)
         class Foo {}
 
@@ -82,12 +56,104 @@ describe('@invariant debug mode', () => {
             return new Foo();
         }).toThrow(AssertionError);
     });
+
+    test('Test getter/setter', () => {
+        @invariant<Foo>(self => self.value >= 0)
+        class Foo {
+            protected _value: number = 0;
+            get value() { return this._value; }
+            set value(value: number) { this._value = value; }
+        }
+
+        let foo = new Foo();
+
+        expect(() => {
+            foo.value = 3;
+        }).not.toThrow(AssertionError);
+
+        expect(() => {
+            foo.value = -1;
+        }).toThrow(AssertionError);
+    });
+
+    test('Test method call', () => {
+        @invariant<Foo>(self => self.value >= 0)
+        class Foo {
+            protected _value: number = 0;
+            get value() { return this._value; }
+            inc() { this._value++; }
+            dec() { this._value--; }
+        }
+
+        let foo = new Foo();
+
+        expect(() => {
+            foo.inc();
+        }).not.toThrow();
+
+        expect(() => {
+            foo.dec();
+        }).not.toThrow();
+
+        expect(() => {
+            foo.dec();
+        }).toThrow(AssertionError);
+    });
+
+    test('Test subclassing', () => {
+        @invariant<Foo>(self => self.value >= 0)
+        class Foo {
+            protected _value: number = 0;
+            get value() { return this._value; }
+            set value(value: number) { this._value = value; }
+            inc() { this._value++; }
+            dec() { this._value--; }
+        }
+
+        class Bar extends Foo {}
+
+        expect(() => {
+            let bar = new Bar();
+            bar.inc();
+            bar.dec();
+        }).not.toThrow();
+
+        expect(() => {
+            let bar = new Bar();
+            bar.dec();
+        }).toThrow(AssertionError);
+
+        expect(() => {
+            let bar = new Bar();
+            bar.value = 3;
+        }).not.toThrow();
+
+        expect(() => {
+            let bar = new Bar();
+
+            return bar.value == 0;
+        }).not.toThrow(AssertionError);
+
+        expect(() => {
+            let bar = new Bar();
+            bar.value = -1;
+        }).toThrow(AssertionError);
+    });
  });
 
 describe('@invariant prod mode', () => {
-    let {invariant, ensures, requires} = new Contracts(false);
+    let {invariant} = new Contracts(false);
 
-    test('define invariant', () => {
+    test('Define invariant', () => {
+        expect(() => {
+            @invariant<Foo>(self => self instanceof Foo)
+            class Foo {}
+
+            return Foo;
+        }).not.toThrow();
+    });
+
+    test('Construction does not throw', () => {
         expect(() => {
             @invariant<Foo>(self => self instanceof Foo)
             class Foo {}
@@ -96,65 +162,95 @@ describe('@invariant prod mode', () => {
         }).not.toThrow();
     });
 
-    @invariant<Stack<any>>(self => 0 <= self.size() && self.size() <= self.maxSize())
-    @invariant<Stack<any>>(self => self.isEmpty() == (self.size() == 0))
-    class Stack<T> {
-        protected _maxSize: number;
-        protected _implementation: T[] = [];
-
-        constructor(maxSize: number) {
-            this._maxSize = maxSize;
-        }
-
-        isEmpty(): boolean {
-            return this._implementation.length == 0;
-        }
-
-        isFull(): boolean {
-            return this._implementation.length == this._maxSize;
-        }
-
-        maxSize(): number {
-            return this._maxSize;
-        }
-
-        @requires<Stack<T>>(self => !self.isEmpty())
-        @ensures<Stack<T>>(self => !self.isFull())
-        //TODO: @ensures<Stack<T>>(self => self.size() == oldSelf.size() - 1)
-        pop(): T {
-            return this._implementation.pop()!;
-        }
-
-        @requires<Stack<T>>(self => !self.isFull())
-        @ensures<Stack<T>>(self => !self.isEmpty())
-        // TODO: @ensures<Stack<T>>(self => self.top() === item)
-        push(item: T) {
-            this._implementation.push(item);
-        }
-
-        size(): number {
-            return this._implementation.length;
-        }
-
-        @requires<Stack<T>>(self => !self.isEmpty())
-        top() {
-            return this._implementation[this._implementation.length - 1];
-        }
-    }
-
-    test('Construction does not throw', () => {
-        expect(() => {
-            let myStack = new Stack<number>(5);
-            myStack.push(3);
-        }).not.toThrow();
-    });
-
-    test('Falsey invariant is a noop', () => {
+    test('Falsey invariant does not throw on construction', () => {
         @invariant(self => self instanceof Array)
         class Foo {}
 
         expect(() => {
             return new Foo();
+        }).not.toThrow(AssertionError);
+    });
+
+    test('Test getter/setter', () => {
+        @invariant<Foo>(self => self.value >= 0)
+        class Foo {
+            protected _value: number = 0;
+            get value() { return this._value; }
+            set value(value: number) { this._value = value; }
+        }
+
+        let foo = new Foo();
+
+        expect(() => {
+            foo.value = 3;
+        }).not.toThrow(AssertionError);
+
+        expect(() => {
+            foo.value = -1;
+        }).not.toThrow(AssertionError);
+    });
+
+    test('Test method call', () => {
+        @invariant<Foo>(self => self.value >= 0)
+        class Foo {
+            protected _value: number = 0;
+            get value() { return this._value; }
+            inc() { this._value++; }
+            dec() { this._value--; }
+        }
+
+        let foo = new Foo();
+
+        expect(() => {
+            foo.inc();
         }).not.toThrow();
+
+        expect(() => {
+            foo.dec();
+        }).not.toThrow();
+
+        expect(() => {
+            foo.dec();
+        }).not.toThrow(AssertionError);
+    });
+
+    test('Test subclassing', () => {
+        @invariant<Foo>(self => self.value >= 0)
+        class Foo {
+            protected _value: number = 0;
+            get value() { return this._value; }
+            set value(value: number) { this._value = value; }
+            inc() { this._value++; }
+            dec() { this._value--; }
+        }
+
+        class Bar extends Foo {}
+
+        expect(() => {
+            let bar = new Bar();
+            bar.inc();
+            bar.dec();
+        }).not.toThrow();
+
+        expect(() => {
+            let bar = new Bar();
+            bar.dec();
+        }).not.toThrow(AssertionError);
+
+        expect(() => {
+            let bar = new Bar();
+            bar.value = 3;
+        }).not.toThrow();
+
+        expect(() => {
+            let bar = new Bar();
+
+            return bar.value == 0;
+        }).not.toThrow(AssertionError);
+
+        expect(() => {
+            let bar = new Bar();
+            bar.value = -1;
+        }).not.toThrow(AssertionError);
     });
 });
