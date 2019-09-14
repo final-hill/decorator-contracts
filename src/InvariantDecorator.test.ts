@@ -1,6 +1,3 @@
-import Contracts from './';
-import AssertionError from './AssertionError';
-
 /**
  * @license
  * Copyright (C) 2019 Michael L Haufe
@@ -8,8 +5,14 @@ import AssertionError from './AssertionError';
  *
  * Unit tests for the invariant decorator
  */
+import Contracts from './';
+import AssertionError from './AssertionError';
 
-describe('@invariant debug mode', () => {
+/**
+ * Requirement 132
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/132
+ */
+describe('The invariant decorator MUST be class decorator only', () => {
     let {invariant} = new Contracts(true);
 
     test('Define invariant', () => {
@@ -19,7 +22,22 @@ describe('@invariant debug mode', () => {
 
             return Foo;
         }).not.toThrow();
+
+        expect(() => {
+            class Foo {
+                // @ts-ignore : Raises a type error as expected.
+                @invariant<Foo>(self => self instanceof Foo)
+                baz() {}
+            }
+
+            return Foo;
+        }).toThrow();
     });
+});
+
+//TODO
+describe('@invariant debug mode', () => {
+    let {invariant} = new Contracts(true);
 
     test('Construction does not throw', () => {
         expect(() => {
