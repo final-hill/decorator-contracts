@@ -43,7 +43,7 @@ steps:
     $tag = Invoke-Expression -Command:$command;
     $package = Get-Content './package.json' -raw | ConvertFrom-Json
     $package.version = $tag.substring(1)
-    $package | ConvertFrom-Json -depth 32 | Set-Content './package.json'
+    $package | ConvertTo-Json -depth 32 | Set-Content './package.json'
   workingDirectory: ./
   displayName: "Populate VERSION"
 
@@ -55,7 +55,7 @@ steps:
 - powershell: |
     $package = Get-Content './package.json' -raw | ConvertFrom-Json
     $package.version = "0.0.0"
-    $package | ConvertFrom-Json -depth 32 | Set-Content './package.json'
+    $package | ConvertTo-Json -depth 32 | Set-Content './package.json'
   workingDirectory: ./
   displayName: "Revert VERSION to default"
 
