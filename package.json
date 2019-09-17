@@ -1,6 +1,6 @@
 {
   "name": "decorator-contracts",
-  "version": "__VERSION__",
+  "version": "0.0.0",
   "description": "Design By Contract for TypeScript and ECMAScript classes",
   "main": "dist/index.js",
   "scripts": {
