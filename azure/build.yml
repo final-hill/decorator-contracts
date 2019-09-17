@@ -1,9 +1,6 @@
 name: Build
 
 trigger:
-  branches:
-    include:
-    - master
   tags:
     include:
       - v*.*.*
