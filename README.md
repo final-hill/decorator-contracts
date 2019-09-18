@@ -6,7 +6,17 @@ TODO:
 
 ## Library Installation
 
-TODO:
+This library is not published to the [npm registry](https://www.npmjs.com/).
+To install this library add the following to your `.npmrc` file:
+
+```text
+@thenewobjective:registry=https://pkgs.dev.azure.com/thenewobjective/decorator-contracts/_packaging/public/npm/registry/
+always-auth=true
+```
+
+Then run the command:
+
+`npm install @thenewobjective/decorator-contracts`
 
 ## Usage
 
@@ -15,8 +25,7 @@ TODO:
 The `@invariant` decorator describes and enforces the semantics of a class
 via a provided assertion. This assertion is checked after the associated class
 is constructed, before and after every method execution, and before and after
-every property usage (get/set). An example of this is given below using a 
-Stack:
+every property usage (get/set). An example of this is given below using a Stack:
 
 ```typescript
 @invariant((self: Stack<any>) => self.size >= 0 && self.size <= self.maxSize)
