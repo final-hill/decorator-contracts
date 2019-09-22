@@ -35,6 +35,86 @@ describe('The invariant decorator MUST be class decorator only', () => {
     });
 });
 
+/**
+ * Requirement 133
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/133
+ */
+describe('There can be multiple invariant decorators assigned to a class', () => {
+    let invariants = [
+        new Contracts(true).invariant,
+        new Contracts(false).invariant
+    ];
+
+    invariants.forEach(invariant => {
+        test('Define multiple invariants', () => {
+            expect(() => {
+                @invariant<Foo>(self => self instanceof Foo)
+                @invariant<Foo>(self => self instanceof Object)
+                class Foo extends Object {}
+
+                return Foo;
+            }).not.toThrow();
+
+            expect(() => {
+                @invariant<Foo>(self => self instanceof Foo)
+                @invariant<Foo>(self => self instanceof Array)
+                class Foo extends Object {}
+
+                return Foo;
+            }).not.toThrow();
+        });
+    });
+
+    test('Constructing with multiple invariants in debug mode', () => {
+        let {invariant} = new Contracts(true);
+
+        expect(() => {
+            @invariant<Foo>(self => self instanceof Foo)
+            @invariant<Foo>(self => self instanceof Object)
+            class Foo extends Object {}
+
+            return new Foo();
+        }).not.toThrow();
+
+        expect(() => {
+            @invariant<Foo>(self => self instanceof Foo)
+            @invariant<Foo>(self => self instanceof Array)
+            class Foo extends Object {}
+
+            return new Foo();
+        }).toThrow(AssertionError);
+
+        // Changing order of invariants
+        expect(() => {
+            @invariant<Foo>(self => self instanceof Array)
+            @invariant<Foo>(self => self instanceof Foo)
+            class Foo extends Object {}
+
+            return new Foo();
+        }).toThrow(AssertionError);
+    });
+
+    test('Constructing with multiple invariants in prod mode', () => {
+        let {invariant} = new Contracts(false);
+
+        expect(() => {
+            @invariant<Foo>(self => self instanceof Foo)
+            @invariant<Foo>(self => self instanceof Object)
+            class Foo extends Object {}
+
+            return new Foo();
+        }).not.toThrow();
+
+        expect(() => {
+            @invariant<Foo>(self => self instanceof Foo)
+            @invariant<Foo>(self => self instanceof Array)
+            class Foo extends Object {}
+
+            return new Foo();
+        }).not.toThrow();
+    });
+});
+
 //TODO
 describe('@invariant debug mode', () => {
     let {invariant} = new Contracts(true);
