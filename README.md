@@ -15,24 +15,24 @@ TODO:
 The `@invariant` decorator describes and enforces the semantics of a class
 via a provided assertion. This assertion is checked after the associated class
 is constructed, before and after every method execution, and before and after
-every property usage (get/set). An example of this is given below using a 
+every property usage (get/set). An example of this is given below using a
 Stack:
 
 ```typescript
-@invariant((self: Stack<any>) => self.size >= 0 && self.size <= self.maxSize)
+@invariant((self: Stack<any>) => self.size >= 0 && self.size <= self.limit)
 @invariant((self: Stack<any>) => self.isEmpty() == (self.size == 0))
-@invariant((self: Stack<any>) => self.isFull() == (self.size == self.maxSize))
+@invariant((self: Stack<any>) => self.isFull() == (self.size == self.limit))
 class Stack<T>{
     protected _implementation: Array<T> = []
 
-    constructor(readonly maxSize: number) {}
+    constructor(readonly limit: number) {}
 
     isEmpty(): boolean {
         return this._implementation.length == 0
     }
 
     isFull(): boolean {
-        return this._implementation.length == this.maxSize
+        return this._implementation.length == this.limit
     }
 
     pop(): T {
@@ -50,6 +50,19 @@ class Stack<T>{
     top(): T {
         return this._implementation[this._implementation.length - 1];
     }
+}
+```
+
+As you'll notice multiple assertions can be assigned. If any of these evaluate to false during class usage, an `AssertionError` will be thrown.
+
+Custom messaging can be associated with each `@invariant` as well:
+
+```typescript
+@invariant((self: Stack<any>) => self.size >= 0 && self.size <= self.limit, "The size of a stack must be between 0 and its limit")
+@invariant((self: Stack<any>) => self.isEmpty() == (self.size == 0), "An empty stack must have a size of 0")
+@invariant((self: Stack<any>) => self.isFull() == (self.size == self.limit), "A full stack must have a size that equals its limit")
+class Stack<T>{
+    //...
 }
 ```
 

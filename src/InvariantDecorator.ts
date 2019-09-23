@@ -5,35 +5,9 @@
  */
 
 import Assertion from './Assertion';
+import {ContractHandler, contractHandler} from './ContractHandler';
 
-class InvariantHandler {
-    constructor(
-        protected _assert: typeof Assertion.prototype.assert,
-        protected _predicate: (self: any) => boolean,
-        protected _message: string
-    ) {}
-    protected _decorated(feature: any, target: any) {
-        this._assert(this._predicate(target), this._message);
-        let result = feature.apply(target, arguments);
-        this._assert(this._predicate(target), this._message);
-
-        return result;
-    }
-    get(target: any, prop: any) {
-        let feature = target[prop];
-
-        return typeof feature == 'function' ?
-            this._decorated.bind(this, feature, target) :
-            feature;
-    }
-    set(target: any, prop: any, value: any) {
-        this._assert(this._predicate(target), this._message);
-        target[prop] = value;
-        this._assert(this._predicate(target), this._message);
-
-        return true;
-    }
-}
+type Message = string;
 
 /**
  * The `@invariant` decorator describes and enforces the properties of a class
@@ -49,33 +23,40 @@ export default class InvariantDecorator {
     }
 
     invariant = <Self>(
-        fnCondition: (self: Self) => boolean,
-        message: string = 'Invariant violated'
+        predicate: Predicate<Self>,
+        message: Message = 'Invariant violated'
     ) => {
         let assert = this._assert,
             debugMode = this.debugMode;
 
-        const invariantHandler = new InvariantHandler(assert, fnCondition, message);
-
         return function<T extends new(...args: any[]) => {}>(Constructor: T) {
-            // TODO: if invariantRegistry, update and return
-
             if(!debugMode) {
                 return Constructor;
             }
-            class InvariantClass extends Constructor {
-                // TODO: requiresRegistry
-                // TODO: rescueRegistry
-                // TODO: ensuresRegistry
-                constructor(...args: any[]) {
-                    super(...args);
-                    assert(fnCondition(this as any), message);
 
-                    return new Proxy(this, invariantHandler);
+            let hasHandler = Object.getOwnPropertySymbols(Constructor.prototype).includes(contractHandler);
+            if(hasHandler) {
+                let handler: ContractHandler = Constructor.prototype[contractHandler];
+                handler.addInvariant(predicate, message);
+
+                return Constructor;
+            } else {
+                let handler = new ContractHandler(assert);
+                handler.addInvariant(predicate, message);
+
+                class InvariantClass extends Constructor {
+                    [contractHandler] = handler;
+
+                    constructor(...args: any[]) {
+                        super(...args);
+                        this[contractHandler].assertInvariants(this);
+
+                        return new Proxy(this, handler);
+                    }
                 }
-            }
 
-            return InvariantClass;
+                return InvariantClass;
+            }
         };
     }
 }
