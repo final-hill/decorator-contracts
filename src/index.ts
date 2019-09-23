@@ -6,13 +6,19 @@
 
 import Assertion from './Assertion';
 import EnsuresDecorator from './EnsuresDecorator';
-import InvariantDecorator from './InvariantDecorator';
+import InvariantDecorator, { IInvariantDecorator } from './InvariantDecorator';
 import OverrideDecorator from './OverrideDecorator';
 import RequiresDecorator from './RequiresDecorator';
 
-export default class Contracts {
+export default class Contracts implements IInvariantDecorator {
     assert: typeof Assertion.prototype.assert;
     ensures: typeof EnsuresDecorator.prototype.ensures;
+
+    //invariant<Self>(predicate: Predicate<Self>, message?: string | undefined);
+    //invariant<Self>(...predicate: Predicate<Self>[]);
+    //invariant(predicate?: any, message?: any, ...rest?: any[]) {
+    //    throw new Error("Method not implemented.");
+    //}
     invariant: typeof InvariantDecorator.prototype.invariant;
     override: typeof OverrideDecorator.prototype.override;
     requires: typeof RequiresDecorator.prototype.requires;

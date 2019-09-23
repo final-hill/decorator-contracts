@@ -9,13 +9,19 @@ import {ContractHandler, contractHandler} from './ContractHandler';
 
 type Message = string;
 
+export interface IInvariantDecorator {
+    // FIXME: return type
+    invariant<Self>(predicate: Predicate<Self>, message?: string): any
+    invariant<Self>(...predicate: Predicate<Self>[]): any
+}
+
 /**
  * The `@invariant` decorator describes and enforces the properties of a class
  * via a provided assertion. This assertion is checked after the associated class
  * is constructed, before and after every method execution, and before and after
  * every property usage (get/set).
  */
-export default class InvariantDecorator {
+export default class InvariantDecorator implements IInvariantDecorator {
     protected _assert: typeof Assertion.prototype.assert;
 
     constructor(protected debugMode: boolean) {
@@ -29,7 +35,7 @@ export default class InvariantDecorator {
         let assert = this._assert,
             debugMode = this.debugMode;
 
-        return function<T extends new(...args: any[]) => {}>(Constructor: T) {
+        return function<T extends Constructor<any>>(Constructor: T) {
             if(!debugMode) {
                 return Constructor;
             }
