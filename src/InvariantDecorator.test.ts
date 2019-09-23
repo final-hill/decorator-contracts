@@ -112,6 +112,15 @@ describe('There can be multiple invariant decorators assigned to a class', () =>
 
             return new Foo();
         }).not.toThrow();
+
+        // Changing order of invariants
+        expect(() => {
+            @invariant<Foo>(self => self instanceof Array)
+            @invariant<Foo>(self => self instanceof Foo)
+            class Foo extends Object {}
+
+            return new Foo();
+        }).not.toThrow(AssertionError);
     });
 });
 
