@@ -337,6 +337,20 @@ describe('An invariant is evaluated before and after every method call on the as
 });
 
 /**
+ * Requirement 146
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/146
+ */
+describe('The invariant decorator has a debug mode and production mode', () => {
+    test('init debug mode', () => {
+        expect(new Contracts(true).invariant).toBeDefined();
+    });
+
+    test('init prod mode', () => {
+        expect(new Contracts(false).invariant).toBeDefined();
+    });
+});
+
+/**
  * Requirement 148
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/148
  */
