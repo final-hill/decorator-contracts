@@ -351,6 +351,64 @@ describe('The invariant decorator has a debug mode and production mode', () => {
 });
 
 /**
+ * Requirement 147
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/147
+ */
+describe('In debug mode the invariant decorator evaluates its assertions', () => {
+    test('Construction throws in debugMode', () => {
+        let {invariant} = new Contracts(true);
+
+        expect(() => {
+            @invariant<Foo>(self => self instanceof Array)
+            class Foo {}
+
+            return new Foo();
+        }).toThrow(AssertionError);
+    });
+
+    test('Method throws in debugMode', () => {
+        let {invariant} = new Contracts(true);
+
+        expect(() => {
+            @invariant<Foo>(self => self.value === 37)
+            class Foo {
+                protected value: number = 37;
+
+                dec() { this.value--; }
+                inc() { this.value++; }
+            }
+
+            let foo = new Foo();
+            foo.inc();
+            foo.dec();
+
+            return foo;
+        }).toThrow(AssertionError);
+    });
+
+    test('Test getter/setter', () => {
+        let {invariant} = new Contracts(true);
+
+        @invariant<Foo>(self => self.value >= 0)
+        class Foo {
+            protected _value: number = 0;
+            get value() { return this._value; }
+            set value(value: number) { this._value = value; }
+        }
+
+        let foo = new Foo();
+
+        expect(() => {
+            foo.value = 3;
+        }).not.toThrow(AssertionError);
+
+        expect(() => {
+            foo.value = -1;
+        }).toThrow(AssertionError);
+    });
+});
+
+/**
  * Requirement 148
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/148
  */
@@ -388,25 +446,6 @@ describe('In production mode the invariant decorator does not evaluate its asser
 //TODO
 describe('@invariant debug mode', () => {
     let {invariant} = new Contracts(true);
-
-    test('Test getter/setter', () => {
-        @invariant<Foo>(self => self.value >= 0)
-        class Foo {
-            protected _value: number = 0;
-            get value() { return this._value; }
-            set value(value: number) { this._value = value; }
-        }
-
-        let foo = new Foo();
-
-        expect(() => {
-            foo.value = 3;
-        }).not.toThrow(AssertionError);
-
-        expect(() => {
-            foo.value = -1;
-        }).toThrow(AssertionError);
-    });
 
     test('Test subclassing', () => {
         @invariant<Foo>(self => self.value >= 0)
