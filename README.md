@@ -10,19 +10,46 @@ TODO:
 
 ## Usage
 
+After installation the library can be imported as such:
+
+```typescript
+import Contracts from '@thenewobjective/decorator-contracts';
+```
+
+It is not enough to import the library though, there are two modes of usage:
+`debug` and `production`. This is represented as a boolean argument to the
+`Contracts` constructor.
+
+debug mode: `true`
+
+production mode: `false`
+
+```typescript
+let {invariant} = new Contracts(true);
+```
+
+During development and testing you will want to use debug mode. This will
+enable all assertion checks. In production mode all assertion checks become
+no-ops for run-time efficiency. As the number of contract definitions can
+be numerous, using the appropriate mode becomes increasingly important.
+
+You are not prevented from mixing modes in the event you desire you maintain
+a number of checks in a production library.
+
 ### Invariants
 
 The `@invariant` decorator describes and enforces the semantics of a class
 via a provided assertion. This assertion is checked after the associated class
 is constructed, before and after every method execution, and before and after
-every property usage (get/set). An example of this is given below using a
-Stack:
+every property usage (get/set). If any of these evaluate to false during class
+usage, an `AssertionError` will be thrown. Truthy assertions do not throw an
+error. An example of this is given below using a Stack:
 
 ```typescript
 @invariant((self: Stack<any>) => self.size >= 0 && self.size <= self.limit)
 @invariant((self: Stack<any>) => self.isEmpty() == (self.size == 0))
 @invariant((self: Stack<any>) => self.isFull() == (self.size == self.limit))
-class Stack<T>{
+class Stack<T> {
     protected _implementation: Array<T> = []
 
     constructor(readonly limit: number) {}
@@ -53,16 +80,13 @@ class Stack<T>{
 }
 ```
 
-As you'll notice multiple assertions can be assigned. If any of these evaluate to false during class usage, an `AssertionError` will be thrown.
-Truthy assertions are a no-op and have no side-effects.
-
 Custom messaging can be associated with each `@invariant` as well:
 
 ```typescript
 @invariant((self: Stack<any>) => self.size >= 0 && self.size <= self.limit, "The size of a stack must be between 0 and its limit")
 @invariant((self: Stack<any>) => self.isEmpty() == (self.size == 0), "An empty stack must have a size of 0")
 @invariant((self: Stack<any>) => self.isFull() == (self.size == self.limit), "A full stack must have a size that equals its limit")
-class Stack<T>{
+class Stack<T> {
     //...
 }
 ```
