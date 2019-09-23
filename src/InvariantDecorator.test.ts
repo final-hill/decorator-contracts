@@ -165,6 +165,51 @@ describe('A truthy invariant does not throw an exception when evaluated', () => 
 });
 
 /**
+ * Requirement 137
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/137
+ */
+describe('An invariant is evaluated after it\'s associated class is constructed', () => {
+    test('truthy construction does not throw in debug and prod mode', () => {
+        let invariants = [
+            new Contracts(true).invariant,
+            new Contracts(false).invariant
+        ];
+
+        invariants.forEach(invariant => {
+            expect(() => {
+                @invariant<Foo>(self => self instanceof Foo)
+                class Foo {}
+
+                return new Foo();
+            }).not.toThrow();
+        });
+    });
+
+    test('falsy construction throws in debug mode', () => {
+        let {invariant} = new Contracts(true);
+
+        expect(() => {
+            @invariant<Foo>(self => self instanceof Array)
+            class Foo {}
+
+            return new Foo();
+        }).toThrow();
+    });
+
+    test('falsy construction does not throw in prod mode', () => {
+        let {invariant} = new Contracts(false);
+
+        expect(() => {
+            @invariant<Foo>(self => self instanceof Array)
+            class Foo {}
+
+            return new Foo();
+        }).not.toThrow();
+    });
+
+});
+
+/**
  * Requirement 148
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/148
  */
