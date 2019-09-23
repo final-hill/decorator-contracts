@@ -164,6 +164,41 @@ describe('A truthy invariant does not throw an exception when evaluated', () => 
     });
 });
 
+/**
+ * Requirement 148
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/148
+ */
+describe('In production mode the invariant decorator does not evaluate its assertions', () => {
+    let {invariant} = new Contracts(false);
+
+    test('Construction does not throw', () => {
+        expect(() => {
+            @invariant<Foo>(self => self instanceof Array)
+            class Foo {}
+
+            return new Foo();
+        }).not.toThrow();
+    });
+
+    test('Method does not throw', () => {
+        expect(() => {
+            @invariant<Foo>(self => self.value === 42)
+            class Foo {
+                protected value: number = 0;
+
+                dec() { this.value--; }
+                inc() { this.value++; }
+            }
+
+            let foo = new Foo();
+            foo.inc();
+            foo.dec();
+
+            return foo;
+        }).not.toThrow();
+    });
+});
+
 //TODO
 describe('@invariant debug mode', () => {
     let {invariant} = new Contracts(true);
