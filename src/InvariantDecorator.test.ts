@@ -279,6 +279,64 @@ describe('An invariant is evaluated after it\'s associated class is constructed'
 });
 
 /**
+ * Requirement 138
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/138
+ */
+describe('An invariant is evaluated before and after every method call on the associated class', () => {
+    test('Test method call in debugMode', () => {
+        let {invariant} = new Contracts(true);
+
+        @invariant<Foo>(self => self.value >= 0)
+        class Foo {
+            protected _value: number = 0;
+            get value() { return this._value; }
+            inc() { this._value++; }
+            dec() { this._value--; }
+        }
+
+        let foo = new Foo();
+
+        expect(() => {
+            foo.inc();
+        }).not.toThrow();
+
+        expect(() => {
+            foo.dec();
+        }).not.toThrow();
+
+        expect(() => {
+            foo.dec();
+        }).toThrow(AssertionError);
+    });
+
+    test('Test method call in prodMode', () => {
+        let {invariant} = new Contracts(false);
+
+        @invariant<Foo>(self => self.value >= 0)
+        class Foo {
+            protected _value: number = 0;
+            get value() { return this._value; }
+            inc() { this._value++; }
+            dec() { this._value--; }
+        }
+
+        let foo = new Foo();
+
+        expect(() => {
+            foo.inc();
+        }).not.toThrow();
+
+        expect(() => {
+            foo.dec();
+        }).not.toThrow();
+
+        expect(() => {
+            foo.dec();
+        }).toThrow(AssertionError);
+    });
+});
+
+/**
  * Requirement 148
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/148
  */
@@ -336,30 +394,6 @@ describe('@invariant debug mode', () => {
         }).toThrow(AssertionError);
     });
 
-    test('Test method call', () => {
-        @invariant<Foo>(self => self.value >= 0)
-        class Foo {
-            protected _value: number = 0;
-            get value() { return this._value; }
-            inc() { this._value++; }
-            dec() { this._value--; }
-        }
-
-        let foo = new Foo();
-
-        expect(() => {
-            foo.inc();
-        }).not.toThrow();
-
-        expect(() => {
-            foo.dec();
-        }).not.toThrow();
-
-        expect(() => {
-            foo.dec();
-        }).toThrow(AssertionError);
-    });
-
     test('Test subclassing', () => {
         @invariant<Foo>(self => self.value >= 0)
         class Foo {
@@ -404,15 +438,6 @@ describe('@invariant debug mode', () => {
 describe('@invariant prod mode', () => {
     let {invariant} = new Contracts(false);
 
-    test('Falsey invariant does not throw on construction', () => {
-        @invariant(self => self instanceof Array)
-        class Foo {}
-
-        expect(() => {
-            return new Foo();
-        }).not.toThrow(AssertionError);
-    });
-
     test('Test getter/setter', () => {
         @invariant<Foo>(self => self.value >= 0)
         class Foo {
@@ -429,30 +454,6 @@ describe('@invariant prod mode', () => {
 
         expect(() => {
             foo.value = -1;
-        }).not.toThrow(AssertionError);
-    });
-
-    test('Test method call', () => {
-        @invariant<Foo>(self => self.value >= 0)
-        class Foo {
-            protected _value: number = 0;
-            get value() { return this._value; }
-            inc() { this._value++; }
-            dec() { this._value--; }
-        }
-
-        let foo = new Foo();
-
-        expect(() => {
-            foo.inc();
-        }).not.toThrow();
-
-        expect(() => {
-            foo.dec();
-        }).not.toThrow();
-
-        expect(() => {
-            foo.dec();
         }).not.toThrow(AssertionError);
     });
 

@@ -91,6 +91,21 @@ class Stack<T> {
 }
 ```
 
+With the above invariants any attempt to construct an invalid stack will fail:
+
+```typescript
+let myStack = new Stack(-1)
+```
+
+Additionally, attempting to pop an item from an empty stack would be
+nonsensical according to the invariants. Therefore the following will
+throw an AssertionError and prevent pop() from being executed:
+
+```typescript
+let myStack = new Stack(3)
+let item = myStack.pop();
+```
+
 ## Contributing
 
 Due to current licensing restrictions, contributions are not being accepted currently.
