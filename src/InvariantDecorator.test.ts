@@ -165,6 +165,75 @@ describe('A truthy invariant does not throw an exception when evaluated', () => 
 });
 
 /**
+ * Requirement 136
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/136
+ */
+describe('A falsy invariant throws an exception when evaluated', () => {
+
+    test('Construction throws in debugMode', () => {
+        let {invariant} = new Contracts(true);
+
+        expect(() => {
+            @invariant<Foo>(self => self instanceof Array)
+            class Foo {}
+
+            return new Foo();
+        }).toThrow(AssertionError);
+    });
+
+    test('Construction does not throw in production mode', () => {
+        let {invariant} = new Contracts(false);
+
+        expect(() => {
+            @invariant<Foo>(self => self instanceof Array)
+            class Foo {}
+
+            return new Foo();
+        }).not.toThrow();
+    });
+
+    test('Method throws in debugMode', () => {
+        let {invariant} = new Contracts(true);
+
+        expect(() => {
+            @invariant<Foo>(self => self.value === 37)
+            class Foo {
+                protected value: number = 37;
+
+                dec() { this.value--; }
+                inc() { this.value++; }
+            }
+
+            let foo = new Foo();
+            foo.inc();
+            foo.dec();
+
+            return foo;
+        }).toThrow(AssertionError);
+    });
+
+    test('Method does not throw in production mode', () => {
+        let {invariant} = new Contracts(false);
+
+        expect(() => {
+            @invariant<Foo>(self => self.value === 37)
+            class Foo {
+                protected value: number = 37;
+
+                dec() { this.value--; }
+                inc() { this.value++; }
+            }
+
+            let foo = new Foo();
+            foo.inc();
+            foo.dec();
+
+            return foo;
+        }).not.toThrow();
+    });
+});
+
+/**
  * Requirement 137
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/137
  */
@@ -247,15 +316,6 @@ describe('In production mode the invariant decorator does not evaluate its asser
 //TODO
 describe('@invariant debug mode', () => {
     let {invariant} = new Contracts(true);
-
-    test('Falsey invariant throws on construction', () => {
-        @invariant(self => self instanceof Array)
-        class Foo {}
-
-        expect(() => {
-            return new Foo();
-        }).toThrow(AssertionError);
-    });
 
     test('Test getter/setter', () => {
         @invariant<Foo>(self => self.value >= 0)
@@ -343,24 +403,6 @@ describe('@invariant debug mode', () => {
 
 describe('@invariant prod mode', () => {
     let {invariant} = new Contracts(false);
-
-    test('Define invariant', () => {
-        expect(() => {
-            @invariant<Foo>(self => self instanceof Foo)
-            class Foo {}
-
-            return Foo;
-        }).not.toThrow();
-    });
-
-    test('Construction does not throw', () => {
-        expect(() => {
-            @invariant<Foo>(self => self instanceof Foo)
-            class Foo {}
-
-            return new Foo();
-        }).not.toThrow();
-    });
 
     test('Falsey invariant does not throw on construction', () => {
         @invariant(self => self instanceof Array)
