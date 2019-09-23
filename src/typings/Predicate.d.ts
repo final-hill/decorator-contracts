@@ -1,0 +1,1 @@
+type Predicate<T> = (ctx: T) => boolean
