@@ -9,7 +9,7 @@ import Assertion from './Assertion';
 const contractHandler = Symbol('Contract handler');
 
 /**
- *
+ * The ContractHandler manages the registraction and evaluation of contracts associated with a class
  */
 class ContractHandler {
     protected _assert: typeof Assertion.prototype.assert;
@@ -20,8 +20,8 @@ class ContractHandler {
     // TODO: ensuresRegistry
 
     /**
-     *
-     * @param _assert
+     * Constructs a new instance of the ContractHandler
+     * @param _assert - The assertion implementation associated with the current debugMode
      */
     constructor(
         protected assert: typeof Assertion.prototype.assert
@@ -30,6 +30,7 @@ class ContractHandler {
     }
 
     /**
+     * Wraps a method with invariant assertions
      *
      * @param feature
      * @param target
@@ -43,9 +44,10 @@ class ContractHandler {
     }
 
     /**
+     * Registers a new invariant contract
      *
-     * @param predicate
-     * @param message
+     * @param predicate - The invariant predicate
+     * @param message - The custome error message
      */
     addInvariant(
         predicate: Predicate<any>,
@@ -56,9 +58,9 @@ class ContractHandler {
     }
 
     /**
+     * Evaluates all registered invariants
      *
-     * @param self
-     * @param args
+     * @param self - The context class
      */
     assertInvariants(self: any) {
         this._invariantRegistry.forEach((message, predicate) => {
@@ -67,9 +69,10 @@ class ContractHandler {
     }
 
     /**
+     * The handler trap for getting property values
      *
-     * @param target
-     * @param prop
+     * @param target - The target object
+     * @param prop - The name or Symbol  of the property to get
      */
     get(target: any, prop: any) {
         let feature = target[prop];
@@ -81,10 +84,11 @@ class ContractHandler {
     }
 
     /**
+     * The handler trap for setting property values
      *
-     * @param target
-     * @param prop
-     * @param value
+     * @param target - The target object
+     * @param prop - The name or Symbol  of the property to set
+     * @param value - The new value of the property to set.
      */
     set(target: any, prop: any, value: any) {
         this.assertInvariants(target);
