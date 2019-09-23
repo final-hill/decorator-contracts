@@ -124,18 +124,49 @@ describe('There can be multiple invariant decorators assigned to a class', () =>
     });
 });
 
+/**
+ * Requirement 135
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/135
+ */
+describe('A truthy invariant does not throw an exception when evaluated', () => {
+    let invariants = [
+        new Contracts(true).invariant,
+        new Contracts(false).invariant
+    ];
+
+    invariants.forEach(invariant => {
+        test('Construction does not throw', () => {
+            expect(() => {
+                @invariant<Foo>(self => self instanceof Foo)
+                class Foo {}
+
+                return new Foo();
+            }).not.toThrow();
+        });
+
+        test('Method does not throw', () => {
+            expect(() => {
+                @invariant<Foo>(self => self.value >= 0)
+                class Foo {
+                    protected value: number = 0;
+
+                    dec() { this.value--; }
+                    inc() { this.value++; }
+                }
+
+                let foo = new Foo();
+                foo.inc();
+                foo.dec();
+
+                return foo;
+            }).not.toThrow();
+        });
+    });
+});
+
 //TODO
 describe('@invariant debug mode', () => {
     let {invariant} = new Contracts(true);
-
-    test('Construction does not throw', () => {
-        expect(() => {
-            @invariant<Foo>(self => self instanceof Foo)
-            class Foo {}
-
-            return new Foo();
-        }).not.toThrow();
-    });
 
     test('Falsey invariant throws on construction', () => {
         @invariant(self => self instanceof Array)

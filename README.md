@@ -54,6 +54,7 @@ class Stack<T>{
 ```
 
 As you'll notice multiple assertions can be assigned. If any of these evaluate to false during class usage, an `AssertionError` will be thrown.
+Truthy assertions are a no-op and have no side-effects.
 
 Custom messaging can be associated with each `@invariant` as well:
 
