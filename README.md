@@ -127,11 +127,10 @@ To build and test this library locally you will need the following:
 | `build-types` | Generates type definitions for the library in the `dist` folder                                          |
 | `clean`       | deletes the `dist` folder                                                                                |
 | `clean-full`  | deletes the `dist`, `node_modules`,  and `.cache` folders                                                |
+| `debug`       | Starts debugger                                                                                          |
 | `lint`        | Performs linting and type checking of the library                                                        |
 | `test`        | Executes unit tests                                                                                      |
 | `type-check`  | Performs type checking                                                                                   |
-
-## Debugging
 
 ## Dependencies
 
