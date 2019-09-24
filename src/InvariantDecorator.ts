@@ -8,12 +8,7 @@ import Assertion from './Assertion';
 import {ContractHandler, contractHandler} from './ContractHandler';
 
 type Message = string;
-
-export interface IInvariantDecorator {
-    // FIXME: return type
-    invariant<Self>(predicate: Predicate<Self>, message?: string): any
-    invariant<Self>(...predicate: Predicate<Self>[]): any
-}
+type ClassDecorator = <T extends Constructor<any>>(Constructor: T) => T;
 
 /**
  * The `@invariant` decorator describes and enforces the properties of a class
@@ -21,19 +16,20 @@ export interface IInvariantDecorator {
  * is constructed, before and after every method execution, and before and after
  * every property usage (get/set).
  */
-export default class InvariantDecorator implements IInvariantDecorator {
+export default class InvariantDecorator {
     protected _assert: typeof Assertion.prototype.assert;
 
     constructor(protected debugMode: boolean) {
         this._assert = new Assertion(debugMode).assert;
+        this.invariant = this.invariant.bind(this);
     }
 
-    invariant = <Self>(
-        predicate: Predicate<Self>,
-        message: Message = 'Invariant violated'
-    ) => {
+    invariant<Self>(predicate: Predicate<Self>, message?: Message): ClassDecorator;
+    invariant<Self>(...predicate: Predicate<Self>[]): ClassDecorator;
+    invariant<Self>(predicate: Predicate<Self>, message?: any, ...rest: Predicate<Self>[]): ClassDecorator {
         let assert = this._assert,
-            debugMode = this.debugMode;
+            debugMode = this.debugMode,
+            defaultMessage = 'Invariant violated';
 
         return function<T extends Constructor<any>>(Constructor: T) {
             if(!debugMode) {
@@ -43,7 +39,16 @@ export default class InvariantDecorator implements IInvariantDecorator {
             let hasHandler = Object.getOwnPropertySymbols(Constructor.prototype).includes(contractHandler);
             if(hasHandler) {
                 let handler: ContractHandler = Constructor.prototype[contractHandler];
-                handler.addInvariant(predicate, message);
+                if(typeof message == 'string') {
+                    handler.addInvariant(predicate, message);
+                } else if(message == undefined) {
+                    handler.addInvariant(predicate, 'Invariant violated');
+                } else if(typeof message == 'function') {
+                    let rs = rest == undefined ? [] : rest;
+                    [predicate, message, ...rs].forEach(pred => {
+                        handler.addInvariant(pred, defaultMessage);
+                    });
+                }
 
                 return Constructor;
             } else {

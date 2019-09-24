@@ -6,19 +6,19 @@
 
 import Assertion from './Assertion';
 import EnsuresDecorator from './EnsuresDecorator';
-import InvariantDecorator, { IInvariantDecorator } from './InvariantDecorator';
+import InvariantDecorator from './InvariantDecorator';
 import OverrideDecorator from './OverrideDecorator';
 import RequiresDecorator from './RequiresDecorator';
 
-export default class Contracts implements IInvariantDecorator {
+export default class Contracts {
     assert: typeof Assertion.prototype.assert;
     ensures: typeof EnsuresDecorator.prototype.ensures;
-
-    //invariant<Self>(predicate: Predicate<Self>, message?: string | undefined);
-    //invariant<Self>(...predicate: Predicate<Self>[]);
-    //invariant(predicate?: any, message?: any, ...rest?: any[]) {
-    //    throw new Error("Method not implemented.");
-    //}
+    /**
+     * The `@invariant` decorator describes and enforces the properties of a class
+     * via a provided assertion. This assertion is checked after the associated class
+     * is constructed, before and after every method execution, and before and after
+     * every property usage (get/set).
+     */
     invariant: typeof InvariantDecorator.prototype.invariant;
     override: typeof OverrideDecorator.prototype.override;
     requires: typeof RequiresDecorator.prototype.requires;
