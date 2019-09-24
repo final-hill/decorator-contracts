@@ -101,6 +101,21 @@ class Stack<T> {
 }
 ```
 
+Declaring multiple invariants in this style is terribly verbose. A shorthand is also available.
+
+Without messaging:
+
+```typescript
+@invariant<Stack<any>>(
+    self => self.size >= 0 && self.size <= self.limit,
+    self => self.isEmpty() == (self.size == 0),
+    self => self.isFull() == (self.size == self.limit)
+)
+class Stack<T> {
+    //...
+}
+```
+
 With the above invariants any attempt to construct an invalid stack will fail:
 
 ```typescript

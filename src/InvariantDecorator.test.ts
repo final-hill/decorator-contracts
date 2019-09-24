@@ -332,7 +332,7 @@ describe('An invariant is evaluated before and after every method call on the as
 
         expect(() => {
             foo.dec();
-        }).toThrow(AssertionError);
+        }).not.toThrow();
     });
 });
 
@@ -441,6 +441,57 @@ describe('In production mode the invariant decorator does not evaluate its asser
             return foo;
         }).not.toThrow();
     });
+});
+
+/**
+ * Requirement 163
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/163
+ */
+describe('An invariant decorator must accept multiple assertions', () => {
+
+    test('invariant declaration in debug mode', () => {
+        let {invariant} = new Contracts(true);
+
+        expect(() => {
+            @invariant<Stack<any>>(
+                self => self.size >= 0 && self.size <= self.limit,
+                self => self.isEmpty() == (self.size == 0),
+                self => self.isFull() == (self.size == self.limit)
+            )
+            class Stack<T> {
+                protected _implementation: T[] = [];
+
+                constructor(readonly limit: number) {}
+
+                isEmpty(): boolean {
+                    return this._implementation.length == 0;
+                }
+
+                isFull(): boolean {
+                    return this._implementation.length == this.limit;
+                }
+
+                pop(): T {
+                    return this._implementation.pop()!;
+                }
+
+                push(item: T): void {
+                    this._implementation.push(item);
+                }
+
+                get size(): number {
+                    return this._implementation.length;
+                }
+
+                top(): T {
+                    return this._implementation[this._implementation.length - 1];
+                }
+            }
+
+            return Stack;
+        }).not.toThrow();
+    });
+
 });
 
 //TODO
