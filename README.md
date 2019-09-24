@@ -116,6 +116,19 @@ class Stack<T> {
 }
 ```
 
+With messaging:
+
+```typescript
+@invariant<Stack<any>>([
+    [self => self.size >= 0 && self.size <= self.limit, "The size of a stack must be between 0 and its limit"],
+    [self => self.isEmpty() == (self.size == 0), "An empty stack must have a size of 0"],
+    [self => self.isFull() == (self.size == self.limit), "A full stack must have a size that equals its limit"]
+])
+class Stack<T> {
+    //...
+}
+```
+
 With the above invariants any attempt to construct an invalid stack will fail:
 
 ```typescript
