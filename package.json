@@ -1,5 +1,5 @@
 {
-  "name": "decorator-contracts",
+  "name": "@thenewobjective/decorator-contracts",
   "version": "0.0.0",
   "description": "Design By Contract for TypeScript and ECMAScript classes",
   "main": "dist/index.js",
@@ -9,6 +9,7 @@
     "build-types": "tsc -p tsconfig.json --emitDeclarationOnly --outDir dist",
     "clean": "rimraf dist && rimraf coverage",
     "clean-full": "rimraf dist && rimraf .cache && rimraf node_modules",
+    "debug": "node --debug-brk --inspect ./node_modules/jest/bin/jest -i",
     "prelint": "npm run type-check",
     "lint": "tslint --project tsconfig.json --fix -e \"node_modules\"",
     "test": "jest --coverage",

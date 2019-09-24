@@ -6,7 +6,17 @@ TODO:
 
 ## Library Installation
 
-TODO:
+This library is not published to the [npm registry](https://www.npmjs.com/).
+To install this library add the following to your `.npmrc` file:
+
+```text
+@thenewobjective:registry=https://pkgs.dev.azure.com/thenewobjective/decorator-contracts/_packaging/public/npm/registry/
+always-auth=true
+```
+
+Then run the command:
+
+`npm install @thenewobjective/decorator-contracts`
 
 ## Usage
 
@@ -171,11 +181,10 @@ To build and test this library locally you will need the following:
 | `build-types` | Generates type definitions for the library in the `dist` folder                                          |
 | `clean`       | deletes the `dist` folder                                                                                |
 | `clean-full`  | deletes the `dist`, `node_modules`,  and `.cache` folders                                                |
+| `debug`       | Starts debugger                                                                                          |
 | `lint`        | Performs linting and type checking of the library                                                        |
 | `test`        | Executes unit tests                                                                                      |
 | `type-check`  | Performs type checking                                                                                   |
-
-## Debugging
 
 ## Dependencies
 

@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright (C) 2019 Michael L Haufe
+ * Copyright (C) #{YEAR}# Michael L Haufe
  * SPDX-License-Identifier: GPL-2.0-only
  *
  * Unit tests for the invariant decorator
