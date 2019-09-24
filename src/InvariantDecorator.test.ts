@@ -332,7 +332,7 @@ describe('An invariant is evaluated before and after every method call on the as
 
         expect(() => {
             foo.dec();
-        }).toThrow(AssertionError);
+        }).not.toThrow();
     });
 });
 

@@ -29,7 +29,15 @@ export default class InvariantDecorator {
     invariant<Self>(predicate: Predicate<Self>, message?: any, ...rest: Predicate<Self>[]): ClassDecorator {
         let assert = this._assert,
             debugMode = this.debugMode,
-            defaultMessage = 'Invariant violated';
+            defaultMessage = 'Invariant violated',
+            rs = rest == undefined ? [] : rest;
+
+        let invariants: [Predicate<Self>, Message][] =
+            typeof message == 'string' ? [[predicate, message]] :
+            message == undefined ? [[predicate, defaultMessage]] :
+            typeof message == 'function' ? [
+                predicate, message, ...rs
+            ].map(pred => [pred, defaultMessage]) : [];
 
         return function<T extends Constructor<any>>(Constructor: T) {
             if(!debugMode) {
@@ -37,25 +45,16 @@ export default class InvariantDecorator {
             }
 
             let hasHandler = Object.getOwnPropertySymbols(Constructor.prototype).includes(contractHandler);
+            let handler = hasHandler ?
+                Constructor.prototype[contractHandler] :
+                new ContractHandler(assert);
+            invariants.forEach(([pred, message]) => {
+                handler.addInvariant(pred, message);
+            });
             if(hasHandler) {
-                let handler: ContractHandler = Constructor.prototype[contractHandler];
-                if(typeof message == 'string') {
-                    handler.addInvariant(predicate, message);
-                } else if(message == undefined) {
-                    handler.addInvariant(predicate, 'Invariant violated');
-                } else if(typeof message == 'function') {
-                    let rs = rest == undefined ? [] : rest;
-                    [predicate, message, ...rs].forEach(pred => {
-                        handler.addInvariant(pred, defaultMessage);
-                    });
-                }
-
                 return Constructor;
             } else {
-                let handler = new ContractHandler(assert);
-                handler.addInvariant(predicate, message);
-
-                class InvariantClass extends Constructor {
+                return class InvariantClass extends Constructor {
                     [contractHandler] = handler;
 
                     constructor(...args: any[]) {
@@ -64,9 +63,7 @@ export default class InvariantDecorator {
 
                         return new Proxy(this, handler);
                     }
-                }
-
-                return InvariantClass;
+                };
             }
         };
     }
