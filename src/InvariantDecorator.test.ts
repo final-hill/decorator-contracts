@@ -125,6 +125,130 @@ describe('There can be multiple invariant decorators assigned to a class', () =>
 });
 
 /**
+ * Requirement 134
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/134
+ */
+describe('The subclasses of an invariant decorated class must obey the invariant', () => {
+    test('Test subclassing in debug mode', () => {
+        let {invariant} = new Contracts(true);
+
+        @invariant<Foo>(self => self.value >= 0)
+        class Foo {
+            protected _value: number = 0;
+            get value() { return this._value; }
+            set value(value: number) { this._value = value; }
+            inc() { this._value++; }
+            dec() { this._value--; }
+        }
+
+        class Bar extends Foo {}
+
+        expect(() => {
+            let bar = new Bar();
+            bar.inc();
+            bar.dec();
+        }).not.toThrow();
+
+        expect(() => {
+            let bar = new Bar();
+            bar.dec();
+        }).toThrow(AssertionError);
+
+        expect(() => {
+            let bar = new Bar();
+            bar.value = 3;
+        }).not.toThrow();
+
+        expect(() => {
+            let bar = new Bar();
+
+            return bar.value == 0;
+        }).not.toThrow(AssertionError);
+
+        expect(() => {
+            let bar = new Bar();
+            bar.value = -1;
+        }).toThrow(AssertionError);
+
+        // overriding members
+        class Baz extends Foo {
+            get value() { return this._value; }
+            set value(value: number) { this._value = value; }
+            inc() { this._value++; }
+            dec() { this._value--; }
+        }
+
+        expect(() => {
+            let baz = new Baz();
+            baz.inc();
+            baz.dec();
+        }).not.toThrow();
+
+        expect(() => {
+            let baz = new Baz();
+            baz.dec();
+        }).toThrow(AssertionError);
+
+        expect(() => {
+            let baz = new Baz();
+            baz.value = 3;
+        }).not.toThrow();
+
+        expect(() => {
+            let baz = new Baz();
+
+            return baz.value == 0;
+        }).not.toThrow(AssertionError);
+
+        expect(() => {
+            let baz = new Baz();
+            baz.value = -1;
+        }).toThrow(AssertionError);
+    });
+
+    test('Test subclassing in prod mode', () => {
+        let {invariant} = new Contracts(false);
+        @invariant<Foo>(self => self.value >= 0)
+        class Foo {
+            protected _value: number = 0;
+            get value() { return this._value; }
+            set value(value: number) { this._value = value; }
+            inc() { this._value++; }
+            dec() { this._value--; }
+        }
+
+        class Bar extends Foo {}
+
+        expect(() => {
+            let bar = new Bar();
+            bar.inc();
+            bar.dec();
+        }).not.toThrow();
+
+        expect(() => {
+            let bar = new Bar();
+            bar.dec();
+        }).not.toThrow();
+
+        expect(() => {
+            let bar = new Bar();
+            bar.value = 3;
+        }).not.toThrow();
+
+        expect(() => {
+            let bar = new Bar();
+
+            return bar.value == 0;
+        }).not.toThrow(AssertionError);
+
+        expect(() => {
+            let bar = new Bar();
+            bar.value = -1;
+        }).not.toThrow(AssertionError);
+});
+});
+
+/**
  * Requirement 135
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/135
  */
@@ -538,113 +662,5 @@ describe('An invariant decorator must accept multiple assertions', () => {
 
             return Stack;
         }).not.toThrow();
-    });
-});
-
-//TODO
-describe('@invariant debug mode', () => {
-    let {invariant} = new Contracts(true);
-
-    test('Test subclassing', () => {
-        @invariant<Foo>(self => self.value >= 0)
-        class Foo {
-            protected _value: number = 0;
-            get value() { return this._value; }
-            set value(value: number) { this._value = value; }
-            inc() { this._value++; }
-            dec() { this._value--; }
-        }
-
-        class Bar extends Foo {}
-
-        expect(() => {
-            let bar = new Bar();
-            bar.inc();
-            bar.dec();
-        }).not.toThrow();
-
-        expect(() => {
-            let bar = new Bar();
-            bar.dec();
-        }).toThrow(AssertionError);
-
-        expect(() => {
-            let bar = new Bar();
-            bar.value = 3;
-        }).not.toThrow();
-
-        expect(() => {
-            let bar = new Bar();
-
-            return bar.value == 0;
-        }).not.toThrow(AssertionError);
-
-        expect(() => {
-            let bar = new Bar();
-            bar.value = -1;
-        }).toThrow(AssertionError);
-    });
- });
-
-describe('@invariant prod mode', () => {
-    let {invariant} = new Contracts(false);
-
-    test('Test getter/setter', () => {
-        @invariant<Foo>(self => self.value >= 0)
-        class Foo {
-            protected _value: number = 0;
-            get value() { return this._value; }
-            set value(value: number) { this._value = value; }
-        }
-
-        let foo = new Foo();
-
-        expect(() => {
-            foo.value = 3;
-        }).not.toThrow(AssertionError);
-
-        expect(() => {
-            foo.value = -1;
-        }).not.toThrow(AssertionError);
-    });
-
-    test('Test subclassing', () => {
-        @invariant<Foo>(self => self.value >= 0)
-        class Foo {
-            protected _value: number = 0;
-            get value() { return this._value; }
-            set value(value: number) { this._value = value; }
-            inc() { this._value++; }
-            dec() { this._value--; }
-        }
-
-        class Bar extends Foo {}
-
-        expect(() => {
-            let bar = new Bar();
-            bar.inc();
-            bar.dec();
-        }).not.toThrow();
-
-        expect(() => {
-            let bar = new Bar();
-            bar.dec();
-        }).not.toThrow(AssertionError);
-
-        expect(() => {
-            let bar = new Bar();
-            bar.value = 3;
-        }).not.toThrow();
-
-        expect(() => {
-            let bar = new Bar();
-
-            return bar.value == 0;
-        }).not.toThrow(AssertionError);
-
-        expect(() => {
-            let bar = new Bar();
-            bar.value = -1;
-        }).not.toThrow(AssertionError);
     });
 });
