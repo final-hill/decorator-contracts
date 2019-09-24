@@ -26,13 +26,15 @@ export default class InvariantDecorator {
 
     invariant<Self>(predicate: Predicate<Self>, message?: Message): ClassDecorator;
     invariant<Self>(...predicate: Predicate<Self>[]): ClassDecorator;
-    invariant<Self>(predicate: Predicate<Self>, message?: any, ...rest: Predicate<Self>[]): ClassDecorator {
+    invariant<Self>(predicate: [Predicate<Self>, Message][]): ClassDecorator;
+    invariant<Self>(predicate: Predicate<Self> | [Predicate<Self>, Message][], message?: any, ...rest: Predicate<Self>[]): ClassDecorator {
         let assert = this._assert,
             debugMode = this.debugMode,
             defaultMessage = 'Invariant violated',
             rs = rest == undefined ? [] : rest;
 
         let invariants: [Predicate<Self>, Message][] =
+            Array.isArray(predicate) ? predicate :
             typeof message == 'string' ? [[predicate, message]] :
             message == undefined ? [[predicate, defaultMessage]] :
             typeof message == 'function' ? [
