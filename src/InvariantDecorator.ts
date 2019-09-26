@@ -5,35 +5,10 @@
  */
 
 import Assertion from './Assertion';
+import {ContractHandler, contractHandler} from './ContractHandler';
 
-class InvariantHandler {
-    constructor(
-        protected _assert: typeof Assertion.prototype.assert,
-        protected _predicate: (self: any) => boolean,
-        protected _message: string
-    ) {}
-    protected _decorated(feature: any, target: any) {
-        this._assert(this._predicate(target), this._message);
-        let result = feature.apply(target, arguments);
-        this._assert(this._predicate(target), this._message);
-
-        return result;
-    }
-    get(target: any, prop: any) {
-        let feature = target[prop];
-
-        return typeof feature == 'function' ?
-            this._decorated.bind(this, feature, target) :
-            feature;
-    }
-    set(target: any, prop: any, value: any) {
-        this._assert(this._predicate(target), this._message);
-        target[prop] = value;
-        this._assert(this._predicate(target), this._message);
-
-        return true;
-    }
-}
+type Message = string;
+type ClassDecorator = <T extends Constructor<any>>(Constructor: T) => T;
 
 /**
  * The `@invariant` decorator describes and enforces the properties of a class
@@ -46,36 +21,49 @@ export default class InvariantDecorator {
 
     constructor(protected debugMode: boolean) {
         this._assert = new Assertion(debugMode).assert;
+        this.invariant = this.invariant.bind(this);
     }
 
-    invariant = <Self>(
-        fnCondition: (self: Self) => boolean,
-        message: string = 'Invariant violated'
-    ) => {
+    invariant<Self>(predicate: Predicate<Self>, message?: Message): ClassDecorator;
+    invariant<Self>(...predicate: Predicate<Self>[]): ClassDecorator;
+    invariant<Self>(predicate: [Predicate<Self>, Message][]): ClassDecorator;
+    invariant<Self>(predicate: Predicate<Self> | [Predicate<Self>, Message][], message?: any, ...rest: Predicate<Self>[]): ClassDecorator {
         let assert = this._assert,
-            debugMode = this.debugMode;
+            debugMode = this.debugMode,
+            defaultMessage = 'Invariant violated';
 
-        const invariantHandler = new InvariantHandler(assert, fnCondition, message);
+        let invariants: [Predicate<Self>, Message][] =
+            Array.isArray(predicate) ? predicate :
+            typeof message == 'string' ? [[predicate, message]] :
+            message == undefined ? [[predicate, defaultMessage]] :
+            [predicate, message, ...rest].map(pred => [pred, defaultMessage]);
 
-        return function<T extends new(...args: any[]) => {}>(Constructor: T) {
-            // TODO: if invariantRegistry, update and return
-
+        return function<T extends Constructor<any>>(Base: T) {
             if(!debugMode) {
-                return Constructor;
-            }
-            class InvariantClass extends Constructor {
-                // TODO: requiresRegistry
-                // TODO: rescueRegistry
-                // TODO: ensuresRegistry
-                constructor(...args: any[]) {
-                    super(...args);
-                    assert(fnCondition(this as any), message);
-
-                    return new Proxy(this, invariantHandler);
-                }
+                return Base;
             }
 
-            return InvariantClass;
+            let hasHandler = Object.getOwnPropertySymbols(Base).includes(contractHandler);
+            let handler: ContractHandler = hasHandler ?
+                (Base as any)[contractHandler] :
+                new ContractHandler(assert);
+            invariants.forEach(([pred, message]) => {
+                handler.addInvariant(pred, message);
+            });
+            if(hasHandler) {
+                return Base;
+            } else {
+                return class InvariantClass extends Base {
+                    static [contractHandler]: ContractHandler = handler;
+
+                    constructor(...args: any[]) {
+                        super(...args);
+                        InvariantClass[contractHandler].assertInvariants(this);
+
+                        return new Proxy(this, handler);
+                    }
+                };
+            }
         };
     }
 }

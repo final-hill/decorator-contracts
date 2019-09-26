@@ -13,6 +13,12 @@ import RequiresDecorator from './RequiresDecorator';
 export default class Contracts {
     assert: typeof Assertion.prototype.assert;
     ensures: typeof EnsuresDecorator.prototype.ensures;
+    /**
+     * The `@invariant` decorator describes and enforces the properties of a class
+     * via a provided assertion. This assertion is checked after the associated class
+     * is constructed, before and after every method execution, and before and after
+     * every property usage (get/set).
+     */
     invariant: typeof InvariantDecorator.prototype.invariant;
     override: typeof OverrideDecorator.prototype.override;
     requires: typeof RequiresDecorator.prototype.requires;
