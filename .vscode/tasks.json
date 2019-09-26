@@ -10,6 +10,15 @@
             "problemMatcher": [
                 "$tsc"
             ]
+        },
+        {
+            "label": "build-types",
+            "type": "npm",
+            "script": "build-types",
+            "problemMatcher": [
+                "$tsc"
+            ],
+            "group": "build"
         }
     ]
 }

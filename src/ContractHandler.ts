@@ -9,7 +9,7 @@ import Assertion from './Assertion';
 const contractHandler = Symbol('Contract handler');
 
 /**
- * The ContractHandler manages the registraction and evaluation of contracts associated with a class
+ * The ContractHandler manages the registration and evaluation of contracts associated with a class
  */
 class ContractHandler {
     protected _assert: typeof Assertion.prototype.assert;
@@ -35,7 +35,7 @@ class ContractHandler {
      * @param feature
      * @param target
      */
-    protected _decorated(feature: any, target: any) {
+    protected _decorated(feature: Function, target: object) {
         this.assertInvariants(target);
         let result = feature.apply(target, arguments);
         this.assertInvariants(target);
@@ -62,7 +62,7 @@ class ContractHandler {
      *
      * @param self - The context class
      */
-    assertInvariants(self: any) {
+    assertInvariants(self: object) {
         this._invariantRegistry.forEach((message, predicate) => {
             this._assert(predicate(self), message);
         });
@@ -74,7 +74,7 @@ class ContractHandler {
      * @param target - The target object
      * @param prop - The name or Symbol  of the property to get
      */
-    get(target: any, prop: any) {
+    get(target: object, prop: keyof typeof target) {
         let feature = target[prop];
 
         // TODO: get could be a getter
@@ -90,7 +90,7 @@ class ContractHandler {
      * @param prop - The name or Symbol  of the property to set
      * @param value - The new value of the property to set.
      */
-    set(target: any, prop: any, value: any) {
+    set(target: object, prop: keyof typeof target, value: (typeof target)[keyof typeof target]) {
         this.assertInvariants(target);
         target[prop] = value;
         this.assertInvariants(target);

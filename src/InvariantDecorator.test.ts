@@ -664,3 +664,50 @@ describe('An invariant decorator must accept multiple assertions', () => {
         }).not.toThrow();
     });
 });
+
+/**
+ * Requirement 187
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/187
+ */
+describe('A subclass with its own invariants must enforce all ancestor invariants', () => {
+    test('Debug Mode', () => {
+        let {invariant} = new Contracts(true);
+
+        expect(() => {
+            @invariant(
+                self => self instanceof Base,
+                self => self != null
+            )
+            class Base {}
+
+            @invariant(self => self instanceof Sub)
+            class Sub extends Base {}
+
+            return new Sub();
+        }).not.toThrow();
+
+        expect(() => {
+            @invariant(self => self instanceof Array)
+            class Base {}
+
+            @invariant(self => self instanceof Sub)
+            class Sub extends Base {}
+
+            return new Sub();
+        }).toThrow(AssertionError);
+
+        expect(() => {
+            @invariant(
+                self => self instanceof Base,
+                'I thought I was a Base!'
+            )
+            class Base {}
+
+            @invariant(self => self instanceof Array)
+            // @ts-ignore : Ignore unused error
+            class Sub extends Base {}
+
+            return new Base();
+        }).not.toThrow();
+    });
+});
