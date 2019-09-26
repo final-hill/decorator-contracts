@@ -30,38 +30,35 @@ export default class InvariantDecorator {
     invariant<Self>(predicate: Predicate<Self> | [Predicate<Self>, Message][], message?: any, ...rest: Predicate<Self>[]): ClassDecorator {
         let assert = this._assert,
             debugMode = this.debugMode,
-            defaultMessage = 'Invariant violated',
-            rs = rest == undefined ? [] : rest;
+            defaultMessage = 'Invariant violated';
 
         let invariants: [Predicate<Self>, Message][] =
             Array.isArray(predicate) ? predicate :
             typeof message == 'string' ? [[predicate, message]] :
             message == undefined ? [[predicate, defaultMessage]] :
-            typeof message == 'function' ? [
-                predicate, message, ...rs
-            ].map(pred => [pred, defaultMessage]) : [];
+            [predicate, message, ...rest].map(pred => [pred, defaultMessage]);
 
-        return function<T extends Constructor<any>>(Constructor: T) {
+        return function<T extends Constructor<any>>(Base: T) {
             if(!debugMode) {
-                return Constructor;
+                return Base;
             }
 
-            let hasHandler = Object.getOwnPropertySymbols(Constructor.prototype).includes(contractHandler);
-            let handler = hasHandler ?
-                Constructor.prototype[contractHandler] :
+            let hasHandler = Object.getOwnPropertySymbols(Base).includes(contractHandler);
+            let handler: ContractHandler = hasHandler ?
+                (Base as any)[contractHandler] :
                 new ContractHandler(assert);
             invariants.forEach(([pred, message]) => {
                 handler.addInvariant(pred, message);
             });
             if(hasHandler) {
-                return Constructor;
+                return Base;
             } else {
-                return class InvariantClass extends Constructor {
-                    [contractHandler] = handler;
+                return class InvariantClass extends Base {
+                    static [contractHandler]: ContractHandler = handler;
 
                     constructor(...args: any[]) {
                         super(...args);
-                        this[contractHandler].assertInvariants(this);
+                        InvariantClass[contractHandler].assertInvariants(this);
 
                         return new Proxy(this, handler);
                     }
