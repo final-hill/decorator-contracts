@@ -2,6 +2,8 @@
 
 [![Build Status](https://dev.azure.com/thenewobjective/decorator-contracts/_apis/build/status/Build?branchName=master)](https://dev.azure.com/thenewobjective/decorator-contracts/_build/latest?definitionId=11&branchName=master)
 
+[Code Contracts](https://en.wikipedia.org/wiki/Design_by_contract) are 
+
 TODO:
 
 ## Library Installation
@@ -44,7 +46,7 @@ no-ops for run-time efficiency. As the number of contract definitions can
 be numerous, using the appropriate mode becomes increasingly important.
 
 You are not prevented from mixing modes in the event you desire you maintain
-a number of checks in a production library.
+a number of checks in a production environment.
 
 ### Invariants
 
