@@ -10,7 +10,7 @@ import AssertionError from './AssertionError';
 import Contracts from './';
 
 /**
- * Requirement 169
+ * Requirement 69
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/69
  */
 describe('Assertions must support a means of enabling/disabling', () => {
@@ -20,5 +20,20 @@ describe('Assertions must support a means of enabling/disabling', () => {
 
         expect(() => assertDebug(false)).toThrow(AssertionError);
         expect(() => assertProd(false)).not.toThrow();
+    });
+});
+
+/**
+ * Requirement 70
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/70
+ */
+describe('Assertions must return a boolean in all modes', () => {
+    test('return values', () => {
+        let {assert: assertDebug} = new Contracts(true),
+            {assert: assertProd} = new Contracts(false);
+
+        expect(() => assertDebug(true)).toBe(true);
+        expect(() => assertProd(true)).toBe(true);
+        expect(() => assertProd(false)).toBe(true);
     });
 });
