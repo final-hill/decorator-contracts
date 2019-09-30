@@ -6,41 +6,45 @@
  * Unit testing for the assertion function
  */
 
-import Assertion from './Assertion';
 import AssertionError from './AssertionError';
+import Contracts from './';
 
-describe('debug assertions should execute', () => {
-    let assert = new Assertion(true).assert;
+/**
+ * Requirement 69
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/69
+ */
+describe('Assertions must support a means of enabling/disabling', () => {
+    test('false assertions', () => {
+        let {assert: assertDebug} = new Contracts(true),
+            {assert: assertProd} = new Contracts(false);
 
-    const X = 15;
-
-    test(`assert(X > 5) === true`, () => {
-        expect(assert(X > 5)).toBe(true);
-    });
-
-    test(`assert(X > 200) throws AssertionError`, () => {
-        expect(() => assert(X > 200)).toThrow(AssertionError);
-    });
-
-    test(`assert(X > 200, 'Assertion Failed') throws AssertionError('Assertion Failed')`, () => {
-        expect(() => assert(X > 200, 'Assertion Failed')).toThrow('Assertion Failed');
+        expect(() => assertDebug(false)).toThrow(AssertionError);
+        expect(() => assertProd(false)).not.toThrow();
     });
 });
 
-describe('prod assertions should be NOOPs', () => {
-    let assert = new Assertion(false).assert;
+/**
+ * Requirement 70
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/70
+ */
+describe('Assertions must return a boolean in all modes', () => {
+    test('return values', () => {
+        let {assert: assertDebug} = new Contracts(true),
+            {assert: assertProd} = new Contracts(false);
 
-    const X = 15;
-
-    test(`assert(X > 5) === true`, () => {
-        expect(assert(X < 5)).toBe(true);
+        expect(assertDebug(true)).toBe(true);
+        expect(assertProd(true)).toBe(true);
+        expect(assertProd(false)).toBe(true);
     });
+});
 
-    test(`assert(X > 200) === true`, () => {
-        expect(assert(X > 200)).toBe(true);
-    });
-
-    test(`assert(X > 200, 'Assertion Failed') === true`, () => {
-        expect(assert(X > 200)).toBe(true);
-    });
+/**
+ * Requirement 71
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/71
+ */
+describe('Assertions must support throwing custom error types', () => {
+    let {assert} = new Contracts(true);
+    let fn = () => assert(false, 'BOOM!');
+    expect(fn).toThrow(AssertionError);
+    expect(fn).toThrowError('BOOM!');
 });
