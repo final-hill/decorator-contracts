@@ -35,7 +35,7 @@ debug mode: `true`
 production mode: `false`
 
 ```typescript
-let {invariant} = new Contracts(true);
+let {assert, invariant} = new Contracts(true);
 ```
 
 During development and testing you will want to use debug mode. This will
@@ -45,6 +45,69 @@ be numerous, using the appropriate mode becomes increasingly important.
 
 You are not prevented from mixing modes in the event you desire you maintain
 a number of checks in a production library.
+
+### Assertions
+
+Assertions are a fundamental tool for enforcing correctness in an implementation.
+They are used inline to express a condition that must evaluate to true at a
+particular point of execution.
+
+```typescript
+let {assert} = new Contracts(true);
+
+function avg(xs: number[]): number {
+    assert(xs.length > 0, 'The list can not be empty')
+
+    return xs.reduce((sum, next) => sum + next) / xs.length
+}
+```
+
+Assertions can also be used with conditionals as they return a boolean value.
+So if you find yourself writing code like the following:
+
+```typescript
+let {assert} = new Contracts(true);
+
+...
+
+assert(p,'message')
+if(p) {
+    ...
+} else {
+    ...
+}
+```
+
+or:
+
+```typescript
+let s: boolean = ...;
+assert(q(s), 'message')
+do {
+    ...
+    s = ...;
+    assert(q(s), 'message')
+} while(q(s))
+```
+
+Then you can simplify this as:
+
+```typescript
+if(assert(p,'message')) {
+    ...
+} else {
+    ...
+}
+
+let s: boolean = ...;
+while(assert(q(s), 'message')) {
+    ...
+    s = ...;
+}
+```
+
+In debug mode the assertions is evaluated and throws an exception of failure,
+otherwise returns true. In production mode, assertions always return true.
 
 ### Invariants
 
