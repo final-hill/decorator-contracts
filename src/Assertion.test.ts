@@ -6,41 +6,19 @@
  * Unit testing for the assertion function
  */
 
-import Assertion from './Assertion';
 import AssertionError from './AssertionError';
+import Contracts from './';
 
-describe('debug assertions should execute', () => {
-    let assert = new Assertion(true).assert;
+/**
+ * Requirement 169
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/69
+ */
+describe('Assertions must support a means of enabling/disabling', () => {
+    test('false assertions', () => {
+        let {assert: assertDebug} = new Contracts(true),
+            {assert: assertProd} = new Contracts(false);
 
-    const X = 15;
-
-    test(`assert(X > 5) === true`, () => {
-        expect(assert(X > 5)).toBe(true);
-    });
-
-    test(`assert(X > 200) throws AssertionError`, () => {
-        expect(() => assert(X > 200)).toThrow(AssertionError);
-    });
-
-    test(`assert(X > 200, 'Assertion Failed') throws AssertionError('Assertion Failed')`, () => {
-        expect(() => assert(X > 200, 'Assertion Failed')).toThrow('Assertion Failed');
-    });
-});
-
-describe('prod assertions should be NOOPs', () => {
-    let assert = new Assertion(false).assert;
-
-    const X = 15;
-
-    test(`assert(X > 5) === true`, () => {
-        expect(assert(X < 5)).toBe(true);
-    });
-
-    test(`assert(X > 200) === true`, () => {
-        expect(assert(X > 200)).toBe(true);
-    });
-
-    test(`assert(X > 200, 'Assertion Failed') === true`, () => {
-        expect(assert(X > 200)).toBe(true);
+        expect(() => assertDebug(false)).toThrow(AssertionError);
+        expect(() => assertProd(false)).not.toThrow();
     });
 });
