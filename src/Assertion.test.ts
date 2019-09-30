@@ -32,9 +32,9 @@ describe('Assertions must return a boolean in all modes', () => {
         let {assert: assertDebug} = new Contracts(true),
             {assert: assertProd} = new Contracts(false);
 
-        expect(() => assertDebug(true)).toBe(true);
-        expect(() => assertProd(true)).toBe(true);
-        expect(() => assertProd(false)).toBe(true);
+        expect(assertDebug(true)).toBe(true);
+        expect(assertProd(true)).toBe(true);
+        expect(assertProd(false)).toBe(true);
     });
 });
 
