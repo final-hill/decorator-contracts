@@ -44,13 +44,13 @@ export default class OverrideDecorator {
      * @throws {AssertionError} - if no ancestor member is found
      * @see AssertionError
      */
-    findAncestorMember = (targetProto: any, propertyKey: string): PropertyDescriptor => {
+    protected _findAncestorMember = (targetProto: any, propertyKey: string): PropertyDescriptor => {
         let assert = this._assert;
         let proto = Object.getPrototypeOf(targetProto);
         assert(proto != null, MSG_NO_SUPER);
         let ancestorMember = Object.getOwnPropertyDescriptor(proto, propertyKey);
 
-        return ancestorMember != undefined ? ancestorMember : this.findAncestorMember(proto, propertyKey);
+        return ancestorMember != undefined ? ancestorMember : this._findAncestorMember(proto, propertyKey);
     }
 
     /**
@@ -62,18 +62,56 @@ export default class OverrideDecorator {
      * @throws {TypeError} - if this decorator is applied more than once on a class member
      * @see AssertionError
      */
-    override = (target: any, propertyKey: string, currentDescriptor: PropertyDescriptor): void => {
+    override = (target: Function | object, propertyKey: string, currentDescriptor: PropertyDescriptor): PropertyDescriptor | void => {
         if(!this.debugMode) {
-            return;
+            return undefined;
         }
-        let assert = this._assert;
-        assert(typeof target != 'function', MSG_NO_STATIC, TypeError);
-        assert(currentDescriptor != undefined, MSG_OVERRIDE_METHOD_ACCESSOR_ONLY);
+
+        let assert = this._assert,
+            isStatic = typeof target == 'function',
+            hasDescriptor = currentDescriptor != undefined,
+            isMethod = typeof currentDescriptor.value == 'function',
+            isProperty = typeof currentDescriptor.value != 'function' &&
+                             typeof currentDescriptor.value != 'undefined',
+            isAccessor = typeof currentDescriptor == 'undefined';
+
+        assert(!isStatic, MSG_NO_STATIC, TypeError);
+        // Potentially undefined in pre ES5 environments
+        assert(hasDescriptor, MSG_OVERRIDE_METHOD_ACCESSOR_ONLY, TypeError);
+        assert(isMethod || isProperty || isAccessor);
+
+        let thunkDescriptor: PropertyDescriptor = {
+
+        };
+
+        // TODO: need to save old descriptor until @invariant can register it
+        // Save in a global registry?
+        // Save on the target?
+        //    if so, how does an ancestor invariant register it?
+        //    it wouldn't until construction?
+
+        let ancestorMember = this._findAncestorMember(
+            Object.getPrototypeOf(target), propertyKey
+        );
+
+        if(isMethod) {
+
+            // TODO
+        } else if (isProperty) {
+            // TODO: becomes accessor
+            // getter/setter throw
+        } else {
+            // TODO
+        }
+
+        return thunkDescriptor;
+
+        /*
         assert(!Boolean((currentDescriptor as any)[OVERRIDE_SYMBOL]), MSG_MULTIPLE_OVERRIDE, TypeError);
 
         let isMethodDecorator = currentDescriptor.value != undefined;
         let ancestorDescriptor = this.findAncestorMember(target, propertyKey);
-
+        */
         // TODO: check as part of dynamic contract assignment API
         /*
         if(currentDescriptor.configurable) {}
@@ -83,6 +121,7 @@ export default class OverrideDecorator {
         if(currentDescriptor.writable){}
         */
 
+        /*
         if(isMethodDecorator) {
             assert(typeof currentDescriptor.value == 'function', MSG_OVERRIDE_METHOD_ACCESSOR_ONLY);
             assert(typeof ancestorDescriptor.value == 'function', MSG_NO_MATCHING_METHOD);
@@ -100,5 +139,6 @@ export default class OverrideDecorator {
         }
 
         (currentDescriptor as any)[OVERRIDE_SYMBOL] = true;
+        */
     }
 }
