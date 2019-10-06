@@ -209,6 +209,69 @@ let myStack = new Stack(3)
 let item = myStack.pop();
 ```
 
+### Overrides
+
+Methods implemented in a superclass can be overridden in a subclass. The
+subclass implementation can augment or entirely replace the one belonging
+to the superclass. This can be done for a variety of reasons, such as
+providing a more efficient implementation in the context of the subclass.
+Regardless of the reason, the overridden method should be semantically
+consistent with the superclass method. In other words, it should follow
+[Liskov's Substitution Principle](https://en.wikipedia.org/wiki/Liskov_substitution_principle).
+To aid in the enforcement and documentation of this principle the library
+provides an `@override` decorator for class methods.
+
+A simple example is calculating the area of Convex Polygons. While a general
+formula exists to accomplish this, more efficient and direct formulas exist
+for specific polygons such as a Right Triangles:
+
+```typescript
+type Side = number
+type Vertex = [number, number]
+
+let _triArea = (v1: Vertex, v2: Vertex, v3: Vertex): number => {
+    let a = Math.hypot((v1[0] - v2[0]), (v1[1] - v2[1])),
+        b = Math.hypot((v2[0] - v3[0]), (v2[1] - v3[1])),
+        c = Math.hypot((v3[0] - v1[0]), (v3[1] - v1[1])),
+        s = 0.5 * (a + b + c)
+
+    return Math.sqrt(s*(s-a)*(s-b)*(s-c))
+}
+
+class ConvexShape {
+    readonly vertices: Vertex[]
+
+    constructor(...vertices: Vertex[]) {
+        this.vertices = vertices
+    }
+
+    area(): number {
+        let [v1, v2, v3, ...vs] = this.vertices
+        return this.vertices.length >= 3 ?
+            _triArea(v1, v2, v3) + new ConvexShape(v1, v3, ...vs).area() :
+            0
+    }
+}
+
+class RightTriangle extends ConvexShape {
+    constructor(
+        readonly base: Side,
+        readonly height: Side
+    ) {
+        super([0,0], [base,0], [base,height])
+    }
+
+    @override
+    area(): number {
+        return this.base * this.height / 2
+    }
+}
+```
+
+Above you can see the `area()` method being overridden with the more
+efficient implementation. The `@override` decorator makes explicit
+that the method is replacing another implementation.
+
 ## Contributing
 
 Due to current licensing restrictions, contributions are not being accepted currently.
