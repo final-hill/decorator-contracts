@@ -9,6 +9,7 @@
 3. [Usage](#usage)
    1. [Assertions](#assertions)
    2. [Invariants](#invariants)
+   3. [Requires](#requires)
 4. [Contributing](#contributing)
 5. [Building and Editing](#building-and-editing)
 6. [Getting Started](#getting-started)
@@ -238,6 +239,29 @@ class Subclass extends BaseClass {}
 This is because the decorators work in relationship to others
 in the class hierarchy and the `@invariant` manages this interclass
 relationship.
+
+### Requires
+
+Before a client of your class can execute a method, there are often preconditions
+that must be met first. Often in 
+{Be liberal in what you accept, and conservative in what you give}
+{Encoding of error checking}
+{Complicates implementation}
+{All of this extraneous checking has nothing to do with the datastructure}
+
+```typescript
+class Stack<T> {
+    ...
+
+    @requires<Stack<T>>(self => !self.isEmpty())
+    peek(): T {}
+
+    @requires<Stack<T>>(self => !self.isEmpty())
+    pop(): T {
+        ...
+    }
+}
+```
 
 ## Contributing
 
