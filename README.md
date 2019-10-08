@@ -243,7 +243,7 @@ relationship.
 ### Requires
 
 Before a client of your class can execute a method, there are often preconditions
-that must be met first. Often in 
+that must be met first. Often in
 {Be liberal in what you accept, and conservative in what you give}
 {Encoding of error checking}
 {Complicates implementation}
