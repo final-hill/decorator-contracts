@@ -29,7 +29,7 @@
     "invariant"
   ],
   "author": "Michael L Haufe <tno@thenewobjective.com> (https://thenewobjective.com)",
-  "license": "GPL-2.0-only",
+  "license": "AGPL-1.0-only",
   "jest": {
     "preset": "ts-jest",
     "reporters": [
