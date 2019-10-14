@@ -1,10 +1,27 @@
-# Introduction
+# Decorator Contracts
 
 [![Build Status](https://dev.azure.com/thenewobjective/decorator-contracts/_apis/build/status/Build?branchName=master)](https://dev.azure.com/thenewobjective/decorator-contracts/_build/latest?definitionId=11&branchName=master)
 
-[Code Contracts](https://en.wikipedia.org/wiki/Design_by_contract) are 
+## Table of Contents
 
-TODO:
+1. [Introduction](#introduction)
+2. [Library Installation](#library-installation)
+3. [Usage](#usage)
+   1. [Assertions](#assertions)
+   2. [Invariants](#invariants)
+   3. [Overrides](#overrides)
+4. [Contributing](#contributing)
+5. [Building and Editing](#building-and-editing)
+6. [Getting Started](#getting-started)
+7. [Project Structure](#project-structure)
+8. [Build and Test](#build-and-test)
+9. [Dependencies](#dependencies)
+
+## Introduction
+
+TODO
+
+[Code Contracts](https://en.wikipedia.org/wiki/Design_by_contract)
 
 ## Library Installation
 
@@ -271,14 +288,27 @@ class RightTriangle extends ConvexShape {
 Above you can see the `area()` method being overridden with the more
 efficient implementation. The `@override` decorator makes explicit
 that the method is replacing another implementation.
+Whether you have invariants for a class or not it is necessary to declare one
+anyway on one of the base classes.
+
+```typescript
+@invariant()
+class BaseClass {}
+
+class Subclass extends BaseClass {}
+```
+
+This is because the decorators work in relationship to others
+in the class hierarchy and the `@invariant` manages this interclass
+relationship.
 
 ## Contributing
 
 Due to current licensing restrictions, contributions are not being accepted currently.
 
-## Building/Editing the Project
+## Building and Editing
 
-### Getting Started (FIXME)
+### Getting Started
 
 - Clone the repository
 

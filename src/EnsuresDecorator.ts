@@ -1,7 +1,7 @@
 /**
  * @license
  * Copyright (C) #{YEAR}# Michael L Haufe
- * SPDX-License-Identifier: GPL-2.0-only
+ * SPDX-License-Identifier: AGPL-1.0-only
  *
  * The ensures decorator is an assertion of a postcondition.
  * It expresses a condition that must be true after the associated class member is executed.

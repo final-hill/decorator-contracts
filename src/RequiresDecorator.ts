@@ -1,7 +1,7 @@
 /**
  * @license
  * Copyright (C) #{YEAR}# Michael L Haufe
- * SPDX-License-Identifier: GPL-2.0-only
+ * SPDX-License-Identifier: AGPL-1.0-only
  *
  * The requires decorator is an assertion of a precondition.
  * It expresses a condition that must be true before the associated class member is executed.

@@ -1,7 +1,7 @@
 /**
  * @license
  * Copyright (C) #{YEAR}# Michael L Haufe
- * SPDX-License-Identifier: GPL-2.0-only
+ * SPDX-License-Identifier: AGPL-1.0-only
  */
 
 // TODO: does decorating a constructor throw an exception in Babel and browsers?

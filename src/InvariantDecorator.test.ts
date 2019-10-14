@@ -1,7 +1,7 @@
 /**
  * @license
  * Copyright (C) #{YEAR}# Michael L Haufe
- * SPDX-License-Identifier: GPL-2.0-only
+ * SPDX-License-Identifier: AGPL-1.0-only
  *
  * Unit tests for the invariant decorator
  */
@@ -708,6 +708,26 @@ describe('A subclass with its own invariants must enforce all ancestor invariant
             class Sub extends Base {}
 
             return new Base();
+        }).not.toThrow();
+    });
+});
+
+/**
+ * Requirement 199
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/199
+ */
+describe('The invariant decorator supports use with no arguments', () => {
+    let invariants = [
+        new Contracts(true).invariant,
+        new Contracts(false).invariant
+    ];
+
+    invariants.forEach(invariant => {
+        expect(() => {
+            @invariant()
+            class Foo {}
+
+            return new Foo();
         }).not.toThrow();
     });
 });
