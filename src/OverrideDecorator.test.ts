@@ -171,6 +171,15 @@ describe('using @override on a method with an ancestor with a different paramete
 });
 
 /**
+ * Requirement 215
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/215
+ */
+describe('A subclass with an overriding method missing @override is an error', () => {
+    //let override = new OverrideDecorator(true).override;
+
+});
+
+/**
  * Requirement 337
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/337
  */
