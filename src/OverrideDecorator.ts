@@ -4,9 +4,6 @@
  * SPDX-License-Identifier: AGPL-1.0-only
  */
 
-// TODO: when @override or the other decorators are assigned, is the member now immutable?
-// TODO: contract propagation
-
 import Assertion from './Assertion';
 
 export const OVERRIDES = Symbol('overrides');
@@ -15,7 +12,6 @@ const MSG_INVALID_ARG_LENGTH = `An overridden method must have the same number o
 const MSG_NO_MATCHING_MEMBER = `This method does not override an ancestor method. The ancestor is not a method`;
 const MSG_OVERRIDE_METHOD_ACCESSOR_ONLY = `Only methods and accessors can be overridden.`;
 const MSG_DUPLICATE_OVERRIDE = `Only a single @override decorator can be assigned to a class member`;
-// TODO: why? add to README. Because invariant can't play double duty?
 const MSG_NO_STATIC = `Only instance members can be overridden, not static members`;
 const MSG_INVALID_ANCESTOR_METHOD = `A method can only override another method`;
 
@@ -105,8 +101,6 @@ export default class OverrideDecorator {
         let ancestorMember = _findAncestorMember(assert, proto, propertyKey);
         assert(ancestorMember != null, MSG_NO_MATCHING_MEMBER);
 
-        // TODO: is the member locked down to prevent future violations?
-
         if(isMethod) {
             assert(_isMethod(ancestorMember), MSG_INVALID_ANCESTOR_METHOD);
             let thisMethod: Function = currentDescriptor.value,
@@ -120,8 +114,6 @@ export default class OverrideDecorator {
             assert(!overrides.has(propertyKey), MSG_DUPLICATE_OVERRIDE);
             overrides.add(propertyKey);
 
-            // TODO: param names and order must match
-            // loading a parser is too expensive and a regex is insufficient
         } else if (isProperty) {
             let thisValue = currentDescriptor.value,
                 ancValue = ancestorMember.value;
@@ -129,40 +121,5 @@ export default class OverrideDecorator {
         } else { // isAccessor
             // TODO
         }
-
-        /*
-        assert(!Boolean((currentDescriptor as any)[OVERRIDE_SYMBOL]), MSG_MULTIPLE_OVERRIDE, TypeError);
-
-        let isMethodDecorator = currentDescriptor.value != undefined;
-        let ancestorDescriptor = this.findAncestorMember(target, propertyKey);
-        */
-        // TODO: check as part of dynamic contract assignment API
-        /*
-        if(currentDescriptor.configurable) {}
-
-        if(currentDescriptor.enumerable) {}
-
-        if(currentDescriptor.writable){}
-        */
-
-        /*
-        if(isMethodDecorator) {
-            assert(typeof currentDescriptor.value == 'function', MSG_OVERRIDE_METHOD_ACCESSOR_ONLY);
-            assert(typeof ancestorDescriptor.value == 'function', MSG_NO_MATCHING_METHOD);
-            assert(currentDescriptor.value.length >= ancestorDescriptor.value!.length, MSG_INVALID_ARG_LENGTH);
-
-            // Writable
-            // TODO: if(currentDescriptor.writable) {}
-        } else  {
-            if(currentDescriptor.get != undefined && ancestorDescriptor.get != undefined) {
-                // TODO:
-            }
-            if(currentDescriptor.set != undefined && ancestorDescriptor.set != undefined) {
-                // TODO
-            }
-        }
-
-        (currentDescriptor as any)[OVERRIDE_SYMBOL] = true;
-        */
     }
 }
