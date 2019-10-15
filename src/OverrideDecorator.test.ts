@@ -7,36 +7,36 @@
  */
 
 import OverrideDecorator from './OverrideDecorator';
-import AssertionError from './AssertionError';
 
-describe('debugMode @override', () => {
+/**
+ * Requirement 210
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/210
+ */
+describe('The override decorator is a non-static method decorator only', () => {
     let override = new OverrideDecorator(true).override;
 
-    test('Override on Base class should throw', () => {
+    test('class decorator throws', () => {
         expect(() => {
-            class Base {
-                @override
-                method() {}
-            }
-
-            return new Base();
-        }).toThrow(AssertionError);
-    });
-
-    test('Override on subclass method without ancestor should throw', () => {
-        expect(() => {
+            // @ts-ignore: Ignoring type error for JS test
+            @override
             class Base {}
 
-            class Sub extends Base {
-                @override
-                method() {}
-            }
-
-            return new Sub();
-        }).toThrow(AssertionError);
+            return Base;
+        }).toThrow();
     });
 
-    test('Matching override member should not throw', () => {
+    test('static method decorator throws', () => {
+        expect(() => {
+            class Base {
+                @override
+                static method() {}
+            }
+
+            return Base;
+        }).toThrow();
+    });
+
+    test('instance method decorator does not throw', () => {
         expect(() => {
             class Base {
                 method() {}
@@ -47,50 +47,7 @@ describe('debugMode @override', () => {
                 method() {}
             }
 
-            return new Sub();
-        }).not.toThrow();
-    });
-});
-
-describe('prodMode @override', () => {
-    let override = new OverrideDecorator(false).override;
-
-    test('Override on Base class should not throw', () => {
-        expect(() => {
-            class Base {
-                @override
-                method() {}
-            }
-
-            return new Base();
-        }).not.toThrow();
-    });
-
-    test('Override on subclass method without ancestor should not throw', () => {
-        expect(() => {
-            class Base {}
-
-            class Sub extends Base {
-                @override
-                method() {}
-            }
-
-            return new Sub();
-        }).not.toThrow(AssertionError);
-    });
-
-    test('Matching override member should not throw', () => {
-        expect(() => {
-            class Base {
-                method() {}
-            }
-
-            class Sub extends Base {
-                @override
-                method() {}
-            }
-
-            return new Sub();
+            return Sub;
         }).not.toThrow();
     });
 });

@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: AGPL-1.0-only
  */
 
-// TODO: does decorating a constructor throw an exception in Babel and browsers?
 // TODO: when @override or the other decorators are assigned, is the member now immutable?
 // TODO: contract propagation
 
@@ -16,7 +15,7 @@ const MSG_INVALID_ARG_LENGTH = `An overridden method must have an equal or great
 const MSG_NO_MATCHING_MEMBER = `This method does not override an ancestor method. The ancestor is not a method`;
 const MSG_OVERRIDE_METHOD_ACCESSOR_ONLY = `Only methods and accessors can be overridden.`;
 //const MSG_MULTIPLE_OVERRIDE = `Only a single @override decorator can be assigned to a class member`;
-// TODO: why?
+// TODO: why? add to README. Because invariant can't play double duty?
 const MSG_NO_STATIC = `Only instance members can be overridden, not static members`;
 const MSG_INVALID_ANCESTOR_METHOD = `A method can only override another method`;
 
@@ -93,15 +92,16 @@ export default class OverrideDecorator {
             isStatic = typeof target == 'function',
             hasDescriptor = currentDescriptor != undefined,
             isProperty = typeof currentDescriptor.value != 'function' &&
-                             typeof currentDescriptor.value != 'undefined',
+                         typeof currentDescriptor.value != 'undefined',
             isMethod = _isMethod(currentDescriptor),
-            isAccessor = typeof currentDescriptor == 'undefined',
-            ancestorMember = _findAncestorMember(assert, Object.getPrototypeOf(target), propertyKey);
+            isAccessor = typeof currentDescriptor == 'undefined';
 
-        assert(!isStatic, MSG_NO_STATIC, TypeError);
         // Potentially undefined in pre ES5 environments
         assert(hasDescriptor, MSG_OVERRIDE_METHOD_ACCESSOR_ONLY, TypeError);
+        assert(!isStatic, MSG_NO_STATIC, TypeError);
         assert(isMethod || isProperty || isAccessor);
+
+        let ancestorMember = _findAncestorMember(assert, target, propertyKey);
         assert(ancestorMember != null, MSG_NO_MATCHING_MEMBER);
 
         // TODO: is the member locked down to prevent future violations?

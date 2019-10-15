@@ -302,6 +302,10 @@ This is because the decorators work in relationship to others
 in the class hierarchy and the `@invariant` manages this interclass
 relationship.
 
+Static methods, including the constructor, can not be assigned an `@override`
+decorator. In the future this may be enabled for non-constructor static methods
+but the implications are not clear at present.
+
 ## Contributing
 
 Due to current licensing restrictions, contributions are not being accepted currently.
