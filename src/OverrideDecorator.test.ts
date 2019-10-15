@@ -70,3 +70,22 @@ describe('In production mode the @override decorator is a no-op', () => {
         }).not.toThrow();
     });
 });
+
+/**
+ * Requirement 212
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/212
+ */
+describe('Using @override on a method with no ancestor method is an error', () => {
+    let override = new OverrideDecorator(true).override;
+
+    test('base class with @override decorator', () => {
+        expect(() => {
+            class Base {
+                @override
+                method() {}
+            }
+
+            return Base;
+        }).toThrow();
+    });
+});

@@ -226,6 +226,20 @@ let myStack = new Stack(3)
 let item = myStack.pop();
 ```
 
+Whether you have invariants for a class or not it is necessary to declare one
+anyway on one of the base classes.
+
+```typescript
+@invariant()
+class BaseClass {}
+
+class Subclass extends BaseClass {}
+```
+
+This is because the decorators work in relationship to others
+in the class hierarchy and the `@invariant` manages this interclass
+relationship.
+
 ### Overrides
 
 Methods implemented in a superclass can be overridden in a subclass. The
@@ -288,19 +302,6 @@ class RightTriangle extends ConvexShape {
 Above you can see the `area()` method being overridden with the more
 efficient implementation. The `@override` decorator makes explicit
 that the method is replacing another implementation.
-Whether you have invariants for a class or not it is necessary to declare one
-anyway on one of the base classes.
-
-```typescript
-@invariant()
-class BaseClass {}
-
-class Subclass extends BaseClass {}
-```
-
-This is because the decorators work in relationship to others
-in the class hierarchy and the `@invariant` manages this interclass
-relationship.
 
 Static methods, including the constructor, can not be assigned an `@override`
 decorator. In the future this may be enabled for non-constructor static methods
