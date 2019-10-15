@@ -11,7 +11,7 @@ import Assertion from './Assertion';
 
 export const OVERRIDE_SYMBOL = Symbol('override assigned');
 const MSG_NO_SUPER = `This class member does not override an ancestor member`;
-const MSG_INVALID_ARG_LENGTH = `An overridden method must have an equal or greater number of arguments than its ancestor method`;
+const MSG_INVALID_ARG_LENGTH = `An overridden method must have the same number of parameters as its ancestor method`;
 const MSG_NO_MATCHING_MEMBER = `This method does not override an ancestor method. The ancestor is not a method`;
 const MSG_OVERRIDE_METHOD_ACCESSOR_ONLY = `Only methods and accessors can be overridden.`;
 //const MSG_MULTIPLE_OVERRIDE = `Only a single @override decorator can be assigned to a class member`;
@@ -110,7 +110,7 @@ export default class OverrideDecorator {
             assert(_isMethod(ancestorMember), MSG_INVALID_ANCESTOR_METHOD);
             let thisMethod: Function = currentDescriptor.value,
                 ancMethod: Function = ancestorMember.value;
-            assert(thisMethod.length >= ancMethod.length, MSG_INVALID_ARG_LENGTH);
+            assert(thisMethod.length == ancMethod.length, MSG_INVALID_ARG_LENGTH);
 
             // TODO: param names and order must match
             // loading a parser is too expensive and a regex is insufficient

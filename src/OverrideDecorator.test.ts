@@ -102,3 +102,70 @@ describe('Using @override on a method with no ancestor method is an error', () =
         }).toThrow();
     });
 });
+
+/**
+ * Requirement 214
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/214
+ */
+describe('using @override on a method with an ancestor with a different parameter count is an error', () => {
+    let override = new OverrideDecorator(true).override;
+
+    test('bad override', () => {
+        expect(() => {
+            class Base {
+                method(a: string, b: string) {
+                    console.log(`${a}, ${b}`);
+                }
+            }
+
+            class Sub extends Base {
+                @override
+                method(a: string) {
+                    console.log(a);
+                }
+            }
+
+            return Sub;
+        }).toThrow();
+    });
+
+    test('bad override 2', () => {
+        expect(() => {
+            class Base {
+                method(a: string) {
+                    console.log(`${a}`);
+                }
+            }
+
+            class Sub extends Base {
+                @override
+                // @ts-ignore: type error for JS test
+                method(a: string, b: string) {
+                    console.log(`${a}, ${b}`);
+                }
+            }
+
+            return Sub;
+        }).toThrow();
+    });
+
+    test('good override', () => {
+        expect(() => {
+            class Base {
+                method(a: string, b: string) {
+                    console.log(`${a}, ${b}`);
+                }
+            }
+
+            class Sub extends Base {
+                @override
+                method(a: string, b: string) {
+                    super.method(a, b);
+                }
+            }
+
+            return Sub;
+        }).not.toThrow();
+    });
+
+});

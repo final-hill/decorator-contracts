@@ -247,8 +247,8 @@ subclass implementation can augment or entirely replace the one belonging
 to the superclass. This can be done for a variety of reasons, such as
 providing a more efficient implementation in the context of the subclass.
 Regardless of the reason, the overridden method should be semantically
-consistent with the superclass method. In other words, it should follow
-[Liskov's Substitution Principle](https://en.wikipedia.org/wiki/Liskov_substitution_principle).
+consistent with the superclass method. In other
+words, it should follow [Liskov's Substitution Principle](https://en.wikipedia.org/wiki/Liskov_substitution_principle).
 To aid in the enforcement and documentation of this principle the library
 provides an `@override` decorator for class methods.
 
@@ -302,6 +302,9 @@ class RightTriangle extends ConvexShape {
 Above you can see the `area()` method being overridden with the more
 efficient implementation. The `@override` decorator makes explicit
 that the method is replacing another implementation.
+
+This decorator does not simply document and verify the fact that the method is
+overridden, it will also verify that the parameter count matches.
 
 Static methods, including the constructor, can not be assigned an `@override`
 decorator. In the future this may be enabled for non-constructor static methods
