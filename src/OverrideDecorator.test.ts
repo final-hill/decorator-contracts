@@ -88,4 +88,17 @@ describe('Using @override on a method with no ancestor method is an error', () =
             return Base;
         }).toThrow();
     });
+
+    test('subclass with @override decorator', () => {
+        expect(() => {
+            class Base {}
+
+            class Sub extends Base {
+                @override
+                method() {}
+            }
+
+            return Sub;
+        }).toThrow();
+    });
 });
