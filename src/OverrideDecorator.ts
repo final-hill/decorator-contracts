@@ -9,12 +9,12 @@
 
 import Assertion from './Assertion';
 
-export const OVERRIDE_SYMBOL = Symbol('override assigned');
+export const OVERRIDES = Symbol('overrides');
 const MSG_NO_SUPER = `This class member does not override an ancestor member`;
 const MSG_INVALID_ARG_LENGTH = `An overridden method must have the same number of parameters as its ancestor method`;
 const MSG_NO_MATCHING_MEMBER = `This method does not override an ancestor method. The ancestor is not a method`;
 const MSG_OVERRIDE_METHOD_ACCESSOR_ONLY = `Only methods and accessors can be overridden.`;
-//const MSG_MULTIPLE_OVERRIDE = `Only a single @override decorator can be assigned to a class member`;
+const MSG_DUPLICATE_OVERRIDE = `Only a single @override decorator can be assigned to a class member`;
 // TODO: why? add to README. Because invariant can't play double duty?
 const MSG_NO_STATIC = `Only instance members can be overridden, not static members`;
 const MSG_INVALID_ANCESTOR_METHOD = `A method can only override another method`;
@@ -99,9 +99,10 @@ export default class OverrideDecorator {
         // Potentially undefined in pre ES5 environments
         assert(hasDescriptor, MSG_OVERRIDE_METHOD_ACCESSOR_ONLY, TypeError);
         assert(!isStatic, MSG_NO_STATIC, TypeError);
+        let proto = target as {[OVERRIDES]?: Set<string>};
         assert(isMethod || isProperty || isAccessor);
 
-        let ancestorMember = _findAncestorMember(assert, target, propertyKey);
+        let ancestorMember = _findAncestorMember(assert, proto, propertyKey);
         assert(ancestorMember != null, MSG_NO_MATCHING_MEMBER);
 
         // TODO: is the member locked down to prevent future violations?
@@ -111,6 +112,13 @@ export default class OverrideDecorator {
             let thisMethod: Function = currentDescriptor.value,
                 ancMethod: Function = ancestorMember.value;
             assert(thisMethod.length == ancMethod.length, MSG_INVALID_ARG_LENGTH);
+
+            let overrides = proto[OVERRIDES] != undefined ?
+                 proto[OVERRIDES]! :
+                 proto[OVERRIDES] = new Set<string>();
+
+            assert(!overrides.has(propertyKey), MSG_DUPLICATE_OVERRIDE);
+            overrides.add(propertyKey);
 
             // TODO: param names and order must match
             // loading a parser is too expensive and a regex is insufficient

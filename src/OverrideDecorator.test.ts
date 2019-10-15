@@ -169,3 +169,57 @@ describe('using @override on a method with an ancestor with a different paramete
     });
 
 });
+
+/**
+ * Requirement 337
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/337
+ */
+describe('Only a single @override can be assigned to a method per class', () => {
+    let override = new OverrideDecorator(true).override;
+
+    test('duplicate @override', () => {
+        expect(() => {
+            class Base {
+                method(a: string, b: string) {
+                    console.log(`${a}, ${b}`);
+                }
+            }
+
+            class Sub extends Base {
+                @override
+                @override
+                method(a: string, b: string) {
+                    super.method(a, b);
+                }
+            }
+
+            return Sub;
+        }).toThrow();
+    });
+
+    test('Three level @override', () => {
+        expect(() => {
+            class Base {
+                method(a: string, b: string) {
+                    console.log(`${a}, ${b}`);
+                }
+            }
+
+            class Sub extends Base {
+                @override
+                method(a: string, b: string) {
+                    super.method(a, b);
+                }
+            }
+
+            class SubSub extends Sub {
+                @override
+                method(a: string, b: string) {
+                    super.method(a, b);
+                }
+            }
+
+            return SubSub;
+        }).not.toThrow();
+    });
+});
