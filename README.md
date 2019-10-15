@@ -54,7 +54,7 @@ debug mode: `true`
 production mode: `false`
 
 ```typescript
-let {assert, invariant} = new Contracts(true);
+let {assert, invariant, override} = new Contracts(true);
 ```
 
 During development and testing you will want to use debug mode. This will

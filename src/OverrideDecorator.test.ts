@@ -51,3 +51,22 @@ describe('The override decorator is a non-static method decorator only', () => {
         }).not.toThrow();
     });
 });
+
+/**
+ * Requirement 211
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/211
+ */
+describe('In production mode the @override decorator is a no-op', () => {
+    let override = new OverrideDecorator(false).override;
+
+    test('base class with @override decorator', () => {
+        expect(() => {
+            class Base {
+                @override
+                method() {}
+            }
+
+            return Base;
+        }).not.toThrow();
+    });
+});
