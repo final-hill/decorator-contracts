@@ -113,7 +113,7 @@ export default class OverrideDecorator {
                 ancMethod: Function = ancestorMember.value;
             assert(thisMethod.length == ancMethod.length, MSG_INVALID_ARG_LENGTH);
 
-            let overrides = proto[OVERRIDES] != undefined ?
+            let overrides = Object.getOwnPropertySymbols(proto).includes(OVERRIDES) ?
                  proto[OVERRIDES]! :
                  proto[OVERRIDES] = new Set<string>();
 
