@@ -64,13 +64,16 @@ export default class InvariantDecorator {
 
                         let clazz = this.constructor as Function & {[OVERRIDES]?: Map<string, Function>};
                         let overrides = clazz[OVERRIDES];
-                        console.log(`CLASS: ${clazz.name}`);
+
                         if(overrides != undefined) {
-                            console.log(`OVERRIDES: [${[...overrides.keys()].join()}]`);
-                            /*
-                            [...overrides.entries()].forEach(([key, fn]) => {
-                                // TODO
-                            }); */
+                            [...overrides.entries()].forEach(([_propertyName, _originalMethod]) => {
+                                //let descriptor = Object.getOwnPropertyDescriptor(self, propertyName)!;
+                                //console.log('DESCRIPTOR:');
+                                console.log(Object.getOwnPropertyDescriptors(this));
+                                //descriptor.value = originalMethod;
+                                //Object.defineProperty(this.prototype, propertyName, descriptor);
+                            });
+                            delete clazz[OVERRIDES];
                         }
 
                         InvariantClass[contractHandler].assertInvariants(this);

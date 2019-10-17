@@ -22,6 +22,8 @@ let overrideHandler: ProxyHandler<any> = {
     }
 };
 
+// TODO: symbol and number methods?
+
 /**
  * Finds the nearest ancestor member for the given propertyKey by walking the prototype chain of the target
  *

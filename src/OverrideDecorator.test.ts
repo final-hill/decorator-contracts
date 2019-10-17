@@ -7,6 +7,7 @@
  */
 
 import OverrideDecorator from './OverrideDecorator';
+import InvariantDecorator from './InvariantDecorator';
 
 /**
  * Requirement 210
@@ -238,9 +239,10 @@ describe('Only a single @override can be assigned to a method per class', () => 
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/346
  */
 describe('A class with an @override defined must also have an @invariant defined on its ancestor or self', () => {
-    let override = new OverrideDecorator(true).override;
+    let {override} = new OverrideDecorator(true),
+        {invariant} = new InvariantDecorator(true);
 
-    test('undefined', () => {
+    test('unused override w/out invariant does not throw', () => {
         expect(() => {
             class Base {
                 method(a: string, b: string) {
@@ -259,6 +261,63 @@ describe('A class with an @override defined must also have an @invariant defined
         }).not.toThrow();
     });
 
-    // TODO
+    test('used override w/out invariant throws', () => {
+        expect(() => {
+            class Base {
+                method(a: string, b: string) {
+                    console.log(`${a}, ${b}`);
+                }
+            }
+
+            class Sub extends Base {
+                @override
+                method(a: string, b: string) {
+                    super.method(a, b);
+                }
+            }
+
+            return new Sub().method('a', 'b');
+        }).toThrow();
+    });
+
+    test('used override with local invariant does not throw', () => {
+        expect(() => {
+            class Base {
+                method(a: string, b: string) {
+                    console.log(`${a}, ${b}`);
+                }
+            }
+
+            @invariant()
+            class Sub extends Base {
+                @override
+                method(a: string, b: string) {
+                    super.method(a, b);
+                }
+            }
+
+            return new Sub().method('a', 'b');
+        }).not.toThrow();
+    });
+
+    test('used override with ancestor invariant does not throw', () => {
+        expect(() => {
+            @invariant()
+            class Base {
+                method(a: string, b: string) {
+                    console.log(`${a}, ${b}`);
+                }
+            }
+
+            class Sub extends Base {
+                @override
+                method(a: string, b: string) {
+                    super.method(a, b);
+                }
+            }
+
+            return new Sub().method('a', 'b');
+        }).not.toThrow();
+    });
 
 });
