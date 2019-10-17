@@ -6,6 +6,7 @@
 
 import Assertion from './Assertion';
 import {ContractHandler, contractHandler} from './ContractHandler';
+import { OVERRIDES } from './OverrideDecorator';
 
 type Message = string;
 type ClassDecorator = <T extends Constructor<any>>(Constructor: T) => T;
@@ -60,6 +61,18 @@ export default class InvariantDecorator {
 
                     constructor(...args: any[]) {
                         super(...args);
+
+                        let clazz = this.constructor as Function & {[OVERRIDES]?: Map<string, Function>};
+                        let overrides = clazz[OVERRIDES];
+                        console.log(`CLASS: ${clazz.name}`);
+                        if(overrides != undefined) {
+                            console.log(`OVERRIDES: [${[...overrides.keys()].join()}]`);
+                            /*
+                            [...overrides.entries()].forEach(([key, fn]) => {
+                                // TODO
+                            }); */
+                        }
+
                         InvariantClass[contractHandler].assertInvariants(this);
 
                         return new Proxy(this, handler);

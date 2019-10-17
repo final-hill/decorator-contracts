@@ -232,3 +232,33 @@ describe('Only a single @override can be assigned to a method per class', () => 
         }).not.toThrow();
     });
 });
+
+/**
+ * Requirement 346
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/346
+ */
+describe('A class with an @override defined must also have an @invariant defined on its ancestor or self', () => {
+    let override = new OverrideDecorator(true).override;
+
+    test('undefined', () => {
+        expect(() => {
+            class Base {
+                method(a: string, b: string) {
+                    console.log(`${a}, ${b}`);
+                }
+            }
+
+            class Sub extends Base {
+                @override
+                method(a: string, b: string) {
+                    super.method(a, b);
+                }
+            }
+
+            return new Sub();
+        }).not.toThrow();
+    });
+
+    // TODO
+
+});

@@ -14,6 +14,13 @@ const MSG_OVERRIDE_METHOD_ACCESSOR_ONLY = `Only methods and accessors can be ove
 const MSG_DUPLICATE_OVERRIDE = `Only a single @override decorator can be assigned to a class member`;
 const MSG_NO_STATIC = `Only instance members can be overridden, not static members`;
 const MSG_INVALID_ANCESTOR_METHOD = `A method can only override another method`;
+const MSG_NO_INVARIANT = `An @invariant must be defined on this class or an ancestor class`;
+
+let overrideHandler: ProxyHandler<any> = {
+    apply() {
+        throw new Error(MSG_NO_INVARIANT);
+    }
+};
 
 /**
  * Finds the nearest ancestor member for the given propertyKey by walking the prototype chain of the target
@@ -79,9 +86,9 @@ export default class OverrideDecorator {
      * @throws {TypeError} - if this decorator is applied more than once on a class member
      * @see AssertionError
      */
-    override = (target: Function | object, propertyKey: string, currentDescriptor: PropertyDescriptor): void => {
+    override = (target: Function | object, propertyKey: string, currentDescriptor: PropertyDescriptor): PropertyDescriptor => {
         if(!this.debugMode) {
-            return;
+            return currentDescriptor;
         }
 
         let assert = this._assert,
@@ -95,10 +102,10 @@ export default class OverrideDecorator {
         // Potentially undefined in pre ES5 environments
         assert(hasDescriptor, MSG_OVERRIDE_METHOD_ACCESSOR_ONLY, TypeError);
         assert(!isStatic, MSG_NO_STATIC, TypeError);
-        let proto = target as {[OVERRIDES]?: Set<string>};
+        //let proto = target as {[OVERRIDES]?: Map<string, Function>};
         assert(isMethod || isProperty || isAccessor);
 
-        let ancestorMember = _findAncestorMember(assert, proto, propertyKey);
+        let ancestorMember = _findAncestorMember(assert, target, propertyKey);
         assert(ancestorMember != null, MSG_NO_MATCHING_MEMBER);
 
         if(isMethod) {
@@ -107,18 +114,26 @@ export default class OverrideDecorator {
                 ancMethod: Function = ancestorMember.value;
             assert(thisMethod.length == ancMethod.length, MSG_INVALID_ARG_LENGTH);
 
-            let overrides = Object.getOwnPropertySymbols(proto).includes(OVERRIDES) ?
-                 proto[OVERRIDES]! :
-                 proto[OVERRIDES] = new Set<string>();
+            let clazz = target.constructor as {[OVERRIDES]?: Map<string, Function>};
+            let overrides = Object.getOwnPropertySymbols(clazz).includes(OVERRIDES) ?
+                 clazz[OVERRIDES]! :
+                 clazz[OVERRIDES] = new Map<string, Function>();
 
             assert(!overrides.has(propertyKey), MSG_DUPLICATE_OVERRIDE);
-            overrides.add(propertyKey);
+            overrides.set(propertyKey, thisMethod);
 
+            let newDescriptor: PropertyDescriptor = Object.create(currentDescriptor);
+            newDescriptor.value = new Proxy(currentDescriptor.value, overrideHandler);
+
+            return newDescriptor;
         } else if (isProperty) {
             let thisValue = currentDescriptor.value,
                 ancValue = ancestorMember.value;
             assert(_isSubtypeOf(thisValue, ancValue));
+
+            return currentDescriptor;
         } else { // isAccessor
+            return currentDescriptor;
             // TODO
         }
     }
