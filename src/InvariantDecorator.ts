@@ -6,10 +6,24 @@
 
 import Assertion from './Assertion';
 import {ContractHandler, contractHandler} from './ContractHandler';
-import { OVERRIDES } from './OverrideDecorator';
+import DescriptorWrapper from './lib/DescriptorWrapper';
+import { IS_PROXY, ORIGINAL_DESCRIPTOR } from './lib/OverrideHandler';
 
 type Message = string;
 type ClassDecorator = <T extends Constructor<any>>(Constructor: T) => T;
+
+function registerOverrides<T extends Constructor<any>>(Clazz: T) {
+    let proto = Clazz.prototype;
+    let ds = Object.entries(Object.getOwnPropertyDescriptors(proto));
+
+    [...ds].forEach(([propertyName, propertyDescriptor]) => {
+        let dw = new DescriptorWrapper(propertyDescriptor);
+        if(dw.isMethod && dw.value[IS_PROXY]) {
+            let originalDescriptor = dw.value[ORIGINAL_DESCRIPTOR];
+            Object.defineProperty(proto, propertyName, originalDescriptor);
+        }
+    });
+}
 
 /**
  * The `@invariant` decorator describes and enforces the properties of a class
@@ -46,6 +60,8 @@ export default class InvariantDecorator {
                 return Base;
             }
 
+            registerOverrides(Base);
+
             let hasHandler = Object.getOwnPropertySymbols(Base).includes(contractHandler);
             let handler: ContractHandler = hasHandler ?
                 (Base as any)[contractHandler] :
@@ -61,20 +77,6 @@ export default class InvariantDecorator {
 
                     constructor(...args: any[]) {
                         super(...args);
-
-                        let clazz = this.constructor as Function & {[OVERRIDES]?: Map<string, Function>};
-                        let overrides = clazz[OVERRIDES];
-
-                        if(overrides != undefined) {
-                            [...overrides.entries()].forEach(([_propertyName, _originalMethod]) => {
-                                //let descriptor = Object.getOwnPropertyDescriptor(self, propertyName)!;
-                                //console.log('DESCRIPTOR:');
-                                console.log(Object.getOwnPropertyDescriptors(this));
-                                //descriptor.value = originalMethod;
-                                //Object.defineProperty(this.prototype, propertyName, descriptor);
-                            });
-                            delete clazz[OVERRIDES];
-                        }
 
                         InvariantClass[contractHandler].assertInvariants(this);
 

@@ -238,7 +238,7 @@ describe('Only a single @override can be assigned to a method per class', () => 
  * Requirement 346
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/346
  */
-describe('A class with an @override defined must also have an @invariant defined on its ancestor or self', () => {
+describe('A class with an @override defined must also have an @invariant defined', () => {
     let {override} = new OverrideDecorator(true),
         {invariant} = new InvariantDecorator(true);
 

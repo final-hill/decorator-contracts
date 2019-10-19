@@ -5,22 +5,15 @@
  */
 
 import Assertion from './Assertion';
+import DescriptorWrapper from './lib/DescriptorWrapper';
+import OverrideHandler, { IS_PROXY } from './lib/OverrideHandler';
 
-export const OVERRIDES = Symbol('overrides');
-const MSG_NO_SUPER = `This class member does not override an ancestor member`;
 const MSG_INVALID_ARG_LENGTH = `An overridden method must have the same number of parameters as its ancestor method`;
-const MSG_NO_MATCHING_MEMBER = `This method does not override an ancestor method. The ancestor is not a method`;
+const MSG_NO_MATCHING_MEMBER = `This method does not override an ancestor method.`;
 const MSG_OVERRIDE_METHOD_ACCESSOR_ONLY = `Only methods and accessors can be overridden.`;
 const MSG_DUPLICATE_OVERRIDE = `Only a single @override decorator can be assigned to a class member`;
 const MSG_NO_STATIC = `Only instance members can be overridden, not static members`;
 const MSG_INVALID_ANCESTOR_METHOD = `A method can only override another method`;
-const MSG_NO_INVARIANT = `An @invariant must be defined on this class or an ancestor class`;
-
-let overrideHandler: ProxyHandler<any> = {
-    apply() {
-        throw new Error(MSG_NO_INVARIANT);
-    }
-};
 
 // TODO: symbol and number methods?
 
@@ -33,12 +26,14 @@ let overrideHandler: ProxyHandler<any> = {
  * @throws {AssertionError} - if no ancestor member is found
  * @see AssertionError
  */
-function _findAncestorMember(assert: typeof Assertion.prototype.assert, targetProto: any, propertyKey: string): PropertyDescriptor {
+function _findAncestorMember(assert: typeof Assertion.prototype.assert, targetProto: any, propertyKey: string): DescriptorWrapper | undefined {
     let proto = Object.getPrototypeOf(targetProto);
-    assert(proto != null, MSG_NO_SUPER);
+    if(proto == null) {
+        return undefined;
+    }
     let ancestorMember = Object.getOwnPropertyDescriptor(proto, propertyKey);
 
-    return ancestorMember != undefined ? ancestorMember : _findAncestorMember(assert, proto, propertyKey);
+    return ancestorMember != undefined ? new DescriptorWrapper(ancestorMember) : _findAncestorMember(assert, proto, propertyKey);
 }
 
 /**
@@ -50,15 +45,6 @@ function _findAncestorMember(assert: typeof Assertion.prototype.assert, targetPr
 function _isSubtypeOf(a: any, b: any): boolean {
     return a instanceof b;
     // TODO
-}
-
-/**
- * Determines if the provided property descriptor describes a method
- *
- * @param descriptor - The property descriptor to test
- */
-function _isMethod(descriptor: PropertyDescriptor): boolean {
-    return typeof descriptor.value == 'function';
 }
 
 /**
@@ -95,47 +81,37 @@ export default class OverrideDecorator {
 
         let assert = this._assert,
             isStatic = typeof target == 'function',
+            // Potentially undefined in pre ES5 environments (compilation target)
             hasDescriptor = currentDescriptor != undefined,
-            isProperty = typeof currentDescriptor.value != 'function' &&
-                         typeof currentDescriptor.value != 'undefined',
-            isMethod = _isMethod(currentDescriptor),
-            isAccessor = typeof currentDescriptor == 'undefined';
+            dw = new DescriptorWrapper(currentDescriptor);
 
-        // Potentially undefined in pre ES5 environments
         assert(hasDescriptor, MSG_OVERRIDE_METHOD_ACCESSOR_ONLY, TypeError);
         assert(!isStatic, MSG_NO_STATIC, TypeError);
-        //let proto = target as {[OVERRIDES]?: Map<string, Function>};
-        assert(isMethod || isProperty || isAccessor);
+        assert(dw.isMethod || dw.isProperty || dw.isAccessor);
 
-        let ancestorMember = _findAncestorMember(assert, target, propertyKey);
-        assert(ancestorMember != null, MSG_NO_MATCHING_MEMBER);
+        let ancestorMember = _findAncestorMember(assert, target, propertyKey)!;
+        assert(ancestorMember != undefined, MSG_NO_MATCHING_MEMBER);
 
-        if(isMethod) {
-            assert(_isMethod(ancestorMember), MSG_INVALID_ANCESTOR_METHOD);
-            let thisMethod: Function = currentDescriptor.value,
+        if(dw.isMethod) {
+            assert(ancestorMember.isMethod, MSG_INVALID_ANCESTOR_METHOD);
+            let thisMethod: Function & {[IS_PROXY]: boolean} = dw.value,
                 ancMethod: Function = ancestorMember.value;
             assert(thisMethod.length == ancMethod.length, MSG_INVALID_ARG_LENGTH);
+            assert(!thisMethod[IS_PROXY], MSG_DUPLICATE_OVERRIDE);
 
-            let clazz = target.constructor as {[OVERRIDES]?: Map<string, Function>};
-            let overrides = Object.getOwnPropertySymbols(clazz).includes(OVERRIDES) ?
-                 clazz[OVERRIDES]! :
-                 clazz[OVERRIDES] = new Map<string, Function>();
-
-            assert(!overrides.has(propertyKey), MSG_DUPLICATE_OVERRIDE);
-            overrides.set(propertyKey, thisMethod);
-
-            let newDescriptor: PropertyDescriptor = Object.create(currentDescriptor);
-            newDescriptor.value = new Proxy(currentDescriptor.value, overrideHandler);
+            let newDescriptor: PropertyDescriptor = Object.create(dw.value);
+            newDescriptor.value = new Proxy(thisMethod, new OverrideHandler(dw.value));
 
             return newDescriptor;
-        } else if (isProperty) {
+        } else if (dw.isProperty) {
+            // TODO: Do nothing here?
             let thisValue = currentDescriptor.value,
                 ancValue = ancestorMember.value;
             assert(_isSubtypeOf(thisValue, ancValue));
 
-            return currentDescriptor;
+            return dw.value;
         } else { // isAccessor
-            return currentDescriptor;
+            return dw.value;
             // TODO
         }
     }
