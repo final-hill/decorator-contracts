@@ -46,19 +46,19 @@ export default class InvariantDecorator {
             }
 
             let hasHandler = Object.getOwnPropertySymbols(Base).includes(contractHandler);
-            let handler: ContractHandler<any> = hasHandler ?
+            let handler: ContractHandler = hasHandler ?
                 (Base as any)[contractHandler] :
                 new ContractHandler(assert);
             invariants.forEach(([pred, message]) => {
                 handler.addInvariant(pred, message);
             });
-            handler.registerOverrides(Base);
+            //handler.registerOverrides(Base);
 
             if(hasHandler) {
                 return Base;
             } else {
                 return class InvariantClass extends Base {
-                    static [contractHandler]: ContractHandler<any> = handler;
+                    static [contractHandler]: ContractHandler = handler;
 
                     constructor(...args: any[]) {
                         super(...args);

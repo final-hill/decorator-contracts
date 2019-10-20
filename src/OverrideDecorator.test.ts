@@ -7,6 +7,7 @@
  */
 
 import Contracts from './';
+import { MSG_NO_MATCHING_MEMBER, MSG_INVALID_ARG_LENGTH, MSG_DUPLICATE_OVERRIDE } from './OverrideDecorator';
 
 /**
  * Requirement 210
@@ -86,7 +87,7 @@ describe('Using @override on a method with no ancestor method is an error', () =
             }
 
             return Base;
-        }).toThrow();
+        }).toThrow(MSG_NO_MATCHING_MEMBER);
     });
 
     test('subclass with @override decorator', () => {
@@ -99,7 +100,23 @@ describe('Using @override on a method with no ancestor method is an error', () =
             }
 
             return Sub;
-        }).toThrow();
+        }).toThrow(MSG_NO_MATCHING_MEMBER);
+    });
+
+    test('subclass with method overriding non-method', () => {
+        expect(() => {
+            class Base {
+                method = 'foo';
+            }
+
+            class Sub extends Base {
+                @override
+                // @ts-ignore: Ignoring type error for JS check
+                method() {}
+            }
+
+            return Sub;
+        }).toThrow(MSG_NO_MATCHING_MEMBER);
     });
 });
 
@@ -126,7 +143,7 @@ describe('using @override on a method with an ancestor with a different paramete
             }
 
             return Sub;
-        }).toThrow();
+        }).toThrow(MSG_INVALID_ARG_LENGTH);
     });
 
     test('bad override 2', () => {
@@ -146,7 +163,7 @@ describe('using @override on a method with an ancestor with a different paramete
             }
 
             return Sub;
-        }).toThrow();
+        }).toThrow(MSG_INVALID_ARG_LENGTH);
     });
 
     test('good override', () => {
@@ -203,7 +220,7 @@ describe('Only a single @override can be assigned to a method per class', () => 
             }
 
             return Sub;
-        }).toThrow();
+        }).toThrow(MSG_DUPLICATE_OVERRIDE);
     });
 
     test('Three level @override', () => {
@@ -231,91 +248,4 @@ describe('Only a single @override can be assigned to a method per class', () => 
             return SubSub;
         }).not.toThrow();
     });
-});
-
-/**
- * Requirement 346
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/346
- */
-describe('A class with an @override defined must also have an @invariant defined', () => {
-    let {override, invariant} = new Contracts(true);
-
-    test('unused override w/out invariant does not throw', () => {
-        expect(() => {
-            class Base {
-                method(a: string, b: string) {
-                    console.log(`${a}, ${b}`);
-                }
-            }
-
-            class Sub extends Base {
-                @override
-                method(a: string, b: string) {
-                    super.method(a, b);
-                }
-            }
-
-            return new Sub();
-        }).not.toThrow();
-    });
-
-    test('used override w/out invariant throws', () => {
-        expect(() => {
-            class Base {
-                method(a: string, b: string) {
-                    console.log(`${a}, ${b}`);
-                }
-            }
-
-            class Sub extends Base {
-                @override
-                method(a: string, b: string) {
-                    super.method(a, b);
-                }
-            }
-
-            return new Sub().method('a', 'b');
-        }).toThrow();
-    });
-
-    test('used override with local invariant does not throw', () => {
-        expect(() => {
-            class Base {
-                method(a: string, b: string) {
-                    console.log(`${a}, ${b}`);
-                }
-            }
-
-            @invariant()
-            class Sub extends Base {
-                @override
-                method(a: string, b: string) {
-                    super.method(a, b);
-                }
-            }
-
-            return new Sub().method('a', 'b');
-        }).not.toThrow();
-    });
-
-    test('used override with ancestor invariant does not throw', () => {
-        expect(() => {
-            @invariant()
-            class Base {
-                method(a: string, b: string) {
-                    console.log(`${a}, ${b}`);
-                }
-            }
-
-            class Sub extends Base {
-                @override
-                method(a: string, b: string) {
-                    super.method(a, b);
-                }
-            }
-
-            return new Sub().method('a', 'b');
-        }).not.toThrow();
-    });
-
 });
