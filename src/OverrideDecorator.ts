@@ -96,11 +96,11 @@ export default class OverrideDecorator {
             assert(ancestorMember.isMethod, MSG_INVALID_ANCESTOR_METHOD);
             let thisMethod: Function & {[IS_PROXY]: boolean} = dw.value,
                 ancMethod: Function = ancestorMember.value;
-            assert(thisMethod.length == ancMethod.length, MSG_INVALID_ARG_LENGTH);
             assert(!thisMethod[IS_PROXY], MSG_DUPLICATE_OVERRIDE);
+            assert(thisMethod.length == ancMethod.length, MSG_INVALID_ARG_LENGTH);
 
-            let newDescriptor: PropertyDescriptor = Object.create(dw.value);
-            newDescriptor.value = new Proxy(thisMethod, new OverrideHandler(dw.value));
+            let newDescriptor: PropertyDescriptor = {...dw.descriptor};
+            newDescriptor.value = new Proxy(thisMethod, new OverrideHandler(newDescriptor));
 
             return newDescriptor;
         } else if (dw.isProperty) {

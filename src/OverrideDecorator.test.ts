@@ -6,15 +6,14 @@
  * Unit tests for the override decorator
  */
 
-import OverrideDecorator from './OverrideDecorator';
-import InvariantDecorator from './InvariantDecorator';
+import Contracts from './';
 
 /**
  * Requirement 210
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/210
  */
 describe('The override decorator is a non-static method decorator only', () => {
-    let override = new OverrideDecorator(true).override;
+    let {override} = new Contracts(true);
 
     test('class decorator throws', () => {
         expect(() => {
@@ -58,7 +57,7 @@ describe('The override decorator is a non-static method decorator only', () => {
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/211
  */
 describe('In production mode the @override decorator is a no-op', () => {
-    let override = new OverrideDecorator(false).override;
+    let {override} = new Contracts(false);
 
     test('base class with @override decorator', () => {
         expect(() => {
@@ -77,7 +76,7 @@ describe('In production mode the @override decorator is a no-op', () => {
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/212
  */
 describe('Using @override on a method with no ancestor method is an error', () => {
-    let override = new OverrideDecorator(true).override;
+    let {override} = new Contracts(true);
 
     test('base class with @override decorator', () => {
         expect(() => {
@@ -109,7 +108,7 @@ describe('Using @override on a method with no ancestor method is an error', () =
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/214
  */
 describe('using @override on a method with an ancestor with a different parameter count is an error', () => {
-    let override = new OverrideDecorator(true).override;
+    let {override} = new Contracts(true);
 
     test('bad override', () => {
         expect(() => {
@@ -185,7 +184,7 @@ describe('A subclass with an overriding method missing @override is an error', (
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/337
  */
 describe('Only a single @override can be assigned to a method per class', () => {
-    let override = new OverrideDecorator(true).override;
+    let {override} = new Contracts(true);
 
     test('duplicate @override', () => {
         expect(() => {
@@ -239,8 +238,7 @@ describe('Only a single @override can be assigned to a method per class', () => 
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/346
  */
 describe('A class with an @override defined must also have an @invariant defined', () => {
-    let {override} = new OverrideDecorator(true),
-        {invariant} = new InvariantDecorator(true);
+    let {override, invariant} = new Contracts(true);
 
     test('unused override w/out invariant does not throw', () => {
         expect(() => {

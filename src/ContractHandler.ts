@@ -5,13 +5,15 @@
  */
 
 import Assertion from './Assertion';
+import DescriptorWrapper from './lib/DescriptorWrapper';
+import { IS_PROXY, ORIGINAL_DESCRIPTOR } from './lib/OverrideHandler';
 
 const contractHandler = Symbol('Contract handler');
 
 /**
  * The ContractHandler manages the registration and evaluation of contracts associated with a class
  */
-class ContractHandler {
+class ContractHandler<T extends Constructor<any>> {
     protected _assert: typeof Assertion.prototype.assert;
 
     protected readonly _invariantRegistry: Map<Predicate<any>, string> = new Map();
@@ -96,6 +98,19 @@ class ContractHandler {
         this.assertInvariants(target);
 
         return true;
+    }
+
+    registerOverrides(Clazz: T) {
+        let proto = Clazz.prototype;
+        let ds = Object.entries(Object.getOwnPropertyDescriptors(proto));
+
+        [...ds].forEach(([propertyName, propertyDescriptor]) => {
+            let dw = new DescriptorWrapper(propertyDescriptor);
+            if(dw.isMethod && dw.value[IS_PROXY]) {
+                let originalDescriptor = dw.value[ORIGINAL_DESCRIPTOR];
+                Object.defineProperty(proto, propertyName, originalDescriptor);
+            }
+        });
     }
 }
 
