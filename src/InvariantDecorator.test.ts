@@ -130,7 +130,7 @@ describe('There can be multiple invariant decorators assigned to a class', () =>
  */
 describe('The subclasses of an invariant decorated class must obey the invariant', () => {
     test('Test subclassing in debug mode', () => {
-        let {invariant} = new Contracts(true);
+        let {invariant, override} = new Contracts(true);
 
         @invariant<Foo>(self => self.value >= 0)
         class Foo {
@@ -174,7 +174,9 @@ describe('The subclasses of an invariant decorated class must obey the invariant
         class Baz extends Foo {
             get value() { return this._value; }
             set value(value: number) { this._value = value; }
+            @override
             inc() { this._value++; }
+            @override
             dec() { this._value--; }
         }
 
