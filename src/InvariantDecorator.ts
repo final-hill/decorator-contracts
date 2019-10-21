@@ -15,7 +15,7 @@ type ClassDecorator = <T extends Constructor<any>>(Constructor: T) => T;
  * Returns the method names associated with the provided prototype
  */
 function _methodNames(proto: object): Set<PropertyKey> {
-    return new Set(
+    return proto == null ? new Set() : new Set(
         Object.entries(Object.getOwnPropertyDescriptors(proto))
         .filter(([key, descriptor]) => typeof descriptor.value == 'function' && key != 'constructor')
         .map(([key, _]) => key)
@@ -26,10 +26,14 @@ function _methodNames(proto: object): Set<PropertyKey> {
  * Returns the method names defined on the provided prototype and its ancestors
  */
 function _findAncestorMethodNames(targetProto: object): Set<PropertyKey> {
+    if(targetProto == null) {
+        return new Set();
+    }
     let proto = Object.getPrototypeOf(targetProto);
 
     return proto == null ? new Set() :
         new Set([..._methodNames(proto), ..._findAncestorMethodNames(proto)]);
+
 }
 
 function _checkOverrides(
