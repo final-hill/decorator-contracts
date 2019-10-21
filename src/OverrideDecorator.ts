@@ -4,21 +4,15 @@
  * SPDX-License-Identifier: AGPL-1.0-only
  */
 
-// TODO: does decorating a constructor throw an exception in Babel and browsers?
-// TODO: when @override or the other decorators are assigned, is the member now immutable?
-// TODO: contract propagation
-
 import Assertion from './Assertion';
+import DescriptorWrapper from './lib/DescriptorWrapper';
 
-export const OVERRIDE_SYMBOL = Symbol('override assigned');
-const MSG_NO_SUPER = `This class member does not override an ancestor member`;
-const MSG_INVALID_ARG_LENGTH = `An overridden method must have an equal or greater number of arguments than its ancestor method`;
-const MSG_NO_MATCHING_MEMBER = `This method does not override an ancestor method. The ancestor is not a method`;
-const MSG_OVERRIDE_METHOD_ACCESSOR_ONLY = `Only methods and accessors can be overridden.`;
-//const MSG_MULTIPLE_OVERRIDE = `Only a single @override decorator can be assigned to a class member`;
-// TODO: why?
-const MSG_NO_STATIC = `Only instance members can be overridden, not static members`;
-const MSG_INVALID_ANCESTOR_METHOD = `A method can only override another method`;
+export const OVERRIDE_LIST = Symbol('Override List');
+export const MSG_INVALID_ARG_LENGTH = `An overridden method must have the same number of parameters as its ancestor method`;
+export const MSG_NO_MATCHING_MEMBER = `This method does not override an ancestor method.`;
+export const MSG_OVERRIDE_METHOD_ACCESSOR_ONLY = `Only methods and accessors can be overridden.`;
+export const MSG_DUPLICATE_OVERRIDE = `Only a single @override decorator can be assigned to a class member`;
+export const MSG_NO_STATIC = `Only instance members can be overridden, not static members`;
 
 /**
  * Finds the nearest ancestor member for the given propertyKey by walking the prototype chain of the target
@@ -29,32 +23,14 @@ const MSG_INVALID_ANCESTOR_METHOD = `A method can only override another method`;
  * @throws {AssertionError} - if no ancestor member is found
  * @see AssertionError
  */
-function _findAncestorMember(assert: typeof Assertion.prototype.assert, targetProto: any, propertyKey: string): PropertyDescriptor {
+function _findAncestorMember(assert: typeof Assertion.prototype.assert, targetProto: any, propertyKey: PropertyKey): DescriptorWrapper | undefined {
     let proto = Object.getPrototypeOf(targetProto);
-    assert(proto != null, MSG_NO_SUPER);
+    if(proto == null) {
+        return undefined;
+    }
     let ancestorMember = Object.getOwnPropertyDescriptor(proto, propertyKey);
 
-    return ancestorMember != undefined ? ancestorMember : _findAncestorMember(assert, proto, propertyKey);
-}
-
-/**
- * Determines if the first argument is a subtype of the second
- *
- * @param a The candidate sub type
- * @param b The candidate base type
- */
-function _isSubtypeOf(a: any, b: any): boolean {
-    return a instanceof b;
-    // TODO
-}
-
-/**
- * Determines if the provided property descriptor describes a method
- *
- * @param descriptor - The property descriptor to test
- */
-function _isMethod(descriptor: PropertyDescriptor): boolean {
-    return typeof descriptor.value == 'function';
+    return ancestorMember != undefined ? new DescriptorWrapper(ancestorMember) : _findAncestorMember(assert, proto, propertyKey);
 }
 
 /**
@@ -76,85 +52,52 @@ export default class OverrideDecorator {
     }
 
     /**
-     * @throws {AssertionError} - If the current member does not have an ancestor
-     * @throws {AssertionError} - If the current member is not a method nor an accessor
-     * @throws {AssertionError} - If the current member is a method but the ancestor member is not
-     * @throws {AssertionError} - If the current member is a method and method.length < ancestorMethod.length
-     * @throws {TypeError} - If the decorator is applied to a static member
-     * @throws {TypeError} - if this decorator is applied more than once on a class member
-     * @see AssertionError
+     * The override decorator specifies that the associated method replaces
+     * a method of the same name in an ancestor class.
      */
-    override = (target: Function | object, propertyKey: string, currentDescriptor: PropertyDescriptor): void => {
+    override = (target: Function | object, propertyKey: PropertyKey, currentDescriptor: PropertyDescriptor): PropertyDescriptor => {
         if(!this.debugMode) {
-            return;
+            return currentDescriptor;
         }
 
         let assert = this._assert,
             isStatic = typeof target == 'function',
+            // Potentially undefined in pre ES5 environments (compilation target)
             hasDescriptor = currentDescriptor != undefined,
-            isProperty = typeof currentDescriptor.value != 'function' &&
-                             typeof currentDescriptor.value != 'undefined',
-            isMethod = _isMethod(currentDescriptor),
-            isAccessor = typeof currentDescriptor == 'undefined',
-            ancestorMember = _findAncestorMember(assert, Object.getPrototypeOf(target), propertyKey);
+            dw = new DescriptorWrapper(currentDescriptor);
 
-        assert(!isStatic, MSG_NO_STATIC, TypeError);
-        // Potentially undefined in pre ES5 environments
         assert(hasDescriptor, MSG_OVERRIDE_METHOD_ACCESSOR_ONLY, TypeError);
-        assert(isMethod || isProperty || isAccessor);
-        assert(ancestorMember != null, MSG_NO_MATCHING_MEMBER);
+        assert(!isStatic, MSG_NO_STATIC, TypeError);
+        assert(dw.isMethod || dw.isProperty || dw.isAccessor);
 
-        // TODO: is the member locked down to prevent future violations?
+        let ancestorMember = _findAncestorMember(assert, target, propertyKey)!;
+        assert(ancestorMember != undefined, MSG_NO_MATCHING_MEMBER);
 
-        if(isMethod) {
-            assert(_isMethod(ancestorMember), MSG_INVALID_ANCESTOR_METHOD);
-            let thisMethod: Function = currentDescriptor.value,
-                ancMethod: Function = ancestorMember.value;
-            assert(thisMethod.length >= ancMethod.length, MSG_INVALID_ARG_LENGTH);
+        if(dw.isMethod) {
+            let Clazz = (target as any).constructor;
 
-            // TODO: param names and order must match
-            // loading a parser is too expensive and a regex is insufficient
-        } else if (isProperty) {
-            let thisValue = currentDescriptor.value,
-                ancValue = ancestorMember.value;
-            assert(_isSubtypeOf(thisValue, ancValue));
+            assert(ancestorMember.isMethod, MSG_NO_MATCHING_MEMBER);
+            let thisMethod: Function = dw.value,
+                ancMethod: Function = ancestorMember.value,
+                overrides = Object.getOwnPropertySymbols(Clazz).includes(OVERRIDE_LIST) ?
+                    Clazz[OVERRIDE_LIST]! : Clazz[OVERRIDE_LIST] = new Set();
+            assert(!overrides.has(propertyKey), MSG_DUPLICATE_OVERRIDE);
+            assert(thisMethod.length == ancMethod.length, MSG_INVALID_ARG_LENGTH);
+
+            overrides.add(propertyKey);
+
+            return dw.descriptor;
+        } else if (dw.isProperty) {
+            // TODO: Do nothing here?
+            // let thisValue = currentDescriptor.value,
+            //     ancValue = ancestorMember.value;
+            // assert(_isSubtypeOf(thisValue, ancValue));
+
+            return dw.value;
         } else { // isAccessor
             // TODO
+
+            return dw.value;
         }
-
-        /*
-        assert(!Boolean((currentDescriptor as any)[OVERRIDE_SYMBOL]), MSG_MULTIPLE_OVERRIDE, TypeError);
-
-        let isMethodDecorator = currentDescriptor.value != undefined;
-        let ancestorDescriptor = this.findAncestorMember(target, propertyKey);
-        */
-        // TODO: check as part of dynamic contract assignment API
-        /*
-        if(currentDescriptor.configurable) {}
-
-        if(currentDescriptor.enumerable) {}
-
-        if(currentDescriptor.writable){}
-        */
-
-        /*
-        if(isMethodDecorator) {
-            assert(typeof currentDescriptor.value == 'function', MSG_OVERRIDE_METHOD_ACCESSOR_ONLY);
-            assert(typeof ancestorDescriptor.value == 'function', MSG_NO_MATCHING_METHOD);
-            assert(currentDescriptor.value.length >= ancestorDescriptor.value!.length, MSG_INVALID_ARG_LENGTH);
-
-            // Writable
-            // TODO: if(currentDescriptor.writable) {}
-        } else  {
-            if(currentDescriptor.get != undefined && ancestorDescriptor.get != undefined) {
-                // TODO:
-            }
-            if(currentDescriptor.set != undefined && ancestorDescriptor.set != undefined) {
-                // TODO
-            }
-        }
-
-        (currentDescriptor as any)[OVERRIDE_SYMBOL] = true;
-        */
     }
 }

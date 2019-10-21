@@ -54,7 +54,7 @@ debug mode: `true`
 production mode: `false`
 
 ```typescript
-let {assert, invariant} = new Contracts(true);
+let {assert, invariant, override} = new Contracts(true);
 ```
 
 During development and testing you will want to use debug mode. This will
@@ -226,6 +226,20 @@ let myStack = new Stack(3)
 let item = myStack.pop();
 ```
 
+Whether you have invariants for a class or not it is necessary to declare one
+anyway on one of the base classes.
+
+```typescript
+@invariant()
+class BaseClass {}
+
+class Subclass extends BaseClass {}
+```
+
+This is because the decorators work in relationship to others
+in the class hierarchy and the `@invariant` manages this interclass
+relationship.
+
 ### Overrides
 
 Methods implemented in a superclass can be overridden in a subclass. The
@@ -233,8 +247,8 @@ subclass implementation can augment or entirely replace the one belonging
 to the superclass. This can be done for a variety of reasons, such as
 providing a more efficient implementation in the context of the subclass.
 Regardless of the reason, the overridden method should be semantically
-consistent with the superclass method. In other words, it should follow
-[Liskov's Substitution Principle](https://en.wikipedia.org/wiki/Liskov_substitution_principle).
+consistent with the superclass method. In other
+words, it should follow [Liskov's Substitution Principle](https://en.wikipedia.org/wiki/Liskov_substitution_principle).
 To aid in the enforcement and documentation of this principle the library
 provides an `@override` decorator for class methods.
 
@@ -255,6 +269,7 @@ let _triArea = (v1: Vertex, v2: Vertex, v3: Vertex): number => {
     return Math.sqrt(s*(s-a)*(s-b)*(s-c))
 }
 
+@invariant()
 class ConvexShape {
     readonly vertices: Vertex[]
 
@@ -288,19 +303,17 @@ class RightTriangle extends ConvexShape {
 Above you can see the `area()` method being overridden with the more
 efficient implementation. The `@override` decorator makes explicit
 that the method is replacing another implementation.
-Whether you have invariants for a class or not it is necessary to declare one
-anyway on one of the base classes.
 
-```typescript
-@invariant()
-class BaseClass {}
+This decorator does not simply document and verify the fact that the method is
+overridden, it will also verify that the parameter count matches.
 
-class Subclass extends BaseClass {}
-```
+An `@invariant` decorator should also be defined either on the current class
+or on an ancestor. When defined, candidate overrides are identified and an
+error is raised if an associated `@override` decorator is missing.
 
-This is because the decorators work in relationship to others
-in the class hierarchy and the `@invariant` manages this interclass
-relationship.
+Static methods, including the constructor, can not be assigned an `@override`
+decorator. In the future this may be enabled for non-constructor static methods
+but the implications are not clear at present.
 
 ## Contributing
 
