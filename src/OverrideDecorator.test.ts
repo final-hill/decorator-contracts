@@ -192,7 +192,38 @@ describe('using @override on a method with an ancestor with a different paramete
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/215
  */
 describe('A subclass with an overriding method missing @override is an error', () => {
-    //let override = new OverrideDecorator(true).override;
+    let {invariant, override} = new Contracts(true);
+
+    test('@override defined', () => {
+        expect(() => {
+            @invariant()
+            class Base {
+                method() {}
+            }
+
+            class Sub extends Base {
+                @override
+                method() {}
+            }
+
+            return new Sub();
+        }).not.toThrow();
+    });
+
+    test('@override missing', () => {
+        expect(() => {
+            @invariant()
+            class Base {
+                method() {}
+            }
+
+            class Sub extends Base {
+                method() {}
+            }
+
+            return new Sub();
+        }).toThrow(`@override decorator missing on Sub.method`);
+    });
 
 });
 

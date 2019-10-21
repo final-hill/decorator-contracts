@@ -7,14 +7,12 @@
 import Assertion from './Assertion';
 import DescriptorWrapper from './lib/DescriptorWrapper';
 
-const OVERRIDE_LIST = Symbol('Override List');
+export const OVERRIDE_LIST = Symbol('Override List');
 export const MSG_INVALID_ARG_LENGTH = `An overridden method must have the same number of parameters as its ancestor method`;
 export const MSG_NO_MATCHING_MEMBER = `This method does not override an ancestor method.`;
 export const MSG_OVERRIDE_METHOD_ACCESSOR_ONLY = `Only methods and accessors can be overridden.`;
 export const MSG_DUPLICATE_OVERRIDE = `Only a single @override decorator can be assigned to a class member`;
 export const MSG_NO_STATIC = `Only instance members can be overridden, not static members`;
-
-type PropertyKey = string | number | symbol;
 
 /**
  * Finds the nearest ancestor member for the given propertyKey by walking the prototype chain of the target
@@ -54,13 +52,8 @@ export default class OverrideDecorator {
     }
 
     /**
-     * @throws {AssertionError} - If the current member does not have an ancestor
-     * @throws {AssertionError} - If the current member is not a method nor an accessor
-     * @throws {AssertionError} - If the current member is a method but the ancestor member is not
-     * @throws {AssertionError} - If the current member is a method and method.length < ancestorMethod.length
-     * @throws {TypeError} - If the decorator is applied to a static member
-     * @throws {TypeError} - if this decorator is applied more than once on a class member
-     * @see AssertionError
+     * The override decorator specifies that the associated method replaces
+     * a method of the same name in an ancestor class.
      */
     override = (target: Function | object, propertyKey: PropertyKey, currentDescriptor: PropertyDescriptor): PropertyDescriptor => {
         if(!this.debugMode) {
@@ -80,14 +73,14 @@ export default class OverrideDecorator {
         let ancestorMember = _findAncestorMember(assert, target, propertyKey)!;
         assert(ancestorMember != undefined, MSG_NO_MATCHING_MEMBER);
 
-        let proto: object & {[OVERRIDE_LIST]?: Set<PropertyKey>} = target;
-
         if(dw.isMethod) {
+            let Clazz = (target as any).constructor;
+
             assert(ancestorMember.isMethod, MSG_NO_MATCHING_MEMBER);
             let thisMethod: Function = dw.value,
                 ancMethod: Function = ancestorMember.value,
-                overrides = Object.getOwnPropertySymbols(proto).includes(OVERRIDE_LIST) ?
-                    proto[OVERRIDE_LIST]! : proto[OVERRIDE_LIST] = new Set();
+                overrides = Object.getOwnPropertySymbols(Clazz).includes(OVERRIDE_LIST) ?
+                    Clazz[OVERRIDE_LIST]! : Clazz[OVERRIDE_LIST] = new Set();
             assert(!overrides.has(propertyKey), MSG_DUPLICATE_OVERRIDE);
             assert(thisMethod.length == ancMethod.length, MSG_INVALID_ARG_LENGTH);
 

@@ -6,9 +6,49 @@
 
 import Assertion from './Assertion';
 import {ContractHandler, contractHandler} from './ContractHandler';
+import { OVERRIDE_LIST } from './OverrideDecorator';
 
 type Message = string;
 type ClassDecorator = <T extends Constructor<any>>(Constructor: T) => T;
+
+/**
+ * Returns the method names associated with the provided prototype
+ */
+function _methodNames(proto: object): Set<PropertyKey> {
+    return new Set(
+        Object.entries(Object.getOwnPropertyDescriptors(proto))
+        .filter(([key, descriptor]) => typeof descriptor.value == 'function' && key != 'constructor')
+        .map(([key, _]) => key)
+    );
+}
+
+/**
+ * Returns the method names defined on the provided prototype and its ancestors
+ */
+function _findAncestorMethodNames(targetProto: object): Set<PropertyKey> {
+    let proto = Object.getPrototypeOf(targetProto);
+
+    return proto == null ? new Set() :
+        new Set([..._methodNames(proto), ..._findAncestorMethodNames(proto)]);
+}
+
+function _checkOverrides(
+    assert: typeof Assertion.prototype.assert,
+    Clazz: Function & {[OVERRIDE_LIST]?: Set<PropertyKey>},
+    proto: object
+) {
+    let methodNames = _methodNames(proto),
+        ancestorMethodNames: Set<PropertyKey> = _findAncestorMethodNames(proto),
+        overrides: Set<PropertyKey> = Object.getOwnPropertySymbols(Clazz).includes(OVERRIDE_LIST) ?
+            Clazz[OVERRIDE_LIST]! : new Set();
+
+    methodNames.forEach(methodName =>
+        assert(
+            overrides.has(methodName) || !ancestorMethodNames.has(methodName),
+            `@override decorator missing on ${Clazz.name}.${String(methodName)}`
+        )
+    );
+}
 
 /**
  * The `@invariant` decorator describes and enforces the properties of a class
@@ -52,7 +92,6 @@ export default class InvariantDecorator {
             invariants.forEach(([pred, message]) => {
                 handler.addInvariant(pred, message);
             });
-            //handler.registerOverrides(Base);
 
             if(hasHandler) {
                 return Base;
@@ -63,6 +102,8 @@ export default class InvariantDecorator {
                     constructor(...args: any[]) {
                         super(...args);
 
+                        let Clazz = this.constructor;
+                        _checkOverrides(assert, Clazz, Clazz.prototype);
                         InvariantClass[contractHandler].assertInvariants(this);
 
                         return new Proxy(this, handler);

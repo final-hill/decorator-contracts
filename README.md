@@ -269,6 +269,7 @@ let _triArea = (v1: Vertex, v2: Vertex, v3: Vertex): number => {
     return Math.sqrt(s*(s-a)*(s-b)*(s-c))
 }
 
+@invariant()
 class ConvexShape {
     readonly vertices: Vertex[]
 
@@ -305,6 +306,10 @@ that the method is replacing another implementation.
 
 This decorator does not simply document and verify the fact that the method is
 overridden, it will also verify that the parameter count matches.
+
+An `@invariant` decorator should also be defined either on the current class
+or on an ancestor. When defined, candidate overrides are identified and an
+error is raised if an associated `@override` decorator is missing.
 
 Static methods, including the constructor, can not be assigned an `@override`
 decorator. In the future this may be enabled for non-constructor static methods
