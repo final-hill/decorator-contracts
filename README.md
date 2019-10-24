@@ -377,11 +377,13 @@ To build and test this library locally you will need the following:
 | Npm Script    | Description |
 |:--------------|:------------|
 | `build`       | Performs a full build of the library including type generation and linting. Outputs to the `dist` folder |
+| `build-nofix` | Perfoms the sames steps as `build` except that `lint-nofix` will be executed.                            |
 | `build-types` | Generates type definitions for the library in the `dist` folder                                          |
 | `clean`       | deletes the `dist` folder                                                                                |
 | `clean-full`  | deletes the `dist`, `node_modules`,  and `.cache` folders                                                |
 | `debug`       | Starts debugger                                                                                          |
 | `lint`        | Performs linting and type checking of the library                                                        |
+| `lint-nofix`  | Performs linting but will not autofix problems.                                                          |
 | `test`        | Executes unit tests                                                                                      |
 | `type-check`  | Performs type checking                                                                                   |
 
