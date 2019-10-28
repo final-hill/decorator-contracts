@@ -138,9 +138,11 @@ usage, an `AssertionError` will be thrown. Truthy assertions do not throw an
 error. An example of this is given below using a Stack:
 
 ```typescript
-@invariant((self: Stack<any>) => self.size >= 0 && self.size <= self.limit)
-@invariant((self: Stack<any>) => self.isEmpty() == (self.size == 0))
-@invariant((self: Stack<any>) => self.isFull() == (self.size == self.limit))
+@invariant<Stack<any>>(self => ({
+    sizeClamped: self.size >= 0 && self.size <= self.limit,
+    emptyHasNoSize: self.isEmpty() == (self.size == 0),
+    fullIsLimited: self.isFull() == (self.size == self.limit)
+}))
 class Stack<T> {
     protected _implementation: Array<T> = []
 
@@ -172,45 +174,6 @@ class Stack<T> {
 }
 ```
 
-Custom messaging can be associated with each `@invariant` as well:
-
-```typescript
-@invariant((self: Stack<any>) => self.size >= 0 && self.size <= self.limit, "The size of a stack must be between 0 and its limit")
-@invariant((self: Stack<any>) => self.isEmpty() == (self.size == 0), "An empty stack must have a size of 0")
-@invariant((self: Stack<any>) => self.isFull() == (self.size == self.limit), "A full stack must have a size that equals its limit")
-class Stack<T> {
-    //...
-}
-```
-
-Declaring multiple invariants in this style is terribly verbose. A shorthand is also available.
-
-Without messaging:
-
-```typescript
-@invariant<Stack<any>>(
-    self => self.size >= 0 && self.size <= self.limit,
-    self => self.isEmpty() == (self.size == 0),
-    self => self.isFull() == (self.size == self.limit)
-)
-class Stack<T> {
-    //...
-}
-```
-
-With messaging:
-
-```typescript
-@invariant<Stack<any>>([
-    [self => self.size >= 0 && self.size <= self.limit, "The size of a stack must be between 0 and its limit"],
-    [self => self.isEmpty() == (self.size == 0), "An empty stack must have a size of 0"],
-    [self => self.isFull() == (self.size == self.limit), "A full stack must have a size that equals its limit"]
-])
-class Stack<T> {
-    //...
-}
-```
-
 With the above invariants any attempt to construct an invalid stack will fail:
 
 ```typescript
@@ -230,7 +193,7 @@ Whether you have invariants for a class or not it is necessary to declare one
 anyway on one of the base classes.
 
 ```typescript
-@invariant()
+@invariant(() => ({}))
 class BaseClass {}
 
 class Subclass extends BaseClass {}
@@ -269,7 +232,7 @@ let _triArea = (v1: Vertex, v2: Vertex, v3: Vertex): number => {
     return Math.sqrt(s*(s-a)*(s-b)*(s-c))
 }
 
-@invariant()
+@invariant(() => ({}))
 class ConvexShape {
     readonly vertices: Vertex[]
 

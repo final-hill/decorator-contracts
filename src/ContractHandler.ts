@@ -8,13 +8,16 @@ import Assertion from './Assertion';
 
 const contractHandler = Symbol('Contract handler');
 
+const MSG_DUPLICATE_INVARIANT = 'Duplicate invariant function';
+
 /**
  * The ContractHandler manages the registration and evaluation of contracts associated with a class
  */
 class ContractHandler {
     protected _assert: typeof Assertion.prototype.assert;
 
-    protected readonly _invariantRegistry: Map<Predicate<any>, string> = new Map();
+    // TODO: Is there only ever one entry now?
+    protected readonly _invariantRegistry: Set<FnPredTable<any>> = new Set();
     // TODO: requiresRegistry
     // TODO: rescueRegistry
     // TODO: ensuresRegistry
@@ -47,14 +50,12 @@ class ContractHandler {
      * Registers a new invariant contract
      *
      * @param predicate - The invariant predicate
-     * @param message - The custome error message
      */
-    addInvariant(
-        predicate: Predicate<any>,
-        message: string
+    addInvariantRecord(
+        fnPredRecord: FnPredTable<any>
     ) {
-        this._assert(!this._invariantRegistry.has(predicate), 'Duplicate invariant');
-        this._invariantRegistry.set(predicate, message);
+        this._assert(!this._invariantRegistry.has(fnPredRecord), MSG_DUPLICATE_INVARIANT);
+        this._invariantRegistry.add(fnPredRecord);
     }
 
     /**
@@ -63,8 +64,11 @@ class ContractHandler {
      * @param self - The context class
      */
     assertInvariants(self: object) {
-        this._invariantRegistry.forEach((message, predicate) => {
-            this._assert(predicate(self), message);
+        this._invariantRegistry.forEach(fnPredRecord => {
+            let predRecord = fnPredRecord(self);
+            Object.entries(predRecord).forEach(([name, value]) => {
+                this._assert(value, name);
+            });
         });
     }
 
