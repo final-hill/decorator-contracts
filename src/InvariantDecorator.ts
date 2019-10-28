@@ -8,7 +8,6 @@ import Assertion from './Assertion';
 import {ContractHandler, contractHandler} from './ContractHandler';
 import { OVERRIDE_LIST } from './OverrideDecorator';
 
-type Message = string;
 type ClassDecorator = <T extends Constructor<any>>(Constructor: T) => T;
 
 /**
@@ -68,21 +67,9 @@ export default class InvariantDecorator {
         this.invariant = this.invariant.bind(this);
     }
 
-    invariant(predicate: undefined): ClassDecorator;
-    invariant<Self>(predicate: Predicate<Self>, message?: Message): ClassDecorator;
-    invariant<Self>(...predicate: Predicate<Self>[]): ClassDecorator;
-    invariant<Self>(predicate: [Predicate<Self>, Message][]): ClassDecorator;
-    invariant<Self>(predicate: undefined | Predicate<Self> | [Predicate<Self>, Message][], message?: any, ...rest: Predicate<Self>[]): ClassDecorator {
+    invariant<Self>(fnPredTable: FnPredTable<Self>): ClassDecorator {
         let assert = this._assert,
-            debugMode = this.debugMode,
-            defaultMessage = 'Invariant violated';
-
-        let invariants: [Predicate<Self>, Message][] =
-            typeof predicate == 'undefined' ? [] :
-            Array.isArray(predicate) ? predicate :
-            typeof message == 'string' ? [[predicate, message]] :
-            message == undefined ? [[predicate, defaultMessage]] :
-            [predicate, message, ...rest].map(pred => [pred, defaultMessage]);
+            debugMode = this.debugMode;
 
         return function<T extends Constructor<any>>(Base: T) {
             if(!debugMode) {
@@ -93,9 +80,7 @@ export default class InvariantDecorator {
             let handler: ContractHandler = hasHandler ?
                 (Base as any)[contractHandler] :
                 new ContractHandler(assert);
-            invariants.forEach(([pred, message]) => {
-                handler.addInvariant(pred, message);
-            });
+            handler.addInvariantRecord(fnPredTable);
 
             if(hasHandler) {
                 return Base;

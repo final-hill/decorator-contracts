@@ -17,7 +17,9 @@ describe('The invariant decorator MUST be class decorator only', () => {
 
     test('Define invariant', () => {
         expect(() => {
-            @invariant<Foo>(self => self instanceof Foo)
+            @invariant<Foo>(self => ({
+                selfIsFoo: self instanceof Foo
+            }))
             class Foo {}
 
             return Foo;
@@ -48,16 +50,20 @@ describe('There can be multiple invariant decorators assigned to a class', () =>
     invariants.forEach(invariant => {
         test('Define multiple invariants', () => {
             expect(() => {
-                @invariant<Foo>(self => self instanceof Foo)
-                @invariant<Foo>(self => self instanceof Object)
+                @invariant<Foo>(self => ({
+                    selfIsFoo: self instanceof Foo,
+                    selfIsObject: self instanceof Object
+                }))
                 class Foo extends Object {}
 
                 return Foo;
             }).not.toThrow();
 
             expect(() => {
-                @invariant<Foo>(self => self instanceof Foo)
-                @invariant<Foo>(self => self instanceof Array)
+                @invariant<Foo>(self => ({
+                    selfIsFoo: self instanceof Foo,
+                    selfIsArray: self instanceof Array
+                }))
                 class Foo extends Object {}
 
                 return Foo;
@@ -69,16 +75,20 @@ describe('There can be multiple invariant decorators assigned to a class', () =>
         let {invariant} = new Contracts(true);
 
         expect(() => {
-            @invariant<Foo>(self => self instanceof Foo)
-            @invariant<Foo>(self => self instanceof Object)
+            @invariant<Foo>(self => ({
+                selfIsFoo: self instanceof Foo,
+                selfIsObject: self instanceof Object
+            }))
             class Foo extends Object {}
 
             return new Foo();
         }).not.toThrow();
 
         expect(() => {
-            @invariant<Foo>(self => self instanceof Foo)
-            @invariant<Foo>(self => self instanceof Array)
+            @invariant<Foo>(self => ({
+                selfIsFoo: self instanceof Foo,
+                selfIsArray: self instanceof Array
+            }))
             class Foo extends Object {}
 
             return new Foo();
@@ -86,8 +96,10 @@ describe('There can be multiple invariant decorators assigned to a class', () =>
 
         // Changing order of invariants
         expect(() => {
-            @invariant<Foo>(self => self instanceof Array)
-            @invariant<Foo>(self => self instanceof Foo)
+            @invariant<Foo>(self => ({
+                selfIsArray: self instanceof Array,
+                selfIsFoo: self instanceof Foo
+            }))
             class Foo extends Object {}
 
             return new Foo();
@@ -98,16 +110,20 @@ describe('There can be multiple invariant decorators assigned to a class', () =>
         let {invariant} = new Contracts(false);
 
         expect(() => {
-            @invariant<Foo>(self => self instanceof Foo)
-            @invariant<Foo>(self => self instanceof Object)
+            @invariant<Foo>(self => ({
+                selfIsFoo: self instanceof Foo,
+                selfIsObject: self instanceof Object
+            }))
             class Foo extends Object {}
 
             return new Foo();
         }).not.toThrow();
 
         expect(() => {
-            @invariant<Foo>(self => self instanceof Foo)
-            @invariant<Foo>(self => self instanceof Array)
+            @invariant<Foo>(self => ({
+                selfIsFoo: self instanceof Foo,
+                selfIsArray: self instanceof Array
+            }))
             class Foo extends Object {}
 
             return new Foo();
@@ -115,8 +131,10 @@ describe('There can be multiple invariant decorators assigned to a class', () =>
 
         // Changing order of invariants
         expect(() => {
-            @invariant<Foo>(self => self instanceof Array)
-            @invariant<Foo>(self => self instanceof Foo)
+            @invariant<Foo>(self => ({
+                selfIsArray: self instanceof Array,
+                selfIsFoo: self instanceof Foo
+            }))
             class Foo extends Object {}
 
             return new Foo();
@@ -132,7 +150,9 @@ describe('The subclasses of an invariant decorated class must obey the invariant
     test('Test subclassing in debug mode', () => {
         let {invariant, override} = new Contracts(true);
 
-        @invariant<Foo>(self => self.value >= 0)
+        @invariant<Foo>(self => ({
+            nonNegative: self.value >= 0
+        }))
         class Foo {
             protected _value: number = 0;
             get value() { return this._value; }
@@ -210,7 +230,9 @@ describe('The subclasses of an invariant decorated class must obey the invariant
 
     test('Test subclassing in prod mode', () => {
         let {invariant} = new Contracts(false);
-        @invariant<Foo>(self => self.value >= 0)
+        @invariant<Foo>(self => ({
+            nonNegative: self.value >= 0
+        }))
         class Foo {
             protected _value: number = 0;
             get value() { return this._value; }
@@ -247,7 +269,7 @@ describe('The subclasses of an invariant decorated class must obey the invariant
             let bar = new Bar();
             bar.value = -1;
         }).not.toThrow(AssertionError);
-});
+    });
 });
 
 /**
@@ -263,7 +285,9 @@ describe('A truthy invariant does not throw an exception when evaluated', () => 
     invariants.forEach(invariant => {
         test('Construction does not throw', () => {
             expect(() => {
-                @invariant<Foo>(self => self instanceof Foo)
+                @invariant<Foo>(self => ({
+                    selfIsFoo: self instanceof Foo
+                }))
                 class Foo {}
 
                 return new Foo();
@@ -272,7 +296,9 @@ describe('A truthy invariant does not throw an exception when evaluated', () => 
 
         test('Method does not throw', () => {
             expect(() => {
-                @invariant<Foo>(self => self.value >= 0)
+                @invariant<Foo>(self => ({
+                    nonNegative: self.value >= 0
+                }))
                 class Foo {
                     protected value: number = 0;
 
@@ -300,7 +326,9 @@ describe('A falsy invariant throws an exception when evaluated', () => {
         let {invariant} = new Contracts(true);
 
         expect(() => {
-            @invariant<Foo>(self => self instanceof Array)
+            @invariant<Foo>(self => ({
+                selfIsArray: self instanceof Array
+            }))
             class Foo {}
 
             return new Foo();
@@ -311,7 +339,9 @@ describe('A falsy invariant throws an exception when evaluated', () => {
         let {invariant} = new Contracts(false);
 
         expect(() => {
-            @invariant<Foo>(self => self instanceof Array)
+            @invariant<Foo>(self => ({
+                selfIsArray: self instanceof Array
+            }))
             class Foo {}
 
             return new Foo();
@@ -322,7 +352,9 @@ describe('A falsy invariant throws an exception when evaluated', () => {
         let {invariant} = new Contracts(true);
 
         expect(() => {
-            @invariant<Foo>(self => self.value === 37)
+            @invariant<Foo>(self => ({
+                specificValue: self.value === 37
+            }))
             class Foo {
                 protected value: number = 37;
 
@@ -342,7 +374,9 @@ describe('A falsy invariant throws an exception when evaluated', () => {
         let {invariant} = new Contracts(false);
 
         expect(() => {
-            @invariant<Foo>(self => self.value === 37)
+            @invariant<Foo>(self => ({
+                specificValue: self.value === 37
+            }))
             class Foo {
                 protected value: number = 37;
 
@@ -372,7 +406,9 @@ describe('An invariant is evaluated after it\'s associated class is constructed'
 
         invariants.forEach(invariant => {
             expect(() => {
-                @invariant<Foo>(self => self instanceof Foo)
+                @invariant<Foo>(self => ({
+                    selfIsFoo: self instanceof Foo
+                }))
                 class Foo {}
 
                 return new Foo();
@@ -384,7 +420,9 @@ describe('An invariant is evaluated after it\'s associated class is constructed'
         let {invariant} = new Contracts(true);
 
         expect(() => {
-            @invariant<Foo>(self => self instanceof Array)
+            @invariant<Foo>(self => ({
+                selfIsArray: self instanceof Array
+            }))
             class Foo {}
 
             return new Foo();
@@ -395,7 +433,9 @@ describe('An invariant is evaluated after it\'s associated class is constructed'
         let {invariant} = new Contracts(false);
 
         expect(() => {
-            @invariant<Foo>(self => self instanceof Array)
+            @invariant<Foo>(self => ({
+                selfIsArray: self instanceof Array
+            }))
             class Foo {}
 
             return new Foo();
@@ -412,7 +452,9 @@ describe('An invariant is evaluated before and after every method call on the as
     test('Test method call in debugMode', () => {
         let {invariant} = new Contracts(true);
 
-        @invariant<Foo>(self => self.value >= 0)
+        @invariant<Foo>(self => ({
+            nonNegative: self.value >= 0
+        }))
         class Foo {
             protected _value: number = 0;
             get value() { return this._value; }
@@ -438,7 +480,9 @@ describe('An invariant is evaluated before and after every method call on the as
     test('Test method call in prodMode', () => {
         let {invariant} = new Contracts(false);
 
-        @invariant<Foo>(self => self.value >= 0)
+        @invariant<Foo>(self => ({
+            nonNegative: self.value >= 0
+        }))
         class Foo {
             protected _value: number = 0;
             get value() { return this._value; }
@@ -458,55 +502,6 @@ describe('An invariant is evaluated before and after every method call on the as
 
         expect(() => {
             foo.dec();
-        }).not.toThrow();
-    });
-});
-
-/**
- * Requirement 145
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/145
- */
-describe('An invariant decorator must accept multiple [assertion, message] pairs', () => {
-    test('invariant declaration in debug mode', () => {
-        let {invariant} = new Contracts(true);
-
-        expect(() => {
-            @invariant<Stack<any>>([
-                [self => self.size >= 0 && self.size <= self.limit, 'The size of a stack must be between 0 and its limit'],
-                [self => self.isEmpty() == (self.size == 0), 'An empty stack must have a size of 0'],
-                [self => self.isFull() == (self.size == self.limit), 'A full stack must have a size that equals its limit']
-            ])
-            class Stack<T> {
-                protected _implementation: T[] = [];
-
-                constructor(readonly limit: number) {}
-
-                isEmpty(): boolean {
-                    return this._implementation.length == 0;
-                }
-
-                isFull(): boolean {
-                    return this._implementation.length == this.limit;
-                }
-
-                pop(): T {
-                    return this._implementation.pop()!;
-                }
-
-                push(item: T): void {
-                    this._implementation.push(item);
-                }
-
-                get size(): number {
-                    return this._implementation.length;
-                }
-
-                top(): T {
-                    return this._implementation[this._implementation.length - 1];
-                }
-            }
-
-            return Stack;
         }).not.toThrow();
     });
 });
@@ -534,7 +529,9 @@ describe('In debug mode the invariant decorator evaluates its assertions', () =>
         let {invariant} = new Contracts(true);
 
         expect(() => {
-            @invariant<Foo>(self => self instanceof Array)
+            @invariant<Foo>(self => ({
+                selfIsArray: self instanceof Array
+            }))
             class Foo {}
 
             return new Foo();
@@ -545,7 +542,9 @@ describe('In debug mode the invariant decorator evaluates its assertions', () =>
         let {invariant} = new Contracts(true);
 
         expect(() => {
-            @invariant<Foo>(self => self.value === 37)
+            @invariant<Foo>(self => ({
+                specificValue: self.value === 37
+            }))
             class Foo {
                 protected value: number = 37;
 
@@ -564,7 +563,9 @@ describe('In debug mode the invariant decorator evaluates its assertions', () =>
     test('Test getter/setter', () => {
         let {invariant} = new Contracts(true);
 
-        @invariant<Foo>(self => self.value >= 0)
+        @invariant<Foo>(self => ({
+            nonNegative: self.value >= 0
+        }))
         class Foo {
             protected _value: number = 0;
             get value() { return this._value; }
@@ -592,7 +593,9 @@ describe('In production mode the invariant decorator does not evaluate its asser
 
     test('Construction does not throw', () => {
         expect(() => {
-            @invariant<Foo>(self => self instanceof Array)
+            @invariant<Foo>(self => ({
+                selfIsArray: self instanceof Array
+            }))
             class Foo {}
 
             return new Foo();
@@ -601,7 +604,9 @@ describe('In production mode the invariant decorator does not evaluate its asser
 
     test('Method does not throw', () => {
         expect(() => {
-            @invariant<Foo>(self => self.value === 42)
+            @invariant<Foo>(self => ({
+                specificValue: self.value === 42
+            }))
             class Foo {
                 protected value: number = 0;
 
@@ -619,55 +624,6 @@ describe('In production mode the invariant decorator does not evaluate its asser
 });
 
 /**
- * Requirement 163
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/163
- */
-describe('An invariant decorator must accept multiple assertions', () => {
-    test('invariant declaration in debug mode', () => {
-        let {invariant} = new Contracts(true);
-
-        expect(() => {
-            @invariant<Stack<any>>(
-                self => self.size >= 0 && self.size <= self.limit,
-                self => self.isEmpty() == (self.size == 0),
-                self => self.isFull() == (self.size == self.limit)
-            )
-            class Stack<T> {
-                protected _implementation: T[] = [];
-
-                constructor(readonly limit: number) {}
-
-                isEmpty(): boolean {
-                    return this._implementation.length == 0;
-                }
-
-                isFull(): boolean {
-                    return this._implementation.length == this.limit;
-                }
-
-                pop(): T {
-                    return this._implementation.pop()!;
-                }
-
-                push(item: T): void {
-                    this._implementation.push(item);
-                }
-
-                get size(): number {
-                    return this._implementation.length;
-                }
-
-                top(): T {
-                    return this._implementation[this._implementation.length - 1];
-                }
-            }
-
-            return Stack;
-        }).not.toThrow();
-    });
-});
-
-/**
  * Requirement 187
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/187
  */
@@ -676,36 +632,43 @@ describe('A subclass with its own invariants must enforce all ancestor invariant
         let {invariant} = new Contracts(true);
 
         expect(() => {
-            @invariant(
-                self => self instanceof Base,
-                self => self != null
-            )
+            @invariant(self => ({
+                selfIsBase: self instanceof Base,
+                selfExists: self != null
+            }))
             class Base {}
 
-            @invariant(self => self instanceof Sub)
+            @invariant(self => ({
+                selfIsSub: self instanceof Sub
+            }))
             class Sub extends Base {}
 
             return new Sub();
         }).not.toThrow();
 
         expect(() => {
-            @invariant(self => self instanceof Array)
+            @invariant(self => ({
+                selfIsArray: self instanceof Array
+            }))
             class Base {}
 
-            @invariant(self => self instanceof Sub)
+            @invariant(self => ({
+                selfIsSub: self instanceof Sub
+            }))
             class Sub extends Base {}
 
             return new Sub();
         }).toThrow(AssertionError);
 
         expect(() => {
-            @invariant(
-                self => self instanceof Base,
-                'I thought I was a Base!'
-            )
+            @invariant(self => ({
+                selfIsBase: self instanceof Base
+            }))
             class Base {}
 
-            @invariant(self => self instanceof Array)
+            @invariant(self => ({
+                selfIsArray: self instanceof Array
+            }))
             // @ts-ignore : Ignore unused error
             class Sub extends Base {}
 
@@ -726,10 +689,29 @@ describe('The invariant decorator supports use with no arguments', () => {
 
     invariants.forEach(invariant => {
         expect(() => {
-            @invariant()
+            @invariant(_ => ({}))
             class Foo {}
 
             return new Foo();
+        }).not.toThrow();
+    });
+});
+
+/**
+ * Requirement 370
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/370
+ */
+describe('@invariant must accept a function that returns a record of invariants', () => {
+    let {invariant} = new Contracts(true)
+
+    test('Define invariant', () => {
+        expect(() => {
+            @invariant<Foo>(self => ({
+                selfIsFoo: self instanceof Foo
+            }))
+            class Foo {}
+
+            return Foo;
         }).not.toThrow();
     });
 });
