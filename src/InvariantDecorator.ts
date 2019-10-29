@@ -7,9 +7,12 @@
 import Assertion from './Assertion';
 import {ContractHandler, contractHandler} from './ContractHandler';
 import { OVERRIDE_LIST } from './OverrideDecorator';
+import isConstructor from './lib/isContructor';
 
-type Message = string;
 type ClassDecorator = <T extends Constructor<any>>(Constructor: T) => T;
+
+const MSG_INVALID_DECORATOR = 'Invalid decorator usage. Function expected';
+const TRUE_PRED = () => ({ pass: true });
 
 /**
  * Returns the method names associated with the provided prototype
@@ -68,23 +71,17 @@ export default class InvariantDecorator {
         this.invariant = this.invariant.bind(this);
     }
 
-    invariant(predicate: undefined): ClassDecorator;
-    invariant<Self>(predicate: Predicate<Self>, message?: Message): ClassDecorator;
-    invariant<Self>(...predicate: Predicate<Self>[]): ClassDecorator;
-    invariant<Self>(predicate: [Predicate<Self>, Message][]): ClassDecorator;
-    invariant<Self>(predicate: undefined | Predicate<Self> | [Predicate<Self>, Message][], message?: any, ...rest: Predicate<Self>[]): ClassDecorator {
-        let assert = this._assert,
-            debugMode = this.debugMode,
-            defaultMessage = 'Invariant violated';
+    invariant<T extends Constructor<any>>(Base: T): T;
+    invariant<Self>(fnPredTable: FnPredTable<Self>): ClassDecorator;
+    invariant<U extends (Constructor<any> | any)>(fn: Function) {
+        this._assert(typeof fn == 'function', MSG_INVALID_DECORATOR);
 
-        let invariants: [Predicate<Self>, Message][] =
-            typeof predicate == 'undefined' ? [] :
-            Array.isArray(predicate) ? predicate :
-            typeof message == 'string' ? [[predicate, message]] :
-            message == undefined ? [[predicate, defaultMessage]] :
-            [predicate, message, ...rest].map(pred => [pred, defaultMessage]);
+        let predTable = isConstructor(fn) ? TRUE_PRED : fn as FnPredTable<U>,
+            Clazz = isConstructor(fn) ? fn : undefined,
+            assert = this._assert,
+            debugMode = this.debugMode;
 
-        return function<T extends Constructor<any>>(Base: T) {
+        function decorator(Base: any) {
             if(!debugMode) {
                 return Base;
             }
@@ -93,9 +90,7 @@ export default class InvariantDecorator {
             let handler: ContractHandler = hasHandler ?
                 (Base as any)[contractHandler] :
                 new ContractHandler(assert);
-            invariants.forEach(([pred, message]) => {
-                handler.addInvariant(pred, message);
-            });
+            handler.addInvariantRecord(predTable);
 
             if(hasHandler) {
                 return Base;
@@ -114,6 +109,8 @@ export default class InvariantDecorator {
                     }
                 };
             }
-        };
+        }
+
+        return isConstructor(fn) ? decorator(Clazz!) : decorator;
     }
 }
