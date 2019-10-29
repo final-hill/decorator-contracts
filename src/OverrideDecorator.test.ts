@@ -196,7 +196,7 @@ describe('A subclass with an overriding method missing @override is an error', (
 
     test('@override defined', () => {
         expect(() => {
-            @invariant(_ => ({}))
+            @invariant
             class Base {
                 method() {}
             }
@@ -212,7 +212,7 @@ describe('A subclass with an overriding method missing @override is an error', (
 
     test('@override missing', () => {
         expect(() => {
-            @invariant(_ => ({}))
+            @invariant
             class Base {
                 method() {}
             }

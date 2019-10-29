@@ -193,7 +193,7 @@ Whether you have invariants for a class or not it is necessary to declare one
 anyway on one of the base classes.
 
 ```typescript
-@invariant(() => ({}))
+@invariant
 class BaseClass {}
 
 class Subclass extends BaseClass {}
@@ -232,7 +232,7 @@ let _triArea = (v1: Vertex, v2: Vertex, v3: Vertex): number => {
     return Math.sqrt(s*(s-a)*(s-b)*(s-c))
 }
 
-@invariant(() => ({}))
+@invariant
 class ConvexShape {
     readonly vertices: Vertex[]
 
