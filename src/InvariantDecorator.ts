@@ -7,8 +7,12 @@
 import Assertion from './Assertion';
 import {ContractHandler, contractHandler} from './ContractHandler';
 import { OVERRIDE_LIST } from './OverrideDecorator';
+import isConstructor from './lib/isContructor';
 
 type ClassDecorator = <T extends Constructor<any>>(Constructor: T) => T;
+
+const MSG_INVALID_DECORATOR = 'Invalid decorator usage. Function expected';
+const TRUE_PRED = () => ({ pass: true });
 
 /**
  * Returns the method names associated with the provided prototype
@@ -67,11 +71,17 @@ export default class InvariantDecorator {
         this.invariant = this.invariant.bind(this);
     }
 
-    invariant<Self>(fnPredTable: FnPredTable<Self>): ClassDecorator {
-        let assert = this._assert,
+    invariant<T extends Constructor<any>>(Base: T): T;
+    invariant<Self>(fnPredTable: FnPredTable<Self>): ClassDecorator;
+    invariant<U extends (Constructor<any> | any)>(fn: Function) {
+        this._assert(typeof fn == 'function', MSG_INVALID_DECORATOR);
+
+        let predTable = isConstructor(fn) ? TRUE_PRED : fn as FnPredTable<U>,
+            Clazz = isConstructor(fn) ? fn : undefined,
+            assert = this._assert,
             debugMode = this.debugMode;
 
-        return function<T extends Constructor<any>>(Base: T) {
+        function decorator(Base: any) {
             if(!debugMode) {
                 return Base;
             }
@@ -80,7 +90,7 @@ export default class InvariantDecorator {
             let handler: ContractHandler = hasHandler ?
                 (Base as any)[contractHandler] :
                 new ContractHandler(assert);
-            handler.addInvariantRecord(fnPredTable);
+            handler.addInvariantRecord(predTable);
 
             if(hasHandler) {
                 return Base;
@@ -99,6 +109,8 @@ export default class InvariantDecorator {
                     }
                 };
             }
-        };
+        }
+
+        return isConstructor(fn) ? decorator(Clazz!) : decorator;
     }
 }

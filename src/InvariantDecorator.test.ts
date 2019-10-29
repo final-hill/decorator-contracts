@@ -632,13 +632,13 @@ describe('A subclass with its own invariants must enforce all ancestor invariant
         let {invariant} = new Contracts(true);
 
         expect(() => {
-            @invariant(self => ({
+            @invariant<Base>(self => ({
                 selfIsBase: self instanceof Base,
                 selfExists: self != null
             }))
             class Base {}
 
-            @invariant(self => ({
+            @invariant<Sub>(self => ({
                 selfIsSub: self instanceof Sub
             }))
             class Sub extends Base {}
@@ -647,12 +647,12 @@ describe('A subclass with its own invariants must enforce all ancestor invariant
         }).not.toThrow();
 
         expect(() => {
-            @invariant(self => ({
+            @invariant<Base>(self => ({
                 selfIsArray: self instanceof Array
             }))
             class Base {}
 
-            @invariant(self => ({
+            @invariant<Sub>(self => ({
                 selfIsSub: self instanceof Sub
             }))
             class Sub extends Base {}
@@ -661,12 +661,12 @@ describe('A subclass with its own invariants must enforce all ancestor invariant
         }).toThrow(AssertionError);
 
         expect(() => {
-            @invariant(self => ({
+            @invariant<Base>(self => ({
                 selfIsBase: self instanceof Base
             }))
             class Base {}
 
-            @invariant(self => ({
+            @invariant<Sub>(self => ({
                 selfIsArray: self instanceof Array
             }))
             // @ts-ignore : Ignore unused error
@@ -689,7 +689,7 @@ describe('The invariant decorator supports use with no arguments', () => {
 
     invariants.forEach(invariant => {
         expect(() => {
-            @invariant(_ => ({}))
+            @invariant
             class Foo {}
 
             return new Foo();
@@ -702,7 +702,7 @@ describe('The invariant decorator supports use with no arguments', () => {
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/370
  */
 describe('@invariant must accept a function that returns a record of invariants', () => {
-    let {invariant} = new Contracts(true)
+    let {invariant} = new Contracts(true);
 
     test('Define invariant', () => {
         expect(() => {
