@@ -23,7 +23,7 @@ steps:
 #  displayName: 'npm audit'
 
 - script: |
-    npm run build-nofix'
+    npm run build-nofix
   workingDirectory: ./
   displayName: 'npm run build-nofix'
 
