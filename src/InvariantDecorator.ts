@@ -12,6 +12,7 @@ import isConstructor from './lib/isContructor';
 type ClassDecorator = <T extends Constructor<any>>(Constructor: T) => T;
 
 const MSG_INVALID_DECORATOR = 'Invalid decorator usage. Function expected';
+export const MSG_DUPLICATE_INVARIANT = `Only a single @invariant can be assigned per class`;
 const TRUE_PRED = () => ({ pass: true });
 
 /**
@@ -59,9 +60,9 @@ function _checkOverrides(
 
 /**
  * The `@invariant` decorator describes and enforces the properties of a class
- * via a provided assertion. This assertion is checked after the associated class
+ * via assertions. These assertions are checked after the associated class
  * is constructed, before and after every method execution, and before and after
- * every property usage (get/set).
+ * every accessor usage (get/set).
  */
 export default class InvariantDecorator {
     protected _assert: typeof Assertion.prototype.assert;
@@ -87,28 +88,23 @@ export default class InvariantDecorator {
             }
 
             let hasHandler = Object.getOwnPropertySymbols(Base).includes(contractHandler);
-            let handler: ContractHandler = hasHandler ?
-                (Base as any)[contractHandler] :
-                new ContractHandler(assert);
-            handler.addInvariantRecord(predTable);
+            assert(!hasHandler, MSG_DUPLICATE_INVARIANT);
 
-            if(hasHandler) {
-                return Base;
-            } else {
-                return class InvariantClass extends Base {
-                    static [contractHandler]: ContractHandler = handler;
+            let handler: ContractHandler = new ContractHandler(assert, predTable);
 
-                    constructor(...args: any[]) {
-                        super(...args);
+            return class InvariantClass extends Base {
+                static [contractHandler]: ContractHandler = handler;
 
-                        let Clazz = this.constructor;
-                        _checkOverrides(assert, Clazz, Clazz.prototype);
-                        InvariantClass[contractHandler].assertInvariants(this);
+                constructor(...args: any[]) {
+                    super(...args);
 
-                        return new Proxy(this, handler);
-                    }
-                };
-            }
+                    let Clazz = this.constructor;
+                    _checkOverrides(assert, Clazz, Clazz.prototype);
+                    InvariantClass[contractHandler].assertInvariants(this);
+
+                    return new Proxy(this, handler);
+                }
+            };
         }
 
         return isConstructor(fn) ? decorator(Clazz!) : decorator;
