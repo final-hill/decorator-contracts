@@ -8,16 +8,10 @@ import Assertion from './Assertion';
 
 const contractHandler = Symbol('Contract handler');
 
-const MSG_DUPLICATE_INVARIANT = 'Duplicate invariant function';
-
 /**
  * The ContractHandler manages the registration and evaluation of contracts associated with a class
  */
 class ContractHandler {
-    protected _assert: typeof Assertion.prototype.assert;
-
-    // TODO: Is there only ever one entry now?
-    protected readonly _invariantRegistry: Set<FnPredTable<any>> = new Set();
     // TODO: requiresRegistry
     // TODO: rescueRegistry
     // TODO: ensuresRegistry
@@ -27,10 +21,9 @@ class ContractHandler {
      * @param _assert - The assertion implementation associated with the current debugMode
      */
     constructor(
-        protected assert: typeof Assertion.prototype.assert
-    ) {
-        this._assert = assert;
-    }
+        protected readonly _assert: typeof Assertion.prototype.assert,
+        protected readonly _fnInvariantRecord: FnPredTable<any>
+    ) { }
 
     /**
      * Wraps a method with invariant assertions
@@ -47,28 +40,14 @@ class ContractHandler {
     }
 
     /**
-     * Registers a new invariant contract
-     *
-     * @param predicate - The invariant predicate
-     */
-    addInvariantRecord(
-        fnPredRecord: FnPredTable<any>
-    ) {
-        this._assert(!this._invariantRegistry.has(fnPredRecord), MSG_DUPLICATE_INVARIANT);
-        this._invariantRegistry.add(fnPredRecord);
-    }
-
-    /**
      * Evaluates all registered invariants
      *
      * @param self - The context class
      */
     assertInvariants(self: object) {
-        this._invariantRegistry.forEach(fnPredRecord => {
-            let predRecord = fnPredRecord(self);
-            Object.entries(predRecord).forEach(([name, value]) => {
-                this._assert(value, name);
-            });
+        let predRecord = this._fnInvariantRecord.call(self, self);
+        Object.entries(predRecord).forEach(([name, value]) => {
+            this._assert(value, name);
         });
     }
 
