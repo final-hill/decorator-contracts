@@ -205,15 +205,15 @@ relationship.
 
 ### Overrides
 
-Methods implemented in a superclass can be overridden in a subclass. The
+Class members implemented in a superclass can be overridden in a subclass. The
 subclass implementation can augment or entirely replace the one belonging
 to the superclass. This can be done for a variety of reasons, such as
 providing a more efficient implementation in the context of the subclass.
-Regardless of the reason, the overridden method should be semantically
-consistent with the superclass method. In other
+Regardless of the reason, the overridden member should be semantically
+consistent with the superclass member. In other
 words, it should follow [Liskov's Substitution Principle](https://en.wikipedia.org/wiki/Liskov_substitution_principle).
 To aid in the enforcement and documentation of this principle the library
-provides an `@override` decorator for class methods.
+provides an `@override` decorator for class members for methods and accessors.
 
 A simple example is calculating the area of Convex Polygons. While a general
 formula exists to accomplish this, more efficient and direct formulas exist

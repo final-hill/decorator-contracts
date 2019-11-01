@@ -31,6 +31,12 @@ class DescriptorWrapper {
         return typeof this.descriptor.value == 'undefined';
     }
 
+    get memberType(): 'method' | 'property' | 'accessor' {
+        return this.isMethod ? 'method' :
+               this.isProperty ? 'property' :
+               'accessor';
+    }
+
     get value() {
         return this.descriptor.value;
     }
