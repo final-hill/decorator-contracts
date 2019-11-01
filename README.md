@@ -16,12 +16,11 @@
 7. [Project Structure](#project-structure)
 8. [Build and Test](#build-and-test)
 9. [Dependencies](#dependencies)
+10. [Further Reading](#further-reading)
 
 ## Introduction
 
 TODO
-
-[Code Contracts](https://en.wikipedia.org/wiki/Design_by_contract)
 
 ## Library Installation
 
@@ -364,3 +363,9 @@ The development dependencies are as follows:
 | `ts-jest`        | TypeScript support for `jest`                         |
 | `tslint`         | TypeScript linting library                            |
 | `typescript`     | TypeScript compiler                                   |
+
+## Further Reading
+
+- [Design by Contract](https://en.wikipedia.org/wiki/Design_by_contract)
+- [Liskov Substitution Principle](https://en.wikipedia.org/wiki/Liskov_substitution_principle)
+- [Object-Oriented Software Construction](https://en.wikipedia.org/wiki/Object-Oriented_Software_Construction)

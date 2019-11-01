@@ -1,7 +1,7 @@
 {
   "name": "@thenewobjective/decorator-contracts",
   "version": "0.0.0",
-  "description": "Design By Contract for TypeScript and ECMAScript classes",
+  "description": "Code Contracts for TypeScript and ECMAScript classes",
   "main": "dist/index.js",
   "scripts": {
     "prebuild": "npm run clean && npm run lint",
@@ -24,13 +24,15 @@
     "url": "https://thenewobjective@dev.azure.com/thenewobjective/decorator-contracts/_git/decorator-contracts"
   },
   "keywords": [
-    "contract",
+    "code-contracts",
     "contracts",
-    "Dbc",
+    "decorators",
     "test",
     "assert",
     "require",
-    "invariant"
+    "invariant",
+    "precondition",
+    "postcondition"
   ],
   "author": "Michael L Haufe <tno@thenewobjective.com> (https://thenewobjective.com)",
   "license": "AGPL-1.0-only",
