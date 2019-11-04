@@ -5,6 +5,7 @@
  */
 
 import Assertion from './Assertion';
+import FnPredTable from './typings/FnPredTable';
 
 const contractHandler = Symbol('Contract handler');
 
