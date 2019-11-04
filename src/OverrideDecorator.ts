@@ -35,8 +35,7 @@ function _findAncestorMember(assert: typeof Assertion.prototype.assert, targetPr
 
 /**
  * The 'override' decorator asserts that the current class member is a specialized instance of
- * an ancestor class's member of the same name.
- *
+ * an ancestor class's member of the same name
  */
 export default class OverrideDecorator {
     protected _assert: typeof Assertion.prototype.assert;
@@ -70,34 +69,27 @@ export default class OverrideDecorator {
         assert(!isStatic, MSG_NO_STATIC, TypeError);
         assert(dw.isMethod || dw.isProperty || dw.isAccessor);
 
-        let ancestorMember = _findAncestorMember(assert, target, propertyKey)!;
-        assert(ancestorMember != undefined, MSG_NO_MATCHING_MEMBER);
+        let am = _findAncestorMember(assert, target, propertyKey)!;
+        assert(am != undefined, MSG_NO_MATCHING_MEMBER);
+
+        let Clazz = (target as any).constructor,
+            overrides = Object.getOwnPropertySymbols(Clazz).includes(OVERRIDE_LIST) ?
+                Clazz[OVERRIDE_LIST]! : Clazz[OVERRIDE_LIST] = new Set();
+
+        assert(!overrides.has(propertyKey), MSG_DUPLICATE_OVERRIDE);
+        overrides.add(propertyKey);
+
+        assert(dw.memberType === am.memberType, MSG_NO_MATCHING_MEMBER);
 
         if(dw.isMethod) {
-            let Clazz = (target as any).constructor;
-
-            assert(ancestorMember.isMethod, MSG_NO_MATCHING_MEMBER);
             let thisMethod: Function = dw.value,
-                ancMethod: Function = ancestorMember.value,
-                overrides = Object.getOwnPropertySymbols(Clazz).includes(OVERRIDE_LIST) ?
-                    Clazz[OVERRIDE_LIST]! : Clazz[OVERRIDE_LIST] = new Set();
-            assert(!overrides.has(propertyKey), MSG_DUPLICATE_OVERRIDE);
+                ancMethod: Function = am.value;
             assert(thisMethod.length == ancMethod.length, MSG_INVALID_ARG_LENGTH);
-
-            overrides.add(propertyKey);
-
-            return dw.descriptor;
-        } else if (dw.isProperty) {
-            // TODO: Do nothing here?
-            // let thisValue = currentDescriptor.value,
-            //     ancValue = ancestorMember.value;
-            // assert(_isSubtypeOf(thisValue, ancValue));
-
-            return dw.value;
-        } else { // isAccessor
-            // TODO
-
-            return dw.value;
         }
+
+        // TODO: subtyping assertions?
+        // TODO: writable | configurable | enumerable verification
+
+        return dw.descriptor;
     }
 }
