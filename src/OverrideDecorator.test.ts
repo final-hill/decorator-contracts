@@ -131,14 +131,14 @@ describe('using @override on a method with an ancestor with a different paramete
         expect(() => {
             class Base {
                 method(a: string, b: string) {
-                    console.log(`${a}, ${b}`);
+                    return `${a}, ${b}`;
                 }
             }
 
             class Sub extends Base {
                 @override
                 method(a: string) {
-                    console.log(a);
+                    return a;
                 }
             }
 
@@ -150,7 +150,7 @@ describe('using @override on a method with an ancestor with a different paramete
         expect(() => {
             class Base {
                 method(a: string) {
-                    console.log(`${a}`);
+                    return `${a}`;
                 }
             }
 
@@ -158,7 +158,7 @@ describe('using @override on a method with an ancestor with a different paramete
                 @override
                 // @ts-ignore: type error for JS test
                 method(a: string, b: string) {
-                    console.log(`${a}, ${b}`);
+                    return `${a}, ${b}`;
                 }
             }
 
@@ -170,14 +170,14 @@ describe('using @override on a method with an ancestor with a different paramete
         expect(() => {
             class Base {
                 method(a: string, b: string) {
-                    console.log(`${a}, ${b}`);
+                    return `${a}, ${b}`;
                 }
             }
 
             class Sub extends Base {
                 @override
                 method(a: string, b: string) {
-                    super.method(a, b);
+                    return super.method(a, b);
                 }
             }
 
@@ -238,7 +238,7 @@ describe('Only a single @override can be assigned to a method per class', () => 
         expect(() => {
             class Base {
                 method(a: string, b: string) {
-                    console.log(`${a}, ${b}`);
+                    return `${a}, ${b}`;
                 }
             }
 
@@ -246,7 +246,7 @@ describe('Only a single @override can be assigned to a method per class', () => 
                 @override
                 @override
                 method(a: string, b: string) {
-                    super.method(a, b);
+                    return super.method(a, b);
                 }
             }
 
@@ -258,21 +258,21 @@ describe('Only a single @override can be assigned to a method per class', () => 
         expect(() => {
             class Base {
                 method(a: string, b: string) {
-                    console.log(`${a}, ${b}`);
+                    return `${a}, ${b}`;
                 }
             }
 
             class Sub extends Base {
                 @override
                 method(a: string, b: string) {
-                    super.method(a, b);
+                    return super.method(a, b);
                 }
             }
 
             class SubSub extends Sub {
                 @override
                 method(a: string, b: string) {
-                    super.method(a, b);
+                    return super.method(a, b);
                 }
             }
 
