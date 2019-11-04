@@ -5,3 +5,5 @@
  */
 
 type FnPredTable<T> = (ctx: T) => { [attribute: string]: boolean };
+
+export default FnPredTable;
