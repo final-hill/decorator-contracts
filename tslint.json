@@ -34,7 +34,13 @@
         "encoding": true,
         "eofline": false,
         "file-header": [
-            false
+            true,
+            {
+                "allow-single-line-comments": false,
+                "match": "@license",
+                "default": "@license\r\nCopyright (C) #{YEAR}# Michael L Haufe\r\nSPDX-License-Identifier: AGPL-1.0-only",
+                "enforce-trailing-newline": false
+            }
         ],
         "import-spacing": true,
         "indent": [
