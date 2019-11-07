@@ -307,11 +307,12 @@ class NumberList {
 }
 ```
 
-`error` is the error thrown by the feature.
+@rescue is a non-static member decorator that accepts the following:
 
-`retry` is a function that can be called to retry the feature.
-
-`fail` will raise the exception to the caller.
+- `self` is the current instance
+- `error` is the error thrown by the feature.
+- `retry` is a function that can be called to retry the feature.
+- `fail` will raise the exception to the caller.
 
 ## Contributing
 
