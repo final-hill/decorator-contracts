@@ -10,6 +10,7 @@
    1. [Assertions](#assertions)
    2. [Invariants](#invariants)
    3. [Overrides](#overrides)
+   4. [Rescue](#rescue)
 4. [Contributing](#contributing)
 5. [Building and Editing](#building-and-editing)
 6. [Getting Started](#getting-started)
@@ -284,6 +285,33 @@ error is raised if an associated `@override` decorator is missing.
 Static methods, including the constructor, can not be assigned an `@override`
 decorator. In the future this may be enabled for non-constructor static methods
 but the implications are not clear at present.
+
+### Rescue
+
+The `@rescue` decorator enables a mechanism for providing Robustness.
+Robustness is the ability of an implementation to respond to situations
+not specified; in other words the ability to handle exceptions (pun intended).
+
+```typescript
+@invariant
+class NumberList {
+    ...
+    @rescue<NumberList>((self, error, retry, fail) => {
+        self.items = [0];
+        retry();
+    })
+    average(): number {
+        return this.items.reduce((sum, next) => sum + next) / this.items.length
+    }
+    ...
+}
+```
+
+`error` is the error thrown by the feature.
+
+`retry` is a function that can be called to retry the feature.
+
+`fail` will raise the exception to the caller.
 
 ## Contributing
 
