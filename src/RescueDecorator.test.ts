@@ -50,3 +50,25 @@ describe('@rescue is a non-static member decorator only', () => {
         }).not.toThrow();
     });
  });
+
+/**
+ * Requirement 434
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/434
+ */
+describe('The @rescue constructor has a debugMode that enables its execution', () => {
+    test('enabled', () => {
+        let {rescue} = new Contracts(true);
+
+        expect(() => {
+            class Base {}
+        }).toThrow();
+    });
+
+    test('disabled', () => {
+        let {rescue} = new Contracts(false);
+
+        expect(() => {
+            class Base {}
+        }).not.toThrow();
+    });
+});
