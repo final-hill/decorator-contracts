@@ -16,21 +16,6 @@ const MSG_INVALID_DECORATOR = 'Invalid decorator usage. Function expected';
 export const MSG_DUPLICATE_INVARIANT = `Only a single @invariant can be assigned per class`;
 const TRUE_PRED = () => ({ pass: true });
 
-const IS_HANDLER = Symbol('Is Handler');
-
-abstract class Handler<T extends object> implements ProxyHandler<T> {
-    get(target: T, p: PropertyKey, _receiver: any) {
-        switch(p) {
-            case IS_HANDLER: return true;
-            default: return target[p];
-        }
-    }
-}
-
-class InvariantHandler<T extends Object> extends Handler<T>  {
-
-}
-
 /**
  * Returns the method names associated with the provided prototype
  */
@@ -100,10 +85,6 @@ export default class InvariantDecorator {
             debugMode = this.debugMode;
 
         function decorator(Base: any) {
-            assert(!Base[IS_HANDLER]);
-
-            ////////////////////////////////////////////////////
-            ///////////////////////////////////////////////////
             if(!debugMode) {
                 return Base;
             }
