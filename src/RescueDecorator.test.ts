@@ -8,6 +8,14 @@
 
 import Contracts from './';
 
+/**
+ * Requirement 398
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/398
+ */
+describe('A member with a @rescue defined must also have an @invariant defined on self or ancestor class', () => {
+
+});
+
  /**
   * Requirement 399
   * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/399
@@ -28,7 +36,7 @@ describe('@rescue is a non-static member decorator only', () => {
     test('static method decorator throws', () => {
         expect(() => {
             class Base {
-                @rescue
+                @rescue(() => {})
                 static method() {}
             }
 
@@ -42,7 +50,7 @@ describe('@rescue is a non-static member decorator only', () => {
             }
 
             class Sub extends Base {
-                @rescue
+                @rescue(() => {})
                 method() {}
             }
 
@@ -57,18 +65,40 @@ describe('@rescue is a non-static member decorator only', () => {
  */
 describe('The @rescue constructor has a debugMode that enables its execution', () => {
     test('enabled', () => {
-        let {rescue} = new Contracts(true);
+        let {invariant, rescue} = new Contracts(true);
 
         expect(() => {
-            class Base {}
-        }).toThrow();
+            @invariant
+            class Base {
+                @rescue(() => {
+                    throw new Error('I am still an Error');
+                })
+                throws(value: string) {
+                    throw new Error(value);
+                }
+            }
+
+            let base = new Base();
+            base.throws('I am Error');
+        }).toThrow('I am still an Error');
     });
 
     test('disabled', () => {
-        let {rescue} = new Contracts(false);
+        let {invariant, rescue} = new Contracts(false);
 
         expect(() => {
-            class Base {}
-        }).not.toThrow();
+            @invariant
+            class Base {
+                @rescue(() => {
+                    throw new Error('I am still an Error');
+                })
+                throws(value: string) {
+                    throw new Error(value);
+                }
+            }
+
+            let base = new Base();
+            base.throws('I am Error');
+        }).toThrow('I am Error');
     });
 });
