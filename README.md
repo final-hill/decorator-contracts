@@ -54,7 +54,7 @@ debug mode: `true`
 production mode: `false`
 
 ```typescript
-let {assert, invariant, override} = new Contracts(true);
+let {assert, invariant, override, rescue} = new Contracts(true);
 ```
 
 During development and testing you will want to use debug mode. This will
@@ -147,6 +147,10 @@ class Stack<T> {
     protected _implementation: Array<T> = []
 
     constructor(readonly limit: number) {}
+
+    clear(): void {
+        this._implementation = []
+    }
 
     isEmpty(): boolean {
         return this._implementation.length == 0
@@ -291,28 +295,39 @@ but the implications are not clear at present.
 The `@rescue` decorator enables a mechanism for providing Robustness.
 Robustness is the ability of an implementation to respond to situations
 not specified; in other words the ability to handle exceptions (pun intended).
+This decorator can be assigned to both classes and its non-static features.
+The intent of this is to restore any invariants of the class and optionally retry
+execution.
 
 ```typescript
-@invariant
-class NumberList {
+class Stack<T> {
     ...
-    @rescue<NumberList>((self, error, retry, fail) => {
-        self.items = [0];
-        retry();
+    @rescue((self: Stack<T>, error: any, retry: typeof Stack.prototype.pop) => void) => {
+        console.error(error)
     })
-    average(): number {
-        return this.items.reduce((sum, next) => sum + next) / this.items.length
+    pop(): T {
+        if(this.isEmpty())
+            throw new Error('You can not pop from an empty stack')
+        return this._implementation.pop()!
     }
     ...
 }
 ```
 
-@rescue is a non-static member decorator that accepts the following:
+In the above naive example if the `pop` method is called when the stack is
+empty an exception occurs. The `@rescue` decorator then intercepts this
+exception and handles it by simply logging the error. The exception is
+then raised to the caller.
 
-- `self` is the current instance
-- `error` is the error thrown by the feature.
-- `retry` is a function that can be called to retry the feature.
-- `fail` will raise the exception to the caller.
+You also have the ability to retry the execution of the decorated
+feature again from the beginning by calling the `retry` function.
+This provides a mechanism for
+[fault tolerance](https://en.wikipedia.org/wiki/Fault_tolerance).
+When retry is called the exception will no longer be raised to the caller.
+
+Note that the class `@invariant` will be checked after the `@rescue`
+function executes. When `retry` is called any `@invariant` and `@requires`
+declaration is checked as if it was used normally.
 
 ## Contributing
 
