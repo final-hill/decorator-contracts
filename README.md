@@ -301,10 +301,15 @@ execution.
 
 ```typescript
 class Stack<T> {
+    protected _popRescue(
+        error: any,
+        args: Parameters<typeof Stack.prototype.pop>,
+        retry: (...retryArgs: typeof args) => void
+    ) {
+        console.log(error)
+    }
     ...
-    @rescue((self: Stack<T>, error: any, retry: typeof Stack.prototype.pop) => void) => {
-        console.error(error)
-    })
+    @rescue(Stack.protoype._popRescue)
     pop(): T {
         if(this.isEmpty())
             throw new Error('You can not pop from an empty stack')

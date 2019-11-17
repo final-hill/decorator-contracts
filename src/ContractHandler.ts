@@ -62,6 +62,7 @@ class ContractHandler {
         let feature = target[prop];
 
         // TODO: get could be a getter
+        // TODO: if it's a rescue method, no precondition and no invariant
         return typeof feature == 'function' ?
             this._decorated.bind(this, feature, target) :
             feature;

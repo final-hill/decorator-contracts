@@ -65,10 +65,10 @@ describe('@rescue is a non-static member decorator only', () => {
  */
 describe('The @rescue constructor has a debugMode that enables its execution', () => {
     test('enabled', () => {
-        let {invariant, rescue} = new Contracts(true);
+        let {rescue} = new Contracts(true);
 
         expect(() => {
-            @invariant
+            //@invariant
             class Base {
                 @rescue(() => {
                     throw new Error('I am still an Error');
