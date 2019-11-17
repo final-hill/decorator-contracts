@@ -9,7 +9,6 @@ import {ContractHandler, contractHandler} from './ContractHandler';
 import { OVERRIDE_LIST } from './OverrideDecorator';
 import isConstructor from './lib/isContructor';
 import FnPredTable from './typings/FnPredTable';
-import { RESCUE_MAP, RescueMapType } from './RescueDecorator';
 import DescriptorWrapper from './lib/DescriptorWrapper';
 
 type ClassDecorator = <T extends Constructor<any>>(Constructor: T) => T;
@@ -48,8 +47,6 @@ function _ancestorFeatureNames(targetProto: object): Set<PropertyKey> {
 
 interface IDecorated {
     [OVERRIDE_LIST]?: Set<PropertyKey>
-    // TODO: rename to RESCUE_LIST
-    [RESCUE_MAP]?: RescueMapType
 }
 
 function _checkOverrides(Clazz: Function & IDecorated, assert: typeof Assertion.prototype.assert) {

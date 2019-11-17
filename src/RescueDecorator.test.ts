@@ -12,7 +12,7 @@ import Contracts from './';
  * Requirement 398
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/398
  */
-describe('A member with a @rescue defined must also have an @invariant defined on self or ancestor class', () => {
+describe('A feature with a @rescue defined must also have an @invariant defined on its class or ancestor class', () => {
 
 });
 
@@ -65,10 +65,10 @@ describe('@rescue is a non-static member decorator only', () => {
  */
 describe('The @rescue constructor has a debugMode that enables its execution', () => {
     test('enabled', () => {
-        let {rescue} = new Contracts(true);
+        let {invariant, rescue} = new Contracts(true);
 
         expect(() => {
-            //@invariant
+            @invariant
             class Base {
                 @rescue(() => {
                     throw new Error('I am still an Error');
