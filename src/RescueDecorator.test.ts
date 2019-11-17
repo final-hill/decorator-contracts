@@ -7,6 +7,7 @@
  */
 
 import Contracts from './';
+import { MSG_DUPLICATE_RESCUE } from './RescueDecorator';
 
 /**
  * Requirement 398
@@ -100,5 +101,38 @@ describe('The @rescue constructor has a debugMode that enables its execution', (
             let base = new Base();
             base.throws('I am Error');
         }).toThrow('I am Error');
+    });
+});
+
+/**
+ * Requirement 455
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/455
+ */
+describe('Only a single @rescue can be assigned to a method or accessor', () => {
+    let {invariant, rescue} = new Contracts(true);
+
+    test('Single rescue ok', () => {
+        expect(() => {
+            @invariant
+            class Base {
+                @rescue(() => {})
+                method() {}
+            }
+
+            return Base;
+        }).not.toThrow();
+    });
+
+    test('Multiple rescue throws', () => {
+        expect(() => {
+            @invariant
+            class Base {
+                @rescue(() => {})
+                @rescue(() => {})
+                method() {}
+            }
+
+            return Base;
+        }).toThrow(MSG_DUPLICATE_RESCUE);
     });
 });

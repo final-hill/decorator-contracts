@@ -330,6 +330,9 @@ This provides a mechanism for
 [fault tolerance](https://en.wikipedia.org/wiki/Fault_tolerance).
 When retry is called the exception will no longer be raised to the caller.
 
+Only a single `@rescue` can be assigned to a feature. Adding more than one
+will raise an error.
+
 Note that the class `@invariant` will be checked after the `@rescue`
 function executes. When `retry` is called any `@invariant` and `@requires`
 declaration is checked as if it was used normally.
