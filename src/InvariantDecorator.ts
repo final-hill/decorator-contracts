@@ -10,12 +10,14 @@ import { OVERRIDE_LIST } from './OverrideDecorator';
 import isConstructor from './lib/isContructor';
 import FnPredTable from './typings/FnPredTable';
 import DescriptorWrapper from './lib/DescriptorWrapper';
+import RescueDecorator from './RescueDecorator';
 
 type ClassDecorator = <T extends Constructor<any>>(Constructor: T) => T;
 
 export const MSG_INVALID_DECORATOR = 'Invalid decorator usage. Function expected';
 export const MSG_DUPLICATE_INVARIANT = `Only a single @invariant can be assigned per class`;
 const TRUE_PRED = () => ({ pass: true });
+let checkedAssert = new Assertion(true).assert;
 
 /**
  * Returns the feature names associated with the provided prototype
@@ -49,7 +51,7 @@ interface IDecorated {
     [OVERRIDE_LIST]?: Set<PropertyKey>
 }
 
-function _checkOverrides(Clazz: Function & IDecorated, assert: typeof Assertion.prototype.assert) {
+function _checkOverrides(Clazz: Function & IDecorated, featureNames: Set<PropertyKey>) {
     let proto = Clazz.prototype;
     if(proto == null) {
         return;
@@ -58,11 +60,10 @@ function _checkOverrides(Clazz: Function & IDecorated, assert: typeof Assertion.
 
     let overrides: Set<PropertyKey> = clazzSymbols.includes(OVERRIDE_LIST) ?
             Clazz[OVERRIDE_LIST]! : new Set(),
-        featureNames = _featureNames(proto),
         ancestorFeatureNames: Set<PropertyKey> = _ancestorFeatureNames(proto);
 
     featureNames.forEach(featureName =>
-        assert(
+        checkedAssert(
             overrides.has(featureName) || !ancestorFeatureNames.has(featureName),
             `@override decorator missing on ${Clazz.name}.${String(featureName)}`
         )
@@ -109,12 +110,13 @@ export default class InvariantDecorator {
                 constructor(...args: any[]) {
                     super(...args);
 
-                    let clazzProxy = new Proxy(this, handler);
-                    _checkOverrides(this.constructor, assert);
-                    // TODO: check rescueList
+                    let featureNames = _featureNames(Base.prototype);
+                    // TODO: move to OverrideDecorator
+                    _checkOverrides(Base, featureNames);
+                    RescueDecorator.registerRescues(Base, featureNames);
                     InvariantClass[contractHandler].assertInvariants(this);
 
-                    return clazzProxy;
+                    return new Proxy(this, handler);
                 }
             };
         }
