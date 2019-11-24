@@ -4,9 +4,10 @@
  * SPDX-License-Identifier: AGPL-1.0-only
  */
 
-import MemberDecorator, { MSG_NO_STATIC, MSG_DECORATE_METHOD_ACCESSOR_ONLY/*, MSG_INVARIANT_REQUIRED */} from './MemberDecorator';
+import MemberDecorator, { MSG_NO_STATIC, MSG_DECORATE_METHOD_ACCESSOR_ONLY, MSG_INVARIANT_REQUIRED} from './MemberDecorator';
 import DescriptorWrapper from './lib/DescriptorWrapper';
 import isConstructor from './lib/isContructor';
+import { HAS_INVARIANT } from './InvariantDecorator';
 
 export const MSG_INVALID_DECORATOR = 'Invalid decorator usage. Function expected';
 export const MSG_DUPLICATE_RESCUE = 'Only a single @rescue can be assigned to a feature';
@@ -71,6 +72,10 @@ export default class RescueDecorator extends MemberDecorator {
             if(dw.isMethod) {
                 newDescriptor.writable = true;
                 newDescriptor.value = function(this: object, ...args: any[]) {
+                    let Clazz: Function & {[HAS_INVARIANT]?: boolean} = this.constructor,
+                        hasInvariant = Boolean(Clazz[HAS_INVARIANT]);
+                    assert(hasInvariant, MSG_INVARIANT_REQUIRED);
+
                     let feature: Function = dw.value;
                     try {
                         return feature.call(this, ...args);
@@ -87,6 +92,10 @@ export default class RescueDecorator extends MemberDecorator {
             } else {
                 if(dw.hasGetter) {
                     newDescriptor.get = function(this: object) {
+                        let Clazz: Function & {[HAS_INVARIANT]?: boolean} = this.constructor,
+                            hasInvariant = Boolean(Clazz[HAS_INVARIANT]);
+                        assert(hasInvariant, MSG_INVARIANT_REQUIRED);
+
                         try {
                             return dw.descriptor!.get!.call(this);
                         } catch(error) {
@@ -102,6 +111,10 @@ export default class RescueDecorator extends MemberDecorator {
                 }
                 if(dw.hasSetter) {
                     newDescriptor.set = function(this: object, value: any) {
+                        let Clazz: Function & {[HAS_INVARIANT]?: boolean} = this.constructor,
+                            hasInvariant = Boolean(Clazz[HAS_INVARIANT]);
+                        assert(hasInvariant, MSG_INVARIANT_REQUIRED);
+
                         try {
                             dw.descriptor!.set!.call(this, value);
                         } catch(error) {

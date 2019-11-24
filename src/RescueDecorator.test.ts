@@ -8,13 +8,37 @@
 
 import Contracts from './';
 import { MSG_DUPLICATE_RESCUE } from './RescueDecorator';
+import { MSG_INVARIANT_REQUIRED } from './MemberDecorator';
 
 /**
  * Requirement 398
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/398
  */
 describe('A feature with a @rescue defined must also have an @invariant defined on its class or ancestor class', () => {
+    let {invariant, rescue} = new Contracts(true);
 
+    test('Missing @invariant throws', () => {
+        expect(() => {
+            class Base {
+                @rescue(() => {})
+                method() {}
+            }
+
+            return new Base().method();
+        }).toThrow(MSG_INVARIANT_REQUIRED);
+    });
+
+    test('@rescue w/ @invariant on same class okay', () => {
+        expect(() => {
+            @invariant
+            class Base {
+                @rescue(() => {})
+                method() {}
+            }
+
+            return new Base().method();
+        }).not.toThrow();
+    });
 });
 
  /**
