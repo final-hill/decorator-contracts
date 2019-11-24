@@ -187,7 +187,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
             }
 
             get value() { return this._value; }
-            @rescue(() => {})
+            @rescue(Base.prototype._valueRescue)
             set value(value: number) {
                 if(Number.isNaN(value)) {
                     throw new Error('NaN not allowed');

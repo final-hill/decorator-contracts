@@ -10,12 +10,12 @@ import { OVERRIDE_LIST } from './OverrideDecorator';
 import isConstructor from './lib/isContructor';
 import FnPredTable from './typings/FnPredTable';
 import DescriptorWrapper from './lib/DescriptorWrapper';
-import RescueDecorator from './RescueDecorator';
 
 type ClassDecorator = <T extends Constructor<any>>(Constructor: T) => T;
 
 export const MSG_INVALID_DECORATOR = 'Invalid decorator usage. Function expected';
 export const MSG_DUPLICATE_INVARIANT = `Only a single @invariant can be assigned per class`;
+export const HAS_INVARIANT = Symbol('Has Invariant');
 const TRUE_PRED = () => ({ pass: true });
 let checkedAssert = new Assertion(true).assert;
 
@@ -106,6 +106,7 @@ export default class InvariantDecorator {
 
             return class InvariantClass extends Base {
                 static [contractHandler]: ContractHandler = handler;
+                static [HAS_INVARIANT] = true;
 
                 constructor(...args: any[]) {
                     super(...args);
@@ -113,7 +114,6 @@ export default class InvariantDecorator {
                     let featureNames = _featureNames(Base.prototype);
                     // TODO: move to OverrideDecorator
                     _checkOverrides(Base, featureNames);
-                    RescueDecorator.registerRescues(Base, featureNames);
                     InvariantClass[contractHandler].assertInvariants(this);
 
                     return new Proxy(this, handler);
