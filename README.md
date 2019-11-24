@@ -282,7 +282,7 @@ that the method is replacing another implementation.
 This decorator does not simply document and verify the fact that the method is
 overridden, it will also verify that the parameter count matches.
 
-An `@invariant` decorator should also be defined either on the current class
+An `@invariant` decorator must also be defined either on the current class
 or on an ancestor. When defined, candidate overrides are identified and an
 error is raised if an associated `@override` decorator is missing.
 
@@ -300,6 +300,7 @@ The intent of this is to restore any invariants of the class and optionally retr
 execution.
 
 ```typescript
+@invariant
 class Stack<T> {
     protected _popRescue(
         error: any,
@@ -332,6 +333,9 @@ When retry is called the exception will no longer be raised to the caller.
 
 Only a single `@rescue` can be assigned to a feature. Adding more than one
 will raise an error.
+
+An `@invariant` decorator must also be defined either on the current class
+or on an ancestor.
 
 Note that the class `@invariant` will be checked after the `@rescue`
 function executes even if an error is thrown in the `@rescue` body.
