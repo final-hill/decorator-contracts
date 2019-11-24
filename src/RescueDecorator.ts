@@ -71,13 +71,6 @@ export default class RescueDecorator extends MemberDecorator {
             if(dw.isMethod) {
                 newDescriptor.writable = true;
                 newDescriptor.value = function(this: object, ...args: any[]) {
-/*
-                    let Clazz = this.constructor,
-                        clazzSymbols = Object.getOwnPropertySymbols(Clazz),
-                        hasInvariant = clazzSymbols.includes(HAS_INVARIANT);
-
-                    assert(hasInvariant, MSG_INVARIANT_REQUIRED);
-*/
                     let feature: Function = dw.value;
                     try {
                         return feature.call(this, ...args);
@@ -94,13 +87,6 @@ export default class RescueDecorator extends MemberDecorator {
             } else {
                 if(dw.hasGetter) {
                     newDescriptor.get = function(this: object) {
-/*
-                        let Clazz = this.constructor,
-                            clazzSymbols = Object.getOwnPropertySymbols(Clazz),
-                            hasInvariant = clazzSymbols.includes(HAS_INVARIANT);
-
-                        assert(hasInvariant, MSG_INVARIANT_REQUIRED);
-*/
                         try {
                             return dw.descriptor!.get!.call(this);
                         } catch(error) {
@@ -116,13 +102,6 @@ export default class RescueDecorator extends MemberDecorator {
                 }
                 if(dw.hasSetter) {
                     newDescriptor.set = function(this: object, value: any) {
-/*
-                        let Clazz = this.constructor,
-                            clazzSymbols = Object.getOwnPropertySymbols(Clazz),
-                            hasInvariant = clazzSymbols.includes(HAS_INVARIANT);
-
-                        assert(hasInvariant, MSG_INVARIANT_REQUIRED);
-*/
                         try {
                             dw.descriptor!.set!.call(this, value);
                         } catch(error) {
