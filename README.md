@@ -330,6 +330,7 @@ feature again from the beginning by calling the `retry` function.
 This provides a mechanism for
 [fault tolerance](https://en.wikipedia.org/wiki/Fault_tolerance).
 When retry is called the exception will no longer be raised to the caller.
+`retry` can only be called once per exception rescue.
 
 Only a single `@rescue` can be assigned to a feature. Adding more than one
 will raise an error.

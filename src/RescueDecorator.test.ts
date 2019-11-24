@@ -7,7 +7,7 @@
  */
 
 import Contracts from './';
-import { MSG_DUPLICATE_RESCUE } from './RescueDecorator';
+import { MSG_DUPLICATE_RESCUE, MSG_SINGLE_RETRY } from './RescueDecorator';
 import { MSG_INVARIANT_REQUIRED } from './MemberDecorator';
 
 /**
@@ -316,5 +316,53 @@ describe('Only a single @rescue can be assigned to a method or accessor', () => 
 
             return Base;
         }).toThrow(MSG_DUPLICATE_RESCUE);
+    });
+});
+
+/**
+ * Requirement 456
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/456
+ */
+describe('The \'retry\' argument of the @rescue function can only be called once during rescue execution', () => {
+    let {invariant, rescue} = new Contracts(true);
+
+    test('Call retry once succeeds', () => {
+        @invariant
+        class Base {
+            protected _methodRescue(_error: any, _args: any[], retry: any) {
+                return retry(3);
+            }
+
+            @rescue(Base.prototype._methodRescue)
+            method(value: number) {
+                if(value <= 0) {
+                    throw new Error('value must be greater than 0');
+                } else {
+                    return value;
+                }
+            }
+        }
+        let base = new Base();
+        expect(base.method(0)).toBe(3);
+    });
+
+    test('Call retry twice throws error', () => {
+        @invariant
+        class Base {
+            protected _methodRescue(_error: any, _args: any[], retry: any) {
+                return retry(retry(3));
+            }
+
+            @rescue(Base.prototype._methodRescue)
+            method(value: number) {
+                if(value <= 0) {
+                    throw new Error('value must be greater than 0');
+                } else {
+                    return value;
+                }
+            }
+        }
+        let base = new Base();
+        expect(() => { base.method(0); }).toThrow(MSG_SINGLE_RETRY);
     });
 });

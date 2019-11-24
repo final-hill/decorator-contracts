@@ -69,6 +69,7 @@ export default class RescueDecorator extends MemberDecorator {
                 enumerable: true
             };
 
+            // TODO: generalize
             if(dw.isMethod) {
                 newDescriptor.writable = true;
                 newDescriptor.value = function(this: object, ...args: any[]) {
@@ -80,8 +81,11 @@ export default class RescueDecorator extends MemberDecorator {
                     try {
                         return feature.call(this, ...args);
                     } catch(error) {
+                        let hasRetried = false;
                         try {
                             return fnRescue.call(this, error, args, (...retryArgs: any[]) => {
+                                hasRetried = assert(!hasRetried, MSG_SINGLE_RETRY);
+
                                 return feature.call(this, ...retryArgs);
                             });
                         } catch(error) {
@@ -99,8 +103,11 @@ export default class RescueDecorator extends MemberDecorator {
                         try {
                             return dw.descriptor!.get!.call(this);
                         } catch(error) {
+                            let hasRetried = false;
                             try {
                                 return fnRescue.call(this, error, [], () => {
+                                    hasRetried = assert(!hasRetried, MSG_SINGLE_RETRY);
+
                                     return dw.descriptor!.get!.call(this);
                                 });
                             } catch(error) {
@@ -118,8 +125,11 @@ export default class RescueDecorator extends MemberDecorator {
                         try {
                             dw.descriptor!.set!.call(this, value);
                         } catch(error) {
+                            let hasRetried = false;
                             try {
                                 return fnRescue.call(this, error, [value], (retryValue: any) => {
+                                    hasRetried = assert(!hasRetried, MSG_SINGLE_RETRY);
+
                                     dw.descriptor!.set!.call(this, retryValue);
                                 });
                             } catch(error) {
