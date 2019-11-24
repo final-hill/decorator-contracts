@@ -241,7 +241,7 @@ describe('A subclass with an overriding member missing @override is an error', (
             }
 
             return new Sub();
-        });
+        }).toThrow(`@override decorator missing on Sub.prop`);
     });
 });
 

@@ -51,12 +51,13 @@ interface IDecorated {
     [OVERRIDE_LIST]?: Set<PropertyKey>
 }
 
-function _checkOverrides(Clazz: Function & IDecorated, featureNames: Set<PropertyKey>) {
+function _checkOverrides(Clazz: Function & IDecorated) {
     let proto = Clazz.prototype;
     if(proto == null) {
         return;
     }
-    let clazzSymbols = Object.getOwnPropertySymbols(Clazz);
+    let clazzSymbols = Object.getOwnPropertySymbols(Clazz),
+        featureNames = _featureNames(proto);
 
     let overrides: Set<PropertyKey> = clazzSymbols.includes(OVERRIDE_LIST) ?
             Clazz[OVERRIDE_LIST]! : new Set(),
@@ -111,9 +112,8 @@ export default class InvariantDecorator {
                 constructor(...args: any[]) {
                     super(...args);
 
-                    let featureNames = _featureNames(Base.prototype);
                     // TODO: move to OverrideDecorator
-                    _checkOverrides(Base, featureNames);
+                    _checkOverrides(this.constructor);
                     InvariantClass[contractHandler].assertInvariants(this);
 
                     return new Proxy(this, handler);
