@@ -334,8 +334,9 @@ Only a single `@rescue` can be assigned to a feature. Adding more than one
 will raise an error.
 
 Note that the class `@invariant` will be checked after the `@rescue`
-function executes. When `retry` is called any `@invariant` and `@requires`
-declaration is checked as if it was used normally.
+function executes even if an error is thrown in the `@rescue` body.
+When `retry` is called contracts defined on the class feature are checked
+as if it was called normally.
 
 ## Contributing
 
