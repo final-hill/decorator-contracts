@@ -83,8 +83,8 @@ export default class RescueDecorator extends MemberDecorator {
                         return feature.call(this, ...args);
                     } catch(error) {
                         try {
-                            return fnRescue.call(this, error, args, (...args: any[]) => {
-                                return feature.call(this, ...args);
+                            return fnRescue.call(this, error, args, (...retryArgs: any[]) => {
+                                return feature.call(this, ...retryArgs);
                             });
                         } catch(error) {
                             throw error;
@@ -127,8 +127,8 @@ export default class RescueDecorator extends MemberDecorator {
                             dw.descriptor!.set!.call(this, value);
                         } catch(error) {
                             try {
-                                return fnRescue.call(this, error, [value], () => {
-                                    dw.descriptor!.set!.call(this, value);
+                                return fnRescue.call(this, error, [value], (retryValue: any) => {
+                                    dw.descriptor!.set!.call(this, retryValue);
                                 });
                             } catch(error) {
                                 throw error;
