@@ -19,12 +19,12 @@ export const MSG_DUPLICATE_OVERRIDE = `Only a single @override decorator can be 
 export default class OverrideDecorator extends MemberDecorator {
     /**
      * Returns an instance of the 'override' decorator in the specified mode.
-     * When debugMode is true the decorator is enabled. When debugMode is false the decorator has no effect
+     * When checkMode is true the decorator is enabled. When checkMode is false the decorator has no effect
      *
-     * @param debugMode - A flag representing mode of the decorator
+     * @param checkMode - A flag representing mode of the decorator
      */
-    constructor(protected debugMode: boolean) {
-        super(debugMode);
+    constructor(protected checkMode: boolean) {
+        super(checkMode);
         this.override = this.override.bind(this);
     }
 
@@ -33,7 +33,7 @@ export default class OverrideDecorator extends MemberDecorator {
      * a method of the same name in an ancestor class.
      */
     override(target: Function | object, propertyKey: PropertyKey, currentDescriptor: PropertyDescriptor): PropertyDescriptor {
-        if(!this.debugMode) {
+        if(!this.checkMode) {
             return currentDescriptor;
         }
 

@@ -19,7 +19,7 @@ class ContractHandler {
 
     /**
      * Constructs a new instance of the ContractHandler
-     * @param _assert - The assertion implementation associated with the current debugMode
+     * @param _assert - The assertion implementation associated with the current checkMode
      */
     constructor(
         protected readonly _assert: typeof Assertion.prototype.assert,

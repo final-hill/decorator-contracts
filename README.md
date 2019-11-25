@@ -46,18 +46,18 @@ import Contracts from '@thenewobjective/decorator-contracts';
 ```
 
 It is not enough to import the library though, there are two modes of usage:
-`debug` and `production`. This is represented as a boolean argument to the
+`checked` and `unchecked`. This is represented as a boolean argument to the
 `Contracts` constructor.
 
-debug mode: `true`
+checked mode: `true`
 
-production mode: `false`
+unchecked mode: `false`
 
 ```typescript
 let {assert, invariant, override, rescue} = new Contracts(true);
 ```
 
-During development and testing you will want to use debug mode. This will
+During development and testing you will want to use checked mode. This will
 enable all assertion checks. In production mode all assertion checks become
 no-ops for run-time efficiency. As the number of contract definitions can
 be numerous, using the appropriate mode becomes increasingly important.
@@ -125,7 +125,7 @@ while(assert(q(s), 'message')) {
 }
 ```
 
-In debug mode the assertions is evaluated and throws an exception of failure,
+In checked mode the assertions is evaluated and throws an exception of failure,
 otherwise returns true. In production mode, assertions always return true.
 
 ### Invariants

@@ -7,9 +7,10 @@
 import Assertion from './Assertion';
 import {ContractHandler, contractHandler} from './ContractHandler';
 import { OVERRIDE_LIST } from './OverrideDecorator';
-import isConstructor from './lib/isContructor';
+import isConstructor from './lib/isConstructor';
 import FnPredTable from './typings/FnPredTable';
 import DescriptorWrapper from './lib/DescriptorWrapper';
+import Constructor from './typings/Constructor';
 
 type ClassDecorator = <T extends Constructor<any>>(Constructor: T) => T;
 
@@ -80,8 +81,8 @@ function _checkOverrides(Clazz: Function & IDecorated) {
 export default class InvariantDecorator {
     protected _assert: typeof Assertion.prototype.assert;
 
-    constructor(protected debugMode: boolean) {
-        this._assert = new Assertion(debugMode).assert;
+    constructor(protected checkMode: boolean) {
+        this._assert = new Assertion(checkMode).assert;
         this.invariant = this.invariant.bind(this);
     }
 
@@ -91,12 +92,12 @@ export default class InvariantDecorator {
         let predTable = isConstructor(fn) ? TRUE_PRED : fn as FnPredTable<U>,
             Clazz = isConstructor(fn) ? fn : undefined,
             assert = this._assert,
-            debugMode = this.debugMode;
+            checkMode = this.checkMode;
 
         assert(typeof fn == 'function', MSG_INVALID_DECORATOR);
 
         function decorator(Base: any) {
-            if(!debugMode) {
+            if(!checkMode) {
                 return Base;
             }
 
