@@ -10,9 +10,12 @@ import DescriptorWrapper from './lib/DescriptorWrapper';
 export const MSG_NO_STATIC = `Only instance members can be decorated, not static members`;
 export const MSG_DECORATE_METHOD_ACCESSOR_ONLY = `Only methods and accessors can be decorated.`;
 export const MSG_NO_MATCHING_MEMBER = `This member does not have an ancestor.`;
+export const MSG_INVARIANT_REQUIRED = 'An @invariant must be defined on the current class or one of its ancestors';
 
 export default abstract class MemberDecorator {
     protected _assert: typeof Assertion.prototype.assert;
+    protected _checkedAssert = new Assertion(true).assert;
+    protected _uncheckedAssert = new Assertion(false).assert;
 
     /**
      * Returns an instance of the decorator in the specified mode.
@@ -22,7 +25,7 @@ export default abstract class MemberDecorator {
      * @param debugMode - A flag representing mode of the decorator
      */
     constructor(protected debugMode: boolean) {
-        this._assert = new Assertion(debugMode).assert;
+        this._assert = debugMode ? this._checkedAssert : this._uncheckedAssert;
     }
 
     /**

@@ -13,6 +13,14 @@ class DescriptorWrapper {
         return this.descriptor != undefined;
     }
 
+    get hasGetter(): boolean {
+        return this.isAccessor && this.descriptor!.get != undefined;
+    }
+
+    get hasSetter(): boolean {
+        return this.isAccessor && this.descriptor!.set != undefined;
+    }
+
     /**
      * Determines if the descriptor describes a property
      */
