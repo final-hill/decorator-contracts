@@ -5,6 +5,7 @@
  */
 
 import AssertionError from './AssertionError';
+import Constructor from './typings/Constructor';
 
 /**
  * An assertion is an expression of a property that must be true at a particular
