@@ -23,9 +23,9 @@ steps:
 #  displayName: 'npm audit'
 
 - script: |
-    npm run build
+    npm run build-nofix
   workingDirectory: ./
-  displayName: 'npm run build'
+  displayName: 'npm run build-nofix'
 
 - script: |
     npm run test

@@ -10,18 +10,19 @@
    1. [Assertions](#assertions)
    2. [Invariants](#invariants)
    3. [Requires](#requires)
+   4. [Overrides](#overrides)
+   5. [Rescue](#rescue)
 4. [Contributing](#contributing)
 5. [Building and Editing](#building-and-editing)
 6. [Getting Started](#getting-started)
 7. [Project Structure](#project-structure)
 8. [Build and Test](#build-and-test)
 9. [Dependencies](#dependencies)
+10. [Further Reading](#further-reading)
 
 ## Introduction
 
 TODO
-
-[Code Contracts](https://en.wikipedia.org/wiki/Design_by_contract)
 
 ## Library Installation
 
@@ -46,18 +47,18 @@ import Contracts from '@thenewobjective/decorator-contracts';
 ```
 
 It is not enough to import the library though, there are two modes of usage:
-`debug` and `production`. This is represented as a boolean argument to the
+`checked` and `unchecked`. This is represented as a boolean argument to the
 `Contracts` constructor.
 
-debug mode: `true`
+checked mode: `true`
 
-production mode: `false`
+unchecked mode: `false`
 
 ```typescript
-let {assert, invariant} = new Contracts(true);
+let {assert, invariant, override, rescue} = new Contracts(true);
 ```
 
-During development and testing you will want to use debug mode. This will
+During development and testing you will want to use checked mode. This will
 enable all assertion checks. In production mode all assertion checks become
 no-ops for run-time efficiency. As the number of contract definitions can
 be numerous, using the appropriate mode becomes increasingly important.
@@ -125,7 +126,7 @@ while(assert(q(s), 'message')) {
 }
 ```
 
-In debug mode the assertions is evaluated and throws an exception of failure,
+In checked mode the assertions is evaluated and throws an exception of failure,
 otherwise returns true. In production mode, assertions always return true.
 
 ### Invariants
@@ -133,18 +134,24 @@ otherwise returns true. In production mode, assertions always return true.
 The `@invariant` decorator describes and enforces the semantics of a class
 via a provided assertion. This assertion is checked after the associated class
 is constructed, before and after every method execution, and before and after
-every property usage (get/set). If any of these evaluate to false during class
+every accessor usage (get/set). If any of these evaluate to false during class
 usage, an `AssertionError` will be thrown. Truthy assertions do not throw an
 error. An example of this is given below using a Stack:
 
 ```typescript
-@invariant((self: Stack<any>) => self.size >= 0 && self.size <= self.limit)
-@invariant((self: Stack<any>) => self.isEmpty() == (self.size == 0))
-@invariant((self: Stack<any>) => self.isFull() == (self.size == self.limit))
+@invariant<Stack<any>>(self => ({
+    sizeClamped: self.size >= 0 && self.size <= self.limit,
+    emptyHasNoSize: self.isEmpty() == (self.size == 0),
+    fullIsLimited: self.isFull() == (self.size == self.limit)
+}))
 class Stack<T> {
     protected _implementation: Array<T> = []
 
     constructor(readonly limit: number) {}
+
+    clear(): void {
+        this._implementation = []
+    }
 
     isEmpty(): boolean {
         return this._implementation.length == 0
@@ -172,45 +179,6 @@ class Stack<T> {
 }
 ```
 
-Custom messaging can be associated with each `@invariant` as well:
-
-```typescript
-@invariant((self: Stack<any>) => self.size >= 0 && self.size <= self.limit, "The size of a stack must be between 0 and its limit")
-@invariant((self: Stack<any>) => self.isEmpty() == (self.size == 0), "An empty stack must have a size of 0")
-@invariant((self: Stack<any>) => self.isFull() == (self.size == self.limit), "A full stack must have a size that equals its limit")
-class Stack<T> {
-    //...
-}
-```
-
-Declaring multiple invariants in this style is terribly verbose. A shorthand is also available.
-
-Without messaging:
-
-```typescript
-@invariant<Stack<any>>(
-    self => self.size >= 0 && self.size <= self.limit,
-    self => self.isEmpty() == (self.size == 0),
-    self => self.isFull() == (self.size == self.limit)
-)
-class Stack<T> {
-    //...
-}
-```
-
-With messaging:
-
-```typescript
-@invariant<Stack<any>>([
-    [self => self.size >= 0 && self.size <= self.limit, "The size of a stack must be between 0 and its limit"],
-    [self => self.isEmpty() == (self.size == 0), "An empty stack must have a size of 0"],
-    [self => self.isFull() == (self.size == self.limit), "A full stack must have a size that equals its limit"]
-])
-class Stack<T> {
-    //...
-}
-```
-
 With the above invariants any attempt to construct an invalid stack will fail:
 
 ```typescript
@@ -230,7 +198,7 @@ Whether you have invariants for a class or not it is necessary to declare one
 anyway on one of the base classes.
 
 ```typescript
-@invariant()
+@invariant
 class BaseClass {}
 
 class Subclass extends BaseClass {}
@@ -239,6 +207,9 @@ class Subclass extends BaseClass {}
 This is because the decorators work in relationship to others
 in the class hierarchy and the `@invariant` manages this interclass
 relationship.
+
+Whether you have invariants for a class or not it is necessary to declare one
+anyway on one of the base classes.
 
 ### Requires
 
@@ -262,6 +233,134 @@ class Stack<T> {
     }
 }
 ```
+
+### Overrides
+
+Class members implemented in a superclass can be overridden in a subclass. The
+subclass implementation can augment or entirely replace the one belonging
+to the superclass. This can be done for a variety of reasons, such as
+providing a more efficient implementation in the context of the subclass.
+Regardless of the reason, the overridden member should be semantically
+consistent with the superclass member. In other
+words, it should follow [Liskov's Substitution Principle](https://en.wikipedia.org/wiki/Liskov_substitution_principle).
+To aid in the enforcement and documentation of this principle the library
+provides an `@override` decorator for class members for methods and accessors.
+
+A simple example is calculating the area of Convex Polygons. While a general
+formula exists to accomplish this, more efficient and direct formulas exist
+for specific polygons such as a Right Triangles:
+
+```typescript
+type Side = number
+type Vertex = [number, number]
+
+let _triArea = (v1: Vertex, v2: Vertex, v3: Vertex): number => {
+    let a = Math.hypot((v1[0] - v2[0]), (v1[1] - v2[1])),
+        b = Math.hypot((v2[0] - v3[0]), (v2[1] - v3[1])),
+        c = Math.hypot((v3[0] - v1[0]), (v3[1] - v1[1])),
+        s = 0.5 * (a + b + c)
+
+    return Math.sqrt(s*(s-a)*(s-b)*(s-c))
+}
+
+@invariant
+class ConvexShape {
+    readonly vertices: Vertex[]
+
+    constructor(...vertices: Vertex[]) {
+        this.vertices = vertices
+    }
+
+    area(): number {
+        let [v1, v2, v3, ...vs] = this.vertices
+        return this.vertices.length >= 3 ?
+            _triArea(v1, v2, v3) + new ConvexShape(v1, v3, ...vs).area() :
+            0
+    }
+}
+
+class RightTriangle extends ConvexShape {
+    constructor(
+        readonly base: Side,
+        readonly height: Side
+    ) {
+        super([0,0], [base,0], [base,height])
+    }
+
+    @override
+    area(): number {
+        return this.base * this.height / 2
+    }
+}
+```
+
+Above you can see the `area()` method being overridden with the more
+efficient implementation. The `@override` decorator makes explicit
+that the method is replacing another implementation.
+
+This decorator does not simply document and verify the fact that the method is
+overridden, it will also verify that the parameter count matches.
+
+An `@invariant` decorator must also be defined either on the current class
+or on an ancestor. When defined, candidate overrides are identified and an
+error is raised if an associated `@override` decorator is missing.
+
+Static methods, including the constructor, can not be assigned an `@override`
+decorator. In the future this may be enabled for non-constructor static methods
+but the implications are not clear at present.
+
+### Rescue
+
+The `@rescue` decorator enables a mechanism for providing Robustness.
+Robustness is the ability of an implementation to respond to situations
+not specified; in other words the ability to handle exceptions (pun intended).
+This decorator can be assigned to both classes and its non-static features.
+The intent of this is to restore any invariants of the class and optionally retry
+execution.
+
+```typescript
+@invariant
+class Stack<T> {
+    protected _popRescue(
+        error: any,
+        args: Parameters<typeof Stack.prototype.pop>,
+        retry: (...retryArgs: typeof args) => void
+    ) {
+        console.log(error)
+    }
+    ...
+    @rescue(Stack.protoype._popRescue)
+    pop(): T {
+        if(this.isEmpty())
+            throw new Error('You can not pop from an empty stack')
+        return this._implementation.pop()!
+    }
+    ...
+}
+```
+
+In the above naive example if the `pop` method is called when the stack is
+empty an exception occurs. The `@rescue` decorator then intercepts this
+exception and handles it by simply logging the error. The exception is
+then raised to the caller.
+
+You also have the ability to retry the execution of the decorated
+feature again from the beginning by calling the `retry` function.
+This provides a mechanism for
+[fault tolerance](https://en.wikipedia.org/wiki/Fault_tolerance).
+When retry is called the exception will no longer be raised to the caller.
+`retry` can only be called once per exception rescue.
+
+Only a single `@rescue` can be assigned to a feature. Adding more than one
+will raise an error.
+
+An `@invariant` decorator must also be defined either on the current class
+or on an ancestor.
+
+Note that the class `@invariant` will be checked after the `@rescue`
+function executes even if an error is thrown in the `@rescue` body.
+When `retry` is called contracts defined on the class feature are checked
+as if it was called normally.
 
 ## Contributing
 
@@ -325,11 +424,13 @@ To build and test this library locally you will need the following:
 | Npm Script    | Description |
 |:--------------|:------------|
 | `build`       | Performs a full build of the library including type generation and linting. Outputs to the `dist` folder |
+| `build-nofix` | Perfoms the sames steps as `build` except that `lint-nofix` will be executed.                            |
 | `build-types` | Generates type definitions for the library in the `dist` folder                                          |
 | `clean`       | deletes the `dist` folder                                                                                |
 | `clean-full`  | deletes the `dist`, `node_modules`,  and `.cache` folders                                                |
 | `debug`       | Starts debugger                                                                                          |
 | `lint`        | Performs linting and type checking of the library                                                        |
+| `lint-nofix`  | Performs linting but will not autofix problems.                                                          |
 | `test`        | Executes unit tests                                                                                      |
 | `type-check`  | Performs type checking                                                                                   |
 
@@ -347,3 +448,9 @@ The development dependencies are as follows:
 | `ts-jest`        | TypeScript support for `jest`                         |
 | `tslint`         | TypeScript linting library                            |
 | `typescript`     | TypeScript compiler                                   |
+
+## Further Reading
+
+- [Design by Contract](https://en.wikipedia.org/wiki/Design_by_contract)
+- [Liskov Substitution Principle](https://en.wikipedia.org/wiki/Liskov_substitution_principle)
+- [Object-Oriented Software Construction](https://en.wikipedia.org/wiki/Object-Oriented_Software_Construction)

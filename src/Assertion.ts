@@ -1,10 +1,11 @@
 /**
  * @license
  * Copyright (C) #{YEAR}# Michael L Haufe
- * SPDX-License-Identifier: GPL-2.0-only
+ * SPDX-License-Identifier: AGPL-1.0-only
  */
 
 import AssertionError from './AssertionError';
+import Constructor from './typings/Constructor';
 
 /**
  * An assertion is an expression of a property that must be true at a particular
@@ -32,11 +33,11 @@ import AssertionError from './AssertionError';
 export default class Assertion {
     /**
      * Constructs an instance of the Assertion class in the specified mode.
-     * Enabled when debugMode is true, and disabled otherwise
+     * Enabled when checkMode is true, and disabled otherwise
      *
-     * @param debugMode - The flag representing mode of the assertion
+     * @param checkMode - The flag representing mode of the assertion
      */
-    constructor(protected debugMode: boolean) {}
+    constructor(protected checkMode: boolean) {}
 
     /**
      * Tests the provided condition. If the condition is false an AssertionError is raised with an optional message.
@@ -49,7 +50,7 @@ export default class Assertion {
      * @see AssertionError
      */
     assert = (condition: boolean, message: string = 'Assertion failure', ErrorConstructor: Constructor<Error> = AssertionError): boolean => {
-        if(this.debugMode && !condition) {
+        if(this.checkMode && !condition) {
             throw new ErrorConstructor(message);
         }
 
