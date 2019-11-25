@@ -59,12 +59,24 @@ class ContractHandler {
      * @param prop - The name or Symbol  of the property to get
      */
     get(target: object, prop: keyof typeof target) {
+        // TODO: use descriptorWrapper
+        // What if not ownProperty?
         let feature = target[prop];
 
-        // TODO: get could be a getter
-        return typeof feature == 'function' ?
-            this._decorated.bind(this, feature, target) :
-            feature;
+        switch(typeof feature) {
+            case 'function':
+                return (...args: any[]) => {
+                    this.assertInvariants(target);
+                    let result = (feature as Function).call(target, ...args);
+                    this.assertInvariants(target);
+
+                    return result;
+                };
+            // TODO: get could be a getter
+            // TODO: if it's a rescue method, no precondition and no invariant
+            default:
+                return feature;
+        }
     }
 
     /**

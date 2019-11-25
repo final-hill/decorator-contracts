@@ -10,6 +10,7 @@
    1. [Assertions](#assertions)
    2. [Invariants](#invariants)
    3. [Overrides](#overrides)
+   4. [Rescue](#rescue)
 4. [Contributing](#contributing)
 5. [Building and Editing](#building-and-editing)
 6. [Getting Started](#getting-started)
@@ -53,7 +54,7 @@ checked mode: `true`
 unchecked mode: `false`
 
 ```typescript
-let {assert, invariant, override} = new Contracts(true);
+let {assert, invariant, override, rescue} = new Contracts(true);
 ```
 
 During development and testing you will want to use checked mode. This will
@@ -146,6 +147,10 @@ class Stack<T> {
     protected _implementation: Array<T> = []
 
     constructor(readonly limit: number) {}
+
+    clear(): void {
+        this._implementation = []
+    }
 
     isEmpty(): boolean {
         return this._implementation.length == 0
@@ -277,13 +282,66 @@ that the method is replacing another implementation.
 This decorator does not simply document and verify the fact that the method is
 overridden, it will also verify that the parameter count matches.
 
-An `@invariant` decorator should also be defined either on the current class
+An `@invariant` decorator must also be defined either on the current class
 or on an ancestor. When defined, candidate overrides are identified and an
 error is raised if an associated `@override` decorator is missing.
 
 Static methods, including the constructor, can not be assigned an `@override`
 decorator. In the future this may be enabled for non-constructor static methods
 but the implications are not clear at present.
+
+### Rescue
+
+The `@rescue` decorator enables a mechanism for providing Robustness.
+Robustness is the ability of an implementation to respond to situations
+not specified; in other words the ability to handle exceptions (pun intended).
+This decorator can be assigned to both classes and its non-static features.
+The intent of this is to restore any invariants of the class and optionally retry
+execution.
+
+```typescript
+@invariant
+class Stack<T> {
+    protected _popRescue(
+        error: any,
+        args: Parameters<typeof Stack.prototype.pop>,
+        retry: (...retryArgs: typeof args) => void
+    ) {
+        console.log(error)
+    }
+    ...
+    @rescue(Stack.protoype._popRescue)
+    pop(): T {
+        if(this.isEmpty())
+            throw new Error('You can not pop from an empty stack')
+        return this._implementation.pop()!
+    }
+    ...
+}
+```
+
+In the above naive example if the `pop` method is called when the stack is
+empty an exception occurs. The `@rescue` decorator then intercepts this
+exception and handles it by simply logging the error. The exception is
+then raised to the caller.
+
+You also have the ability to retry the execution of the decorated
+feature again from the beginning by calling the `retry` function.
+This provides a mechanism for
+[fault tolerance](https://en.wikipedia.org/wiki/Fault_tolerance).
+When retry is called the exception will no longer be raised to the caller.
+`retry` can only be called once per exception rescue.
+
+Only a single `@rescue` can be assigned to a feature. Adding more than one
+will raise an error.
+
+An `@invariant` decorator must also be defined either on the current class
+or on an ancestor.
+
+Note that the class `@invariant` will be checked after the `@rescue`
+function executes even if an error is thrown in the `@rescue` body.
+When `retry` is called contracts defined on the class feature are checked
+as if it was called normally.
 
 ## Contributing
 

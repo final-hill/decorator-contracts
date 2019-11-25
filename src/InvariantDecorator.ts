@@ -9,53 +9,65 @@ import {ContractHandler, contractHandler} from './ContractHandler';
 import { OVERRIDE_LIST } from './OverrideDecorator';
 import isConstructor from './lib/isConstructor';
 import FnPredTable from './typings/FnPredTable';
+import DescriptorWrapper from './lib/DescriptorWrapper';
 import Constructor from './typings/Constructor';
 
 type ClassDecorator = <T extends Constructor<any>>(Constructor: T) => T;
 
-const MSG_INVALID_DECORATOR = 'Invalid decorator usage. Function expected';
+export const MSG_INVALID_DECORATOR = 'Invalid decorator usage. Function expected';
 export const MSG_DUPLICATE_INVARIANT = `Only a single @invariant can be assigned per class`;
+export const HAS_INVARIANT = Symbol('Has Invariant');
 const TRUE_PRED = () => ({ pass: true });
+let checkedAssert = new Assertion(true).assert;
 
 /**
- * Returns the method names associated with the provided prototype
+ * Returns the feature names associated with the provided prototype
  */
-function _methodNames(proto: object): Set<PropertyKey> {
+function _featureNames(proto: object): Set<PropertyKey> {
     return proto == null ? new Set() : new Set(
         Object.entries(Object.getOwnPropertyDescriptors(proto))
-        .filter(([key, descriptor]) => typeof descriptor.value == 'function' && key != 'constructor')
+        .filter(([key, descriptor]) => {
+            let dw = new DescriptorWrapper(descriptor);
+
+            return (dw.isMethod || dw.isAccessor) && key != 'constructor';
+        })
         .map(([key, _]) => key)
     );
 }
 
 /**
- * Returns the method names defined on the provided prototype and its ancestors
+ * Returns the feature names defined on the provided prototype and its ancestors
  */
-function _findAncestorMethodNames(targetProto: object): Set<PropertyKey> {
+function _ancestorFeatureNames(targetProto: object): Set<PropertyKey> {
     if(targetProto == null) {
         return new Set();
     }
     let proto = Object.getPrototypeOf(targetProto);
 
     return proto == null ? new Set() :
-        new Set([..._methodNames(proto), ..._findAncestorMethodNames(proto)]);
-
+        new Set([..._featureNames(proto), ..._ancestorFeatureNames(proto)]);
 }
 
-function _checkOverrides(
-    assert: typeof Assertion.prototype.assert,
-    Clazz: Function & {[OVERRIDE_LIST]?: Set<PropertyKey>},
-    proto: object
-) {
-    let methodNames = _methodNames(proto),
-        ancestorMethodNames: Set<PropertyKey> = _findAncestorMethodNames(proto),
-        overrides: Set<PropertyKey> = Object.getOwnPropertySymbols(Clazz).includes(OVERRIDE_LIST) ?
-            Clazz[OVERRIDE_LIST]! : new Set();
+interface IDecorated {
+    [OVERRIDE_LIST]?: Set<PropertyKey>
+}
 
-    methodNames.forEach(methodName =>
-        assert(
-            overrides.has(methodName) || !ancestorMethodNames.has(methodName),
-            `@override decorator missing on ${Clazz.name}.${String(methodName)}`
+function _checkOverrides(Clazz: Function & IDecorated) {
+    let proto = Clazz.prototype;
+    if(proto == null) {
+        return;
+    }
+    let clazzSymbols = Object.getOwnPropertySymbols(Clazz),
+        featureNames = _featureNames(proto);
+
+    let overrides: Set<PropertyKey> = clazzSymbols.includes(OVERRIDE_LIST) ?
+            Clazz[OVERRIDE_LIST]! : new Set(),
+        ancestorFeatureNames: Set<PropertyKey> = _ancestorFeatureNames(proto);
+
+    featureNames.forEach(featureName =>
+        checkedAssert(
+            overrides.has(featureName) || !ancestorFeatureNames.has(featureName),
+            `@override decorator missing on ${Clazz.name}.${String(featureName)}`
         )
     );
 }
@@ -77,12 +89,12 @@ export default class InvariantDecorator {
     invariant<T extends Constructor<any>>(Base: T): T;
     invariant<Self>(fnPredTable: FnPredTable<Self>): ClassDecorator;
     invariant<U extends (Constructor<any> | any)>(fn: Function) {
-        this._assert(typeof fn == 'function', MSG_INVALID_DECORATOR);
-
         let predTable = isConstructor(fn) ? TRUE_PRED : fn as FnPredTable<U>,
             Clazz = isConstructor(fn) ? fn : undefined,
             assert = this._assert,
             checkMode = this.checkMode;
+
+        assert(typeof fn == 'function', MSG_INVALID_DECORATOR);
 
         function decorator(Base: any) {
             if(!checkMode) {
@@ -96,12 +108,13 @@ export default class InvariantDecorator {
 
             return class InvariantClass extends Base {
                 static [contractHandler]: ContractHandler = handler;
+                static [HAS_INVARIANT] = true;
 
                 constructor(...args: any[]) {
                     super(...args);
 
-                    let Clazz = this.constructor;
-                    _checkOverrides(assert, Clazz, Clazz.prototype);
+                    // TODO: move to OverrideDecorator
+                    _checkOverrides(this.constructor);
                     InvariantClass[contractHandler].assertInvariants(this);
 
                     return new Proxy(this, handler);

@@ -9,6 +9,7 @@ import EnsuresDecorator from './EnsuresDecorator';
 import InvariantDecorator from './InvariantDecorator';
 import OverrideDecorator from './OverrideDecorator';
 import RequiresDecorator from './RequiresDecorator';
+import RescueDecorator from './RescueDecorator';
 
 /**
  * The Contracts class defines methods that can be used to define and enforce
@@ -21,6 +22,7 @@ export default class Contracts {
     invariant: typeof InvariantDecorator.prototype.invariant;
     override: typeof OverrideDecorator.prototype.override;
     requires: typeof RequiresDecorator.prototype.requires;
+    rescue: typeof RescueDecorator.prototype.rescue;
 
     /**
      * Constructs a new instance of Contracts in the specified mode
@@ -33,5 +35,6 @@ export default class Contracts {
         this.invariant = new InvariantDecorator(checkMode).invariant;
         this.override = new OverrideDecorator(checkMode).override;
         this.requires = new RequiresDecorator(checkMode).requires;
+        this.rescue = new RescueDecorator(checkMode).rescue;
     }
 }

@@ -7,7 +7,8 @@
  */
 
 import Contracts from './';
-import { MSG_NO_MATCHING_MEMBER, MSG_INVALID_ARG_LENGTH, MSG_DUPLICATE_OVERRIDE } from './OverrideDecorator';
+import { MSG_INVALID_ARG_LENGTH, MSG_DUPLICATE_OVERRIDE } from './OverrideDecorator';
+import { MSG_NO_MATCHING_MEMBER } from './MemberDecorator';
 
 /**
  * Requirement 210
@@ -240,7 +241,7 @@ describe('A subclass with an overriding member missing @override is an error', (
             }
 
             return new Sub();
-        });
+        }).toThrow(`@override decorator missing on Sub.prop`);
     });
 });
 

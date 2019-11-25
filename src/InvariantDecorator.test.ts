@@ -193,6 +193,7 @@ describe('The subclasses of an invariant decorated class must obey the invariant
 
         // overriding members
         class Baz extends Foo {
+            @override
             get value() { return this._value; }
             set value(value: number) { this._value = value; }
             @override
