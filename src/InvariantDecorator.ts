@@ -7,7 +7,7 @@
 import Assertion from './Assertion';
 import {ContractHandler, contractHandler} from './ContractHandler';
 import { OVERRIDE_LIST } from './OverrideDecorator';
-import isConstructor from './lib/isContructor';
+import isConstructor from './lib/isConstructor';
 import FnPredTable from './typings/FnPredTable';
 
 type ClassDecorator = <T extends Constructor<any>>(Constructor: T) => T;
