@@ -1,4 +1,4 @@
-/**
+/*!
  * @license
  * Copyright (C) #{YEAR}# Michael L Haufe
  * SPDX-License-Identifier: AGPL-1.0-only
@@ -6,7 +6,6 @@
  * The ensures decorator is an assertion of a postcondition.
  * It expresses a condition that must be true after the associated class member is executed.
  */
-
 import Assertion from './Assertion';
 
 export default class EnsuresDecorator {
