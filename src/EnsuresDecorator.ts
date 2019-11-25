@@ -1,7 +1,7 @@
 /**
  * @license
  * Copyright (C) #{YEAR}# Michael L Haufe
- * SPDX-License-Identifier: GPL-2.0-only
+ * SPDX-License-Identifier: AGPL-1.0-only
  *
  * The ensures decorator is an assertion of a postcondition.
  * It expresses a condition that must be true after the associated class member is executed.
@@ -12,16 +12,16 @@ import Assertion from './Assertion';
 export default class EnsuresDecorator {
     protected _assert: typeof Assertion.prototype.assert;
 
-    constructor(protected debugMode: boolean) {
-        this._assert = new Assertion(debugMode).assert;
+    constructor(protected checkMode: boolean) {
+        this._assert = new Assertion(checkMode).assert;
     }
 
     ensures = <Self>(fnCondition: (self: Self, returnValue: any) => boolean, message: string = 'Postcondition failed') => {
         let assert = this._assert,
-            debugMode = this.debugMode;
+            checkMode = this.checkMode;
 
         return function(_target: any, _propertyKey: string, descriptor: PropertyDescriptor) {
-            if(!debugMode) {
+            if(!checkMode) {
                 return;
             }
             let {value, get, set} = descriptor;

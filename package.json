@@ -1,17 +1,21 @@
 {
   "name": "@thenewobjective/decorator-contracts",
   "version": "0.0.0",
-  "description": "Design By Contract for TypeScript and ECMAScript classes",
+  "description": "Code Contracts for TypeScript and ECMAScript classes",
   "main": "dist/index.js",
   "scripts": {
     "prebuild": "npm run clean && npm run lint",
     "build": "npm run build-types && parcel build src/index.ts",
+    "prebuild-nofix": "npm run clean && npm run lint-nofix",
+    "build-nofix": "npm run build-types && parcel build src/index.ts",
     "build-types": "tsc -p tsconfig.json --emitDeclarationOnly --outDir dist",
     "clean": "rimraf dist && rimraf coverage",
     "clean-full": "rimraf dist && rimraf .cache && rimraf node_modules",
     "debug": "node --debug-brk --inspect ./node_modules/jest/bin/jest -i",
     "prelint": "npm run type-check",
     "lint": "tslint --project tsconfig.json --fix -e \"node_modules\"",
+    "prelint-nofix": "npm run type-check",
+    "lint-nofix": "tslint --project tsconfig.json -e \"node_modules\"",
     "test": "jest --coverage",
     "type-check": "tsc -p tsconfig.json --noEmit"
   },
@@ -20,16 +24,18 @@
     "url": "https://thenewobjective@dev.azure.com/thenewobjective/decorator-contracts/_git/decorator-contracts"
   },
   "keywords": [
-    "contract",
+    "code-contracts",
     "contracts",
-    "Dbc",
+    "decorators",
     "test",
     "assert",
     "require",
-    "invariant"
+    "invariant",
+    "precondition",
+    "postcondition"
   ],
   "author": "Michael L Haufe <tno@thenewobjective.com> (https://thenewobjective.com)",
-  "license": "GPL-2.0-only",
+  "license": "AGPL-1.0-only",
   "jest": {
     "preset": "ts-jest",
     "reporters": [
@@ -41,14 +47,14 @@
     "outputDirectory": "./coverage"
   },
   "devDependencies": {
-    "@types/jest": "^24.0.18",
+    "@types/jest": "^24.0.19",
     "jest": "^24.9.0",
     "jest-junit": "^8.0.0",
-    "parcel-bundler": "^1.12.3",
+    "parcel-bundler": "^1.12.4",
     "rimraf": "^3.0.0",
-    "ts-jest": "^24.0.2",
-    "tslint": "^5.19.0",
-    "typescript": "^3.6.2"
+    "ts-jest": "^24.1.0",
+    "tslint": "^5.20.0",
+    "typescript": "^3.6.4"
   },
   "dependencies": {},
   "files": [

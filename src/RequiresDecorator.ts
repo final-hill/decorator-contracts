@@ -1,7 +1,10 @@
 /**
  * @license
  * Copyright (C) #{YEAR}# Michael L Haufe
- * SPDX-License-Identifier: GPL-2.0-only
+ * SPDX-License-Identifier: AGPL-1.0-only
+ *
+ * The requires decorator is an assertion of a precondition.
+ * It expresses a condition that must be true before the associated class member is executed.
  */
 
 import Assertion from './Assertion';
@@ -20,12 +23,12 @@ export default class RequiresDecorator {
 
     /**
      * Constructs a new instance of the RequiresDecorator in the specified mode
-     * Enabled when debugMode is true, and disabled otherwise
+     * Enabled when checkMode is true, and disabled otherwise
      *
-     * @param debugMode - The flag representing mode of the assertion
+     * @param checkMode - The flag representing mode of the assertion
      */
-    constructor(protected debugMode: boolean) {
-        this._assert =  new Assertion(debugMode).assert;
+    constructor(protected checkMode: boolean) {
+        this._assert =  new Assertion(checkMode).assert;
     }
 
     /**
@@ -36,7 +39,7 @@ export default class RequiresDecorator {
         message: string = 'Precondition failed'
     ) => {
         let assert = this._assert,
-            debugMode = this.debugMode;
+            checkMode = this.checkMode;
 
         return function(target: any, propertyKey: PropertyKey, descriptor: PropertyDescriptor) {
             assert(typeof target == 'object', MSG_INVALID_DECORATOR);
@@ -44,7 +47,7 @@ export default class RequiresDecorator {
             // The Property Descriptor will be undefined if the script target is less than ES5.
             assert(descriptor != undefined, MSG_OLD_ES);
 
-            if(!debugMode) {
+            if(!checkMode) {
                 return;
             }
             let {value, get, set} = descriptor;

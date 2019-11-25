@@ -1,10 +1,11 @@
 /**
  * @license
  * Copyright (C) 2019 Michael L Haufe
- * SPDX-License-Identifier: GPL-2.0-only
+ * SPDX-License-Identifier: AGPL-1.0-only
  */
 
 import Assertion from './Assertion';
+import FnPredTable from './typings/FnPredTable';
 
 const contractHandler = Symbol('Contract handler');
 
@@ -12,22 +13,18 @@ const contractHandler = Symbol('Contract handler');
  * The ContractHandler manages the registration and evaluation of contracts associated with a class
  */
 class ContractHandler {
-    protected _assert: typeof Assertion.prototype.assert;
-
-    protected readonly _invariantRegistry: Map<Predicate<any>, string> = new Map();
     // TODO: requiresRegistry
     // TODO: rescueRegistry
     // TODO: ensuresRegistry
 
     /**
      * Constructs a new instance of the ContractHandler
-     * @param _assert - The assertion implementation associated with the current debugMode
+     * @param _assert - The assertion implementation associated with the current checkMode
      */
     constructor(
-        protected assert: typeof Assertion.prototype.assert
-    ) {
-        this._assert = assert;
-    }
+        protected readonly _assert: typeof Assertion.prototype.assert,
+        protected readonly _fnInvariantRecord: FnPredTable<any>
+    ) { }
 
     /**
      * Wraps a method with invariant assertions
@@ -44,27 +41,14 @@ class ContractHandler {
     }
 
     /**
-     * Registers a new invariant contract
-     *
-     * @param predicate - The invariant predicate
-     * @param message - The custome error message
-     */
-    addInvariant(
-        predicate: Predicate<any>,
-        message: string
-    ) {
-        this._assert(!this._invariantRegistry.has(predicate), 'Duplicate invariant');
-        this._invariantRegistry.set(predicate, message);
-    }
-
-    /**
      * Evaluates all registered invariants
      *
      * @param self - The context class
      */
     assertInvariants(self: object) {
-        this._invariantRegistry.forEach((message, predicate) => {
-            this._assert(predicate(self), message);
+        let predRecord = this._fnInvariantRecord.call(self, self);
+        Object.entries(predRecord).forEach(([name, value]) => {
+            this._assert(value, name);
         });
     }
 
@@ -75,12 +59,24 @@ class ContractHandler {
      * @param prop - The name or Symbol  of the property to get
      */
     get(target: object, prop: keyof typeof target) {
+        // TODO: use descriptorWrapper
+        // What if not ownProperty?
         let feature = target[prop];
 
-        // TODO: get could be a getter
-        return typeof feature == 'function' ?
-            this._decorated.bind(this, feature, target) :
-            feature;
+        switch(typeof feature) {
+            case 'function':
+                return (...args: any[]) => {
+                    this.assertInvariants(target);
+                    let result = (feature as Function).call(target, ...args);
+                    this.assertInvariants(target);
+
+                    return result;
+                };
+            // TODO: get could be a getter
+            // TODO: if it's a rescue method, no precondition and no invariant
+            default:
+                return feature;
+        }
     }
 
     /**
