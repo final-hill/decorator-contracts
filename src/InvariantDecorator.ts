@@ -9,6 +9,7 @@ import {ContractHandler, contractHandler} from './ContractHandler';
 import { OVERRIDE_LIST } from './OverrideDecorator';
 import isConstructor from './lib/isConstructor';
 import FnPredTable from './typings/FnPredTable';
+import Constructor from './typings/Constructor';
 
 type ClassDecorator = <T extends Constructor<any>>(Constructor: T) => T;
 
