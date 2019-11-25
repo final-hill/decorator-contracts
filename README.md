@@ -9,8 +9,9 @@
 3. [Usage](#usage)
    1. [Assertions](#assertions)
    2. [Invariants](#invariants)
-   3. [Overrides](#overrides)
-   4. [Rescue](#rescue)
+   3. [Requires](#requires)
+   4. [Overrides](#overrides)
+   5. [Rescue](#rescue)
 4. [Contributing](#contributing)
 5. [Building and Editing](#building-and-editing)
 6. [Getting Started](#getting-started)
@@ -207,12 +208,30 @@ This is because the decorators work in relationship to others
 in the class hierarchy and the `@invariant` manages this interclass
 relationship.
 
-Only one `@invariant` can be assigned per class. The following would throw an exception:
+Whether you have invariants for a class or not it is necessary to declare one
+anyway on one of the base classes.
+
+### Requires
+
+Before a client of your class can execute a method, there are often preconditions
+that must be met first. Often in
+{Be liberal in what you accept, and conservative in what you give}
+{Encoding of error checking}
+{Complicates implementation}
+{All of this extraneous checking has nothing to do with the datastructure}
 
 ```typescript
-@invariant
-@invariant
-class Foo {}
+class Stack<T> {
+    ...
+
+    @requires<Stack<T>>(self => !self.isEmpty())
+    peek(): T {}
+
+    @requires<Stack<T>>(self => !self.isEmpty())
+    pop(): T {
+        ...
+    }
+}
 ```
 
 ### Overrides
