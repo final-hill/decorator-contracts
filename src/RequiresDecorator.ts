@@ -14,12 +14,12 @@ export default class RequiresDecorator {
 
     /**
      * Constructs a new instance of the RequiresDecorator int he specified mode
-     * Enabled when debugMode is true, and disabled otherwise
+     * Enabled when checkMode is true, and disabled otherwise
      *
-     * @param debugMode - The flag representing mode of the assertion
+     * @param checkMode - The flag representing mode of the assertion
      */
-    constructor(protected debugMode: boolean) {
-        this._assert =  new Assertion(debugMode).assert;
+    constructor(protected checkMode: boolean) {
+        this._assert =  new Assertion(checkMode).assert;
     }
 
     requires = <Self>(
@@ -27,10 +27,10 @@ export default class RequiresDecorator {
         message: string = 'Precondition failed'
     ) => {
         let assert = this._assert,
-            debugMode = this.debugMode;
+            checkMode = this.checkMode;
 
         return function(_target: any, _propertyKey: string, descriptor: PropertyDescriptor) {
-            if(!debugMode) {
+            if(!checkMode) {
                 return;
             }
             let {value, get, set} = descriptor;

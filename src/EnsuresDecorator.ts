@@ -12,16 +12,16 @@ import Assertion from './Assertion';
 export default class EnsuresDecorator {
     protected _assert: typeof Assertion.prototype.assert;
 
-    constructor(protected debugMode: boolean) {
-        this._assert = new Assertion(debugMode).assert;
+    constructor(protected checkMode: boolean) {
+        this._assert = new Assertion(checkMode).assert;
     }
 
     ensures = <Self>(fnCondition: (self: Self, returnValue: any) => boolean, message: string = 'Postcondition failed') => {
         let assert = this._assert,
-            debugMode = this.debugMode;
+            checkMode = this.checkMode;
 
         return function(_target: any, _propertyKey: string, descriptor: PropertyDescriptor) {
-            if(!debugMode) {
+            if(!checkMode) {
                 return;
             }
             let {value, get, set} = descriptor;

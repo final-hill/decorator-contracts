@@ -68,8 +68,8 @@ function _checkOverrides(
 export default class InvariantDecorator {
     protected _assert: typeof Assertion.prototype.assert;
 
-    constructor(protected debugMode: boolean) {
-        this._assert = new Assertion(debugMode).assert;
+    constructor(protected checkMode: boolean) {
+        this._assert = new Assertion(checkMode).assert;
         this.invariant = this.invariant.bind(this);
     }
 
@@ -81,10 +81,10 @@ export default class InvariantDecorator {
         let predTable = isConstructor(fn) ? TRUE_PRED : fn as FnPredTable<U>,
             Clazz = isConstructor(fn) ? fn : undefined,
             assert = this._assert,
-            debugMode = this.debugMode;
+            checkMode = this.checkMode;
 
         function decorator(Base: any) {
-            if(!debugMode) {
+            if(!checkMode) {
                 return Base;
             }
 
