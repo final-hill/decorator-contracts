@@ -323,7 +323,7 @@ describe('A truthy invariant does not throw an exception when evaluated', () => 
  */
 describe('A falsy invariant throws an exception when evaluated', () => {
 
-    test('Construction throws in debugMode', () => {
+    test('Construction throws in checkMode', () => {
         let {invariant} = new Contracts(true);
 
         expect(() => {
@@ -349,7 +349,7 @@ describe('A falsy invariant throws an exception when evaluated', () => {
         }).not.toThrow();
     });
 
-    test('Method throws in debugMode', () => {
+    test('Method throws in checkMode', () => {
         let {invariant} = new Contracts(true);
 
         expect(() => {
@@ -450,7 +450,7 @@ describe('An invariant is evaluated after it\'s associated class is constructed'
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/138
  */
 describe('An invariant is evaluated before and after every method call on the associated class', () => {
-    test('Test method call in debugMode', () => {
+    test('Test method call in checkMode', () => {
         let {invariant} = new Contracts(true);
 
         @invariant<Foo>(self => ({
@@ -526,7 +526,7 @@ describe('The invariant decorator has a debug mode and production mode', () => {
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/147
  */
 describe('In debug mode the invariant decorator evaluates its assertions', () => {
-    test('Construction throws in debugMode', () => {
+    test('Construction throws in checkMode', () => {
         let {invariant} = new Contracts(true);
 
         expect(() => {
@@ -539,7 +539,7 @@ describe('In debug mode the invariant decorator evaluates its assertions', () =>
         }).toThrow(AssertionError);
     });
 
-    test('Method throws in debugMode', () => {
+    test('Method throws in checkMode', () => {
         let {invariant} = new Contracts(true);
 
         expect(() => {

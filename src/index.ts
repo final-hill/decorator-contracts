@@ -25,13 +25,13 @@ export default class Contracts {
     /**
      * Constructs a new instance of Contracts in the specified mode
      *
-     * @param debugMode - enables assertions
+     * @param checkMode - enables assertions
      */
-    constructor(readonly debugMode: boolean) {
-        this.assert = new Assertion(debugMode).assert;
-        this.ensures = new EnsuresDecorator(debugMode).ensures;
-        this.invariant = new InvariantDecorator(debugMode).invariant;
-        this.override = new OverrideDecorator(debugMode).override;
-        this.requires = new RequiresDecorator(debugMode).requires;
+    constructor(readonly checkMode: boolean) {
+        this.assert = new Assertion(checkMode).assert;
+        this.ensures = new EnsuresDecorator(checkMode).ensures;
+        this.invariant = new InvariantDecorator(checkMode).invariant;
+        this.override = new OverrideDecorator(checkMode).override;
+        this.requires = new RequiresDecorator(checkMode).requires;
     }
 }
