@@ -6,7 +6,7 @@
 
 import MemberDecorator, { MSG_NO_STATIC, MSG_DECORATE_METHOD_ACCESSOR_ONLY, MSG_INVARIANT_REQUIRED} from './MemberDecorator';
 import DescriptorWrapper from './lib/DescriptorWrapper';
-import isConstructor from './lib/isContructor';
+import isConstructor from './lib/isConstructor';
 import { HAS_INVARIANT } from './InvariantDecorator';
 
 export const MSG_INVALID_DECORATOR = 'Invalid decorator usage. Function expected';

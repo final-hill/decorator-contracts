@@ -13,7 +13,7 @@ import Contracts from './';
  */
 describe('The contracts constructor accepts a single boolean parameter called "debugMode"', () => {
     test('Construction', () => {
-        expect(new Contracts(true).debugMode).toBe(true);
-        expect(new Contracts(false).debugMode).toBe(false);
+        expect(new Contracts(true).checkMode).toBe(true);
+        expect(new Contracts(false).checkMode).toBe(false);
     });
 });
