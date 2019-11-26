@@ -7,8 +7,7 @@
  */
 
 import Contracts from './';
-import { MSG_INVALID_ARG_LENGTH, MSG_DUPLICATE_OVERRIDE } from './OverrideDecorator';
-import { MSG_NO_MATCHING_MEMBER } from './MemberDecorator';
+import { MSG_INVALID_ARG_LENGTH, MSG_DUPLICATE_OVERRIDE, MSG_NO_MATCHING_FEATURE } from './OverrideDecorator';
 
 /**
  * Requirement 210
@@ -88,7 +87,7 @@ describe('Using @override on a class member with no ancestor member is an error'
             }
 
             return Base;
-        }).toThrow(MSG_NO_MATCHING_MEMBER);
+        }).toThrow(MSG_NO_MATCHING_FEATURE);
     });
 
     test('subclass with @override decorator', () => {
@@ -101,7 +100,7 @@ describe('Using @override on a class member with no ancestor member is an error'
             }
 
             return Sub;
-        }).toThrow(MSG_NO_MATCHING_MEMBER);
+        }).toThrow(MSG_NO_MATCHING_FEATURE);
     });
 
     test('subclass with method overriding non-method', () => {
@@ -117,7 +116,7 @@ describe('Using @override on a class member with no ancestor member is an error'
             }
 
             return Sub;
-        }).toThrow(MSG_NO_MATCHING_MEMBER);
+        }).toThrow(MSG_NO_MATCHING_FEATURE);
     });
 });
 
@@ -345,4 +344,12 @@ describe('Accessors must support @override', () => {
             return Sub;
         }).toThrow();
     });
+});
+
+/**
+ * Requirement 346
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/346
+ */
+describe('A class with an @override defined must also have an @invariant defined', () => {
+
 });
