@@ -10,6 +10,7 @@ import OverrideDecorator from './OverrideDecorator';
 import isConstructor from './lib/isConstructor';
 import FnPredTable from './typings/FnPredTable';
 import Constructor from './typings/Constructor';
+import MemberDecorator from './MemberDecorator';
 
 type ClassDecorator = <T extends Constructor<any>>(Constructor: T) => T;
 
@@ -60,6 +61,7 @@ export default class InvariantDecorator {
                     super(...args);
 
                     OverrideDecorator.checkOverrides(this.constructor);
+                    MemberDecorator.restoreFeatures(this.constructor);
                     InvariantClass[contractHandler].assertInvariants(this);
 
                     return new Proxy(this, handler);

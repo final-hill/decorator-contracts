@@ -49,7 +49,7 @@ export default class Assertion {
      * @throws {Error} - When the condition is false
      * @see AssertionError
      */
-    assert = (condition: boolean, message: string = 'Assertion failure', ErrorConstructor: Constructor<Error> = AssertionError): boolean => {
+    assert = (condition: boolean, message: string = 'Assertion failure', ErrorConstructor: Constructor<Error> = AssertionError): true => {
         if(this.checkMode && !condition) {
             throw new ErrorConstructor(message);
         }
