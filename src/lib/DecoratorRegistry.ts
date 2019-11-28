@@ -10,13 +10,13 @@ export const DECORATOR_REGISTRY = Symbol('Decorator Registry');
 
 export interface IDecoratorRegistration {
     overrides: boolean
-    descriptor: DescriptorWrapper
+    descriptorWrapper: DescriptorWrapper
 }
 
 export class DecoratorRegistry extends Map<PropertyKey, IDecoratorRegistration> {
     getOrCreate(propertyKey: PropertyKey, descriptor: PropertyDescriptor): IDecoratorRegistration {
         if(!this.has(propertyKey)) {
-            this.set(propertyKey, {overrides: false, descriptor: new DescriptorWrapper(descriptor)});
+            this.set(propertyKey, {overrides: false, descriptorWrapper: new DescriptorWrapper(descriptor)});
         }
 
         return this.get(propertyKey)!;

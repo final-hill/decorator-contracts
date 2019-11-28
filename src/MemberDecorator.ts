@@ -35,8 +35,8 @@ export default abstract class MemberDecorator {
 
         let registry = MemberDecorator.getOrCreateRegistry(proto.constructor),
             descriptorWrapper = registry.has(propertyKey) ?
-                registry.get(propertyKey)!.descriptor :
-                new DescriptorWrapper(Object.getOwnPropertyDescriptor(proto, propertyKey));
+                registry.get(propertyKey)!.descriptorWrapper :
+                new DescriptorWrapper(Object.getOwnPropertyDescriptor(proto, propertyKey)!);
 
         return descriptorWrapper.hasDescriptor ? descriptorWrapper : this.ancestorFeature(proto, propertyKey);
     }
@@ -95,7 +95,9 @@ export default abstract class MemberDecorator {
 
         let registry = this.getOrCreateRegistry(Clazz);
         registry.forEach((registration, propertyKey) => {
-            Object.defineProperty(proto, propertyKey, registration.descriptor);
+            // TODO: is this ever null?
+            let descriptor = registration.descriptorWrapper.descriptor!;
+            Object.defineProperty(proto, propertyKey, descriptor);
         });
     }
 
