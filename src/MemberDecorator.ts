@@ -32,9 +32,13 @@ export default abstract class MemberDecorator {
         if(proto == null) {
             return null;
         }
-        let ancestorFeature = Object.getOwnPropertyDescriptor(proto, propertyKey);
 
-        return ancestorFeature != undefined ? new DescriptorWrapper(ancestorFeature) : this.ancestorFeature(proto, propertyKey);
+        let registry = MemberDecorator.getOrCreateRegistry(targetProto.constructor),
+            descriptorWrapper = registry.has(propertyKey) ?
+                registry.get(propertyKey)!.descriptor :
+                new DescriptorWrapper(Object.getOwnPropertyDescriptor(proto, propertyKey));
+
+        return descriptorWrapper.hasDescriptor ? descriptorWrapper : this.ancestorFeature(proto, propertyKey);
     }
 
     /**
