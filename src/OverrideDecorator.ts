@@ -77,7 +77,7 @@ export default class OverrideDecorator extends MemberDecorator {
 
         let Clazz = (target as any).constructor,
             decoratorRegistry = MemberDecorator.getOrCreateRegistry(Clazz),
-            registration = decoratorRegistry.getOrCreate(propertyKey, currentDescriptor);
+            registration = decoratorRegistry.getOrCreate(propertyKey, {...currentDescriptor});
 
         registration.overrides = assert(!registration.overrides, MSG_DUPLICATE_OVERRIDE);
 
