@@ -236,7 +236,7 @@ class Stack<T> {
 
 ### Overrides
 
-Class members implemented in a superclass can be overridden in a subclass. The
+Class features implemented in a superclass can be overridden in a subclass. The
 subclass implementation can augment or entirely replace the one belonging
 to the superclass. This can be done for a variety of reasons, such as
 providing a more efficient implementation in the context of the subclass.
@@ -244,11 +244,11 @@ Regardless of the reason, the overridden member should be semantically
 consistent with the superclass member. In other
 words, it should follow [Liskov's Substitution Principle](https://en.wikipedia.org/wiki/Liskov_substitution_principle).
 To aid in the enforcement and documentation of this principle the library
-provides an `@override` decorator for class members for methods and accessors.
+provides an `@override` decorator for class methods and accessors.
 
 A simple example is calculating the area of Convex Polygons. While a general
 formula exists to accomplish this, more efficient and direct formulas exist
-for specific polygons such as a Right Triangles:
+for specific polygons such as a Right Triangle:
 
 ```typescript
 type Side = number
@@ -298,12 +298,13 @@ Above you can see the `area()` method being overridden with the more
 efficient implementation. The `@override` decorator makes explicit
 that the method is replacing another implementation.
 
-This decorator does not simply document and verify the fact that the method is
-overridden, it will also verify that the parameter count matches.
+This decorator does not only document and verify that the method is
+overridden; it will also verify that the parameter count matches.
 
 An `@invariant` decorator must also be defined either on the current class
-or on an ancestor. When defined, candidate overrides are identified and an
-error is raised if an associated `@override` decorator is missing.
+or on an ancestor. When defined candidate overrides are identified and an
+error is raised if an associated `@override` decorator is missing on that
+feature.
 
 Static methods, including the constructor, can not be assigned an `@override`
 decorator. In the future this may be enabled for non-constructor static methods
