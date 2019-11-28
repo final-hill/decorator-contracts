@@ -33,7 +33,7 @@ export default abstract class MemberDecorator {
             return null;
         }
 
-        let registry = MemberDecorator.getOrCreateRegistry(targetProto.constructor),
+        let registry = MemberDecorator.getOrCreateRegistry(proto.constructor),
             descriptorWrapper = registry.has(propertyKey) ?
                 registry.get(propertyKey)!.descriptor :
                 new DescriptorWrapper(Object.getOwnPropertyDescriptor(proto, propertyKey));
