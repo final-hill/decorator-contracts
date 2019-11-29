@@ -12,7 +12,7 @@ import Contracts from './';
  * Requirement 241
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/241
  */
-describe('The @requires decorator must be a non-static method decorator only', () => {
+describe('The @requires decorator must be a non-static feature decorator only', () => {
     test('Test declaration', () => {
         [new Contracts(false), new Contracts(true)].forEach(contracts => {
             let {requires} = contracts;
