@@ -126,7 +126,7 @@ describe('Using @override on a class member with no ancestor member is an error'
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/214
  */
 describe('using @override on a method with an ancestor with a different parameter count is an error', () => {
-    let {override} = new Contracts(true);
+    let {invariant, override} = new Contracts(true);
 
     test('bad override', () => {
         expect(() => {
@@ -169,6 +169,7 @@ describe('using @override on a method with an ancestor with a different paramete
 
     test('good override', () => {
         expect(() => {
+            @invariant
             class Base {
                 method(a: string, b: string) {
                     return `${a}, ${b}`;
@@ -352,7 +353,6 @@ describe('Accessors must support @override', () => {
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/346
  */
 describe('A class with an @override defined must also have an @invariant defined', () => {
-    // TODO
     let {invariant, override} = new Contracts(true);
 
     test('override without invariant throws on usage', () => {
