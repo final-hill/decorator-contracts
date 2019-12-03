@@ -44,7 +44,7 @@ export default class RescueDecorator extends MemberDecorator {
         this._checkedAssert(typeof fnRescue == 'function', MSG_INVALID_DECORATOR);
         this._checkedAssert(!isConstructor(fnRescue), MSG_INVALID_DECORATOR);
 
-        return function(target: Function | object, propertyKey: PropertyKey, currentDescriptor: PropertyDescriptor): PropertyDescriptor {
+        return function(target: any, propertyKey: PropertyKey, currentDescriptor: PropertyDescriptor): PropertyDescriptor {
             if(!self.debugMode) {
                 return currentDescriptor;
             }

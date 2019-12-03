@@ -16,7 +16,7 @@ import RescueDecorator from './RescueDecorator';
  * specifications for other classes. These are exposed as decorator factories and
  * an assertion function.
  */
-export default class Contracts {
+class Contracts {
     assert: typeof Assertion.prototype.assert;
     ensures: typeof EnsuresDecorator.prototype.ensures;
     invariant: typeof InvariantDecorator.prototype.invariant;
@@ -38,3 +38,5 @@ export default class Contracts {
         this.rescue = new RescueDecorator(checkMode).rescue;
     }
 }
+
+export default Contracts;

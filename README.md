@@ -213,26 +213,37 @@ anyway on one of the base classes.
 
 ### Requires
 
-Before a client of your class can execute a method, there are often preconditions
-that must be met first. Often in
-{Be liberal in what you accept, and conservative in what you give}
-{Encoding of error checking}
-{Complicates implementation}
-{All of this extraneous checking has nothing to do with the datastructure}
+The `@requires` decorator describes and enforces an assertion that must be true
+before its associated feature can execute. In other words, before a client
+of your class can execute a method or accessor the defined precondition
+must be met first or an error will be raised.
 
 ```typescript
+@invariant
 class Stack<T> {
+    protected _notEmpty(){ return !this.isEmpty() }
     ...
 
-    @requires<Stack<T>>(self => !self.isEmpty())
+    @requires(Stack.prototype._notEmpty)
     peek(): T {}
 
-    @requires<Stack<T>>(self => !self.isEmpty())
+    @requires(Stack.prototype._notEmpty)
     pop(): T {
         ...
     }
 }
 ```
+
+In the above example the precondition of executing `pop` or `peek`
+on a stack is that the stack is not empty. If this assertion fails
+an AssertionError is raised.
+
+An `@invariant` decorator must also be defined either on the current class
+or on an ancestor as shown in the example.
+
+Static features, including the constructor, can not be assigned a `@requires`
+decorator. In the future this may be enabled for non-constructor static methods
+but the implications are not clear at present.
 
 ### Overrides
 

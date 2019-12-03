@@ -9,14 +9,19 @@ import DescriptorWrapper from './DescriptorWrapper';
 export const DECORATOR_REGISTRY = Symbol('Decorator Registry');
 
 export interface IDecoratorRegistration {
-    overrides: boolean
     descriptorWrapper: DescriptorWrapper
+    overrides: boolean
+    hasRequirement: boolean
 }
 
 export class DecoratorRegistry extends Map<PropertyKey, IDecoratorRegistration> {
     getOrCreate(propertyKey: PropertyKey, descriptor: PropertyDescriptor): IDecoratorRegistration {
         if(!this.has(propertyKey)) {
-            this.set(propertyKey, {overrides: false, descriptorWrapper: new DescriptorWrapper(descriptor)});
+            this.set(propertyKey, {
+                descriptorWrapper: new DescriptorWrapper(descriptor),
+                hasRequirement: false,
+                overrides: false
+            });
         }
 
         return this.get(propertyKey)!;
