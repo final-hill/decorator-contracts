@@ -58,3 +58,34 @@ describe('The @requires decorator must be a non-static feature decorator only', 
         }).not.toThrow();
     });
 });
+
+/**
+ * Requirement 248
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/248
+ */
+describe('@requires has a checked mode and unchecked mode', () => {
+
+    test('The associated assertion is evaluated when checkMode = true', () => {
+        let {invariant, requires} = new Contracts(true);
+
+        @invariant
+        class Foo {
+            @requires(() => false)
+            method() {}
+        }
+
+        expect(() => new Foo().method()).toThrow();
+    });
+
+    test('The associated assertion is NOT evaluated in checkMode = false', () => {
+        let {invariant, requires} = new Contracts(false);
+
+        @invariant
+        class Foo {
+            @requires(() => false)
+            method() {}
+        }
+
+        expect(() => new Foo().method()).not.toThrow();
+    });
+});

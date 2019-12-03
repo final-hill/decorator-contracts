@@ -27,10 +27,10 @@ export default class RescueDecorator extends MemberDecorator {
      * When debugMode is true the decorator is enabled.
      * When debugMode is false the decorator has no effect
      *
-     * @param debugMode - A flag representing mode of the decorator
+     * @param checkMode - A flag representing mode of the decorator
      */
-    constructor(protected debugMode: boolean) {
-        super(debugMode);
+    constructor(protected checkMode: boolean) {
+        super(checkMode);
         this.rescue = this.rescue.bind(this);
     }
 
@@ -45,7 +45,7 @@ export default class RescueDecorator extends MemberDecorator {
         this._checkedAssert(!isConstructor(fnRescue), MSG_INVALID_DECORATOR);
 
         return function(target: any, propertyKey: PropertyKey, currentDescriptor: PropertyDescriptor): PropertyDescriptor {
-            if(!self.debugMode) {
+            if(!self.checkMode) {
                 return currentDescriptor;
             }
 

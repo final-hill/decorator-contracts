@@ -132,12 +132,12 @@ export default abstract class MemberDecorator {
 
     /**
      * Returns an instance of the decorator in the specified mode.
-     * When debugMode is true the decorator is enabled.
-     * When debugMode is false the decorator has no effect
+     * When checkMode is true the decorator is enabled.
+     * When checkMode is false the decorator has no effect
      *
-     * @param debugMode - A flag representing mode of the decorator
+     * @param checkMode - A flag representing mode of the decorator
      */
-    constructor(protected debugMode: boolean) {
-        this._assert = debugMode ? this._checkedAssert : this._uncheckedAssert;
+    constructor(protected checkMode: boolean) {
+        this._assert = checkMode ? this._checkedAssert : this._uncheckedAssert;
     }
 }

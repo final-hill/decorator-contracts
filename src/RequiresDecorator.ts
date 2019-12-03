@@ -43,7 +43,7 @@ export default class RequiresDecorator extends MemberDecorator {
             let isStatic = typeof target == 'function';
             assert(!isStatic, MSG_NO_STATIC, TypeError);
 
-            if(!self.debugMode) {
+            if(!self.checkMode) {
                 return currentDescriptor;
             }
 
