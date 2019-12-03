@@ -29,7 +29,9 @@ export default class RequiresDecorator extends MemberDecorator {
     }
 
     /**
-     * TODO
+     * The 'requires' decorator. This is a feature decorator only.
+     *
+     * @param fnRequires - The assertion
      */
     requires(fnRequires: RequireType) {
         let self = this,
