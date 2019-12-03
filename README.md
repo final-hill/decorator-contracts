@@ -55,7 +55,7 @@ checked mode: `true`
 unchecked mode: `false`
 
 ```typescript
-let {assert, invariant, override, rescue} = new Contracts(true);
+let {assert, invariant, override, rescue, requires} = new Contracts(true);
 ```
 
 During development and testing you will want to use checked mode. This will
