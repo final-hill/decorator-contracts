@@ -7,15 +7,18 @@
 import Assertion from './Assertion';
 import DescriptorWrapper from './lib/DescriptorWrapper';
 import AssertionError from './AssertionError';
-import { DECORATOR_REGISTRY, DecoratorRegistry } from './lib/DecoratorRegistry';
+import { DECORATOR_REGISTRY, DecoratorRegistry, IDecoratorRegistration } from './lib/DecoratorRegistry';
 
 export const MSG_NO_STATIC = `Only instance members can be decorated, not static members`;
 export const MSG_DECORATE_METHOD_ACCESSOR_ONLY = `Only methods and accessors can be decorated.`;
 export const MSG_INVARIANT_REQUIRED = 'An @invariant must be defined on the current class or one of its ancestors';
+export const MSG_INVALID_DECORATOR = 'Invalid decorator declaration';
 
-export function fnInvariantRequired(): void {
+function fnInvariantRequired(): void {
     throw new AssertionError(MSG_INVARIANT_REQUIRED);
 }
+
+let checkedAssert = new Assertion(true).assert;
 
 export type DecoratedConstructor = Function & {[DECORATOR_REGISTRY]?: DecoratorRegistry};
 
@@ -79,6 +82,28 @@ export default abstract class MemberDecorator {
         return Object.getOwnPropertySymbols(Clazz).includes(DECORATOR_REGISTRY) ?
                 Clazz[DECORATOR_REGISTRY]! :
                 Clazz[DECORATOR_REGISTRY] = new DecoratorRegistry();
+    }
+
+    static registerFeature(Clazz: Function, propertyKey: PropertyKey, descriptorWrapper: DescriptorWrapper): IDecoratorRegistration {
+        let decoratorRegistry = this.getOrCreateRegistry(Clazz),
+            registration = decoratorRegistry.getOrCreate(propertyKey, {...descriptorWrapper.descriptor});
+
+        // Potentially undefined in pre ES5 environments (compilation target)
+        checkedAssert(descriptorWrapper.hasDescriptor, MSG_DECORATE_METHOD_ACCESSOR_ONLY, TypeError);
+        checkedAssert(descriptorWrapper.isMethod || descriptorWrapper.isAccessor, MSG_DECORATE_METHOD_ACCESSOR_ONLY);
+
+        if(descriptorWrapper.isMethod) {
+            descriptorWrapper.descriptor!.value = fnInvariantRequired;
+        } else {
+            if(descriptorWrapper.hasGetter) {
+                descriptorWrapper.descriptor!.get = fnInvariantRequired;
+            }
+            if(descriptorWrapper.hasGetter) {
+                descriptorWrapper.descriptor!.set = fnInvariantRequired;
+            }
+        }
+
+        return registration;
     }
 
     /**

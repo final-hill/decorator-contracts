@@ -7,6 +7,7 @@
  */
 
 import Contracts from './';
+import { MSG_NO_STATIC } from './MemberDecorator';
 
 /**
  * Requirement 241
@@ -14,21 +15,27 @@ import Contracts from './';
  */
 describe('The @requires decorator must be a non-static feature decorator only', () => {
     test('Test declaration', () => {
-        [new Contracts(false), new Contracts(true)].forEach(contracts => {
-            let {requires} = contracts;
+        let {requires} = new Contracts(true);
 
-            expect(() => {
-                class Foo {
-                    @requires(() => true)
-                    method1() {}
+        expect(() => {
+            class Foo {
+                @requires(() => true)
+                method1() {}
 
-                    @requires(() => false)
-                    method2() {}
-                }
+                @requires(() => false)
+                method2() {}
+            }
 
-                return Foo;
-            }).not.toThrow();
-        });
+            return Foo;
+        }).not.toThrow();
+
+        expect(() => {
+            //@ts-ignore: ignoring typescript error for JavaScript testing
+            @requires(() => true)
+            class Foo {}
+
+            return Foo;
+        }).toThrow(MSG_NO_STATIC);
     });
 
     test('Invalid declaration', () => {
