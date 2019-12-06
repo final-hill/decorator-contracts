@@ -52,7 +52,8 @@ export default class RequiresDecorator extends MemberDecorator {
                 dw = new DescriptorWrapper(currentDescriptor),
                 registration = MemberDecorator.registerFeature(Clazz, propertyKey, dw);
 
-            registration.hasRequirement = assert(!registration.hasRequirement, MSG_DUPLICATE_REQUIRES);
+            registration.hasRequires = assert(!registration.hasRequires, MSG_DUPLICATE_REQUIRES);
+            registration.requires = fnRequires;
 
             return dw.descriptor!;
         };

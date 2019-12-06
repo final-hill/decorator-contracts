@@ -60,6 +60,48 @@ describe('The @requires decorator must be a non-static feature decorator only', 
 });
 
 /**
+ * Requirement 246
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/246
+ */
+describe('@requires is evaluated before its associated feature is called', () => {
+    let {invariant, requires} = new Contracts(true);
+
+    @invariant
+    class Foo {
+        protected _value = 0;
+
+        protected _nonNegative() {
+            return this._value >= 0;
+        }
+    }
+
+    test('true @requires check does not throw', () => {
+        class Bar extends Foo {
+            @requires(Bar.prototype._nonNegative)
+            method() {
+                return this._value = -2;
+            }
+        }
+
+        let bar = new Bar();
+
+        expect(bar.method()).toBe(-2);
+    });
+
+    test('false @requires check throws', () => {
+        class Bar extends Foo {
+            @requires(() => false)
+            method() {
+                return this._value = 12;
+            }
+        }
+        let bar = new Bar();
+
+        expect(() => { bar.method(); }).toThrow();
+    });
+});
+
+/**
  * Requirement 248
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/248
  */

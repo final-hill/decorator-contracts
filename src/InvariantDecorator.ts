@@ -17,6 +17,7 @@ type ClassDecorator = <T extends Constructor<any>>(Constructor: T) => T;
 export const MSG_INVALID_DECORATOR = 'Invalid decorator usage. Function expected';
 export const MSG_DUPLICATE_INVARIANT = `Only a single @invariant can be assigned per class`;
 export const HAS_INVARIANT = Symbol('Has Invariant');
+export const IS_RESTORED = Symbol('Is restored');
 const TRUE_PRED = () => ({ pass: true });
 
 /**
@@ -60,8 +61,15 @@ export default class InvariantDecorator {
                 constructor(...args: any[]) {
                     super(...args);
 
-                    OverrideDecorator.checkOverrides(this.constructor);
-                    MemberDecorator.restoreFeatures(this.constructor);
+                    let Clazz: Function & {[IS_RESTORED]?: boolean} = this.constructor,
+                        isRestored = Object.getOwnPropertySymbols(Clazz).includes(IS_RESTORED) ? Clazz[IS_RESTORED]! : Clazz[IS_RESTORED] = false;
+
+                    if(!isRestored) {
+                        OverrideDecorator.checkOverrides(Clazz);
+                        MemberDecorator.restoreFeatures(Clazz);
+                        Clazz[IS_RESTORED] = true;
+                    }
+
                     InvariantClass[contractHandler].assertInvariants(this);
 
                     return new Proxy(this, handler);
