@@ -97,7 +97,7 @@
         "no-conditional-assignment": true,
         "no-consecutive-blank-lines": true,
         "no-console": true,
-        "no-debugger": true,,
+        "no-debugger": true,
         "no-empty-interface": false,
         "no-inferrable-types": [
             true,
