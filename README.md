@@ -216,7 +216,7 @@ anyway on one of the base classes.
 The `@requires` decorator describes and enforces an assertion that must be true
 before its associated feature can execute. In other words, before a client
 of your class can execute a method or accessor the defined precondition
-must be met first or an error will be raised.
+must first be met or an error will be raised.
 
 ```typescript
 @invariant

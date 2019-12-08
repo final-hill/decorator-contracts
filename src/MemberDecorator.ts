@@ -112,6 +112,7 @@ export default abstract class MemberDecorator {
      *
      * @param Clazz
      */
+    // TODO: misnamed?
     static restoreFeatures(Clazz: DecoratedConstructor): void {
         let proto = Clazz.prototype;
         if(proto == null) {
@@ -120,9 +121,40 @@ export default abstract class MemberDecorator {
 
         let registry = this.getOrCreateRegistry(Clazz);
         registry.forEach((registration, propertyKey) => {
-            // TODO: is this ever null?
-            let descriptor = registration.descriptorWrapper.descriptor!;
-            Object.defineProperty(proto, propertyKey, descriptor);
+            let {descriptorWrapper} = registration,
+                requires = registration.requires != undefined ? registration.requires : (() => true),
+                originalDescriptor = descriptorWrapper.descriptor!,
+                newDescriptor = {...originalDescriptor},
+                requiresError = `Precondition failed on ${Clazz.name}.${String(propertyKey)}`;
+
+            if(descriptorWrapper.isMethod) {
+                let method: Function = originalDescriptor.value;
+                newDescriptor.value = function(...args: any[]) {
+                    checkedAssert(requires!.apply(this, args), requiresError);
+
+                    return method.apply(this, args);
+                };
+                newDescriptor.writable = false;
+            } else {
+                if(descriptorWrapper.hasGetter) {
+                    let getter: Function = originalDescriptor.get!;
+                    newDescriptor.get = function() {
+                        checkedAssert(requires!.apply(this), requiresError);
+
+                        return getter.apply(this);
+                    };
+                }
+                if(descriptorWrapper.hasSetter) {
+                    let setter: Function = originalDescriptor.set!;
+                    newDescriptor.set = function(value: any) {
+                        checkedAssert(requires!.apply(this), requiresError);
+                        setter.call(this, value);
+                    };
+                }
+            }
+            newDescriptor.configurable = false;
+
+            Object.defineProperty(proto, propertyKey, newDescriptor);
         });
     }
 
