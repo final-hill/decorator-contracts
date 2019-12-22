@@ -47,7 +47,6 @@ export default class RequiresDecorator extends MemberDecorator {
                 return currentDescriptor;
             }
 
-            // TODO: enforce rescue method as an instance/ancestor member of target
             let Clazz = (target as any).constructor,
                 dw = new DescriptorWrapper(currentDescriptor),
                 registration = MemberDecorator.registerFeature(Clazz, propertyKey, dw);

@@ -16,7 +16,7 @@ export const MSG_SINGLE_RETRY = `retry can only be called once`;
 
 const RESCUE_SET = Symbol('Rescue Map');
 type RescueSetType = Set<PropertyKey>;
-type RescueType = (error: any, args: any[], retry: Function) => void;
+export type RescueType = (error: any, args: any[], retry: Function) => void;
 
 /**
  * The `rescue` decorator enables a mechanism for providing Robustness.

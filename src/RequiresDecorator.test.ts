@@ -60,6 +60,52 @@ describe('The @requires decorator must be a non-static feature decorator only', 
 });
 
 /**
+ * Requirement 244
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/244
+ */
+describe('Features that override a @requires decorated feature must be subject to that decorator', () => {
+    let {invariant, override, requires} = new Contracts(true);
+
+    @invariant
+    class Base {
+        protected _value = 0;
+
+        protected _nonNegative() {
+            return this._value >= 0;
+        }
+
+        inc() { this._value++; }
+
+        @requires(Base.prototype._nonNegative)
+        dec() { this._value--; }
+    }
+
+    class Sub extends Base {
+        @override
+        dec() {
+            this._value -= 2;
+        }
+    }
+
+    test('inc(); inc(); dec(); does not throw', () => {
+        expect(() => {
+            let sub = new Sub();
+            sub.inc();
+            sub.inc();
+            sub.dec();
+        }).not.toThrow();
+    });
+
+    test('dec(); dec(); throws', () => {
+        expect(() => {
+            let sub = new Sub();
+            sub.dec();
+            sub.dec();
+        }).toThrow();
+    });
+});
+
+/**
  * Requirement 246
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/246
  */

@@ -8,14 +8,21 @@ import Assertion from './Assertion';
 import DescriptorWrapper from './lib/DescriptorWrapper';
 import AssertionError from './AssertionError';
 import { DECORATOR_REGISTRY, DecoratorRegistry, IDecoratorRegistration } from './lib/DecoratorRegistry';
+import { RequireType } from './RequiresDecorator';
 
 export const MSG_NO_STATIC = `Only instance members can be decorated, not static members`;
 export const MSG_DECORATE_METHOD_ACCESSOR_ONLY = `Only methods and accessors can be decorated.`;
 export const MSG_INVARIANT_REQUIRED = 'An @invariant must be defined on the current class or one of its ancestors';
 export const MSG_INVALID_DECORATOR = 'Invalid decorator declaration';
+const FN_TRUE: RequireType = () => true;
 
 function fnInvariantRequired(): void {
     throw new AssertionError(MSG_INVARIANT_REQUIRED);
+}
+
+function getAncestry(Clazz: Function): Function[] {
+    return Clazz == null ? [] :
+        [Clazz].concat(getAncestry(Object.getPrototypeOf(Clazz)));
 }
 
 let checkedAssert = new Assertion(true).assert;
@@ -80,10 +87,16 @@ export default abstract class MemberDecorator {
      */
     static getOrCreateRegistry(Clazz: DecoratedConstructor): DecoratorRegistry {
         return Object.getOwnPropertySymbols(Clazz).includes(DECORATOR_REGISTRY) ?
-                Clazz[DECORATOR_REGISTRY]! :
-                Clazz[DECORATOR_REGISTRY] = new DecoratorRegistry();
+            Clazz[DECORATOR_REGISTRY]! :
+            Clazz[DECORATOR_REGISTRY] = new DecoratorRegistry();
     }
 
+    /**
+     *
+     * @param Clazz
+     * @param propertyKey
+     * @param descriptorWrapper
+     */
     static registerFeature(Clazz: Function, propertyKey: PropertyKey, descriptorWrapper: DescriptorWrapper): IDecoratorRegistration {
         let decoratorRegistry = this.getOrCreateRegistry(Clazz),
             registration = decoratorRegistry.getOrCreate(propertyKey, {...descriptorWrapper.descriptor});
@@ -106,6 +119,17 @@ export default abstract class MemberDecorator {
         return registration;
     }
 
+    static getAncestorRegistration(Clazz: Function, propertyKey: PropertyKey) {
+        let Base = Object.getPrototypeOf(Clazz),
+            ancestry = getAncestry(Base),
+            AncestorRegistryClazz = ancestry.find(Clazz =>
+                this.getOrCreateRegistry(Clazz).has(propertyKey)
+            ),
+            ancestorRegistry = AncestorRegistryClazz != null ? this.getOrCreateRegistry(AncestorRegistryClazz) : null;
+
+        return ancestorRegistry?.get(propertyKey);
+    }
+
     /**
      * Decorated class features are replaced with the fnInvariantRequired definition.
      * This method restores the original descriptor.
@@ -113,6 +137,7 @@ export default abstract class MemberDecorator {
      * @param Clazz
      */
     // TODO: misnamed?
+    // TODO: BaseClazz is a Constructor
     static restoreFeatures(Clazz: DecoratedConstructor): void {
         let proto = Clazz.prototype;
         if(proto == null) {
@@ -122,7 +147,9 @@ export default abstract class MemberDecorator {
         let registry = this.getOrCreateRegistry(Clazz);
         registry.forEach((registration, propertyKey) => {
             let {descriptorWrapper} = registration,
-                requires = registration.requires != undefined ? registration.requires : (() => true),
+                // TODO: optimize. Don't pay for the lookup if on current registration
+                ancRegistration = this.getAncestorRegistration(Clazz, propertyKey),
+                requires = registration.requires ?? ancRegistration?.requires ?? FN_TRUE,
                 originalDescriptor = descriptorWrapper.descriptor!,
                 newDescriptor = {...originalDescriptor},
                 requiresError = `Precondition failed on ${Clazz.name}.${String(propertyKey)}`;
