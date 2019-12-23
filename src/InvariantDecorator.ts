@@ -12,7 +12,7 @@ import FnPredTable from './typings/FnPredTable';
 import Constructor from './typings/Constructor';
 import MemberDecorator from './MemberDecorator';
 
-type ClassDecorator = <T extends Constructor<any>>(Constructor: T) => T;
+export type ClassDecorator = <T extends Constructor<any>>(Constructor: T) => T;
 
 export const MSG_INVALID_DECORATOR = 'Invalid decorator usage. Function expected';
 export const MSG_DUPLICATE_INVARIANT = `Only a single @invariant can be assigned per class`;
