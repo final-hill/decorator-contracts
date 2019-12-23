@@ -225,7 +225,9 @@ class Stack<T> {
     ...
 
     @requires(Stack.prototype._notEmpty)
-    peek(): T {}
+    peek(): T {
+        ...
+    }
 
     @requires(Stack.prototype._notEmpty)
     pop(): T {
@@ -237,6 +239,21 @@ class Stack<T> {
 In the above example the precondition of executing `pop` or `peek`
 on a stack is that the stack is not empty. If this assertion fails
 an AssertionError is raised.
+
+If a class feature is overridden then the `@requires` assertion still applies:
+
+```typescript
+class MyStack<T> extends Stack<T> {
+    @overrides
+    pop(): { ... }
+}
+
+...
+let myStack = new MyStack()
+
+myStack.pop() // throws
+
+```
 
 An `@invariant` decorator must also be defined either on the current class
 or on an ancestor as shown in the example.
