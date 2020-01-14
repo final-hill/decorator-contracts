@@ -59,6 +59,7 @@ class DescriptorWrapper {
         return this.hasDescriptor ? this.descriptor!.value : undefined;
     }
 
+    // TODO: why undefined?
     constructor(public descriptor: PropertyDescriptor | undefined) {}
 }
 

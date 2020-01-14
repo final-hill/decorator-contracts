@@ -7,15 +7,25 @@
 import Assertion from './Assertion';
 import DescriptorWrapper from './lib/DescriptorWrapper';
 import AssertionError from './AssertionError';
-import { DECORATOR_REGISTRY, DecoratorRegistry } from './lib/DecoratorRegistry';
+import { DECORATOR_REGISTRY, DecoratorRegistry, IDecoratorRegistration } from './lib/DecoratorRegistry';
+import { RequireType } from './RequiresDecorator';
 
 export const MSG_NO_STATIC = `Only instance members can be decorated, not static members`;
 export const MSG_DECORATE_METHOD_ACCESSOR_ONLY = `Only methods and accessors can be decorated.`;
 export const MSG_INVARIANT_REQUIRED = 'An @invariant must be defined on the current class or one of its ancestors';
+export const MSG_INVALID_DECORATOR = 'Invalid decorator declaration';
+const FN_TRUE: RequireType = () => true;
 
-export function fnInvariantRequired(): void {
+function fnInvariantRequired(): void {
     throw new AssertionError(MSG_INVARIANT_REQUIRED);
 }
+
+function getAncestry(Clazz: Function): Function[] {
+    return Clazz == null ? [] :
+        [Clazz].concat(getAncestry(Object.getPrototypeOf(Clazz)));
+}
+
+let checkedAssert = new Assertion(true).assert;
 
 export type DecoratedConstructor = Function & {[DECORATOR_REGISTRY]?: DecoratorRegistry};
 
@@ -77,8 +87,47 @@ export default abstract class MemberDecorator {
      */
     static getOrCreateRegistry(Clazz: DecoratedConstructor): DecoratorRegistry {
         return Object.getOwnPropertySymbols(Clazz).includes(DECORATOR_REGISTRY) ?
-                Clazz[DECORATOR_REGISTRY]! :
-                Clazz[DECORATOR_REGISTRY] = new DecoratorRegistry();
+            Clazz[DECORATOR_REGISTRY]! :
+            Clazz[DECORATOR_REGISTRY] = new DecoratorRegistry();
+    }
+
+    /**
+     *
+     * @param Clazz
+     * @param propertyKey
+     * @param descriptorWrapper
+     */
+    static registerFeature(Clazz: Function, propertyKey: PropertyKey, descriptorWrapper: DescriptorWrapper): IDecoratorRegistration {
+        let decoratorRegistry = this.getOrCreateRegistry(Clazz),
+            registration = decoratorRegistry.getOrCreate(propertyKey, {...descriptorWrapper.descriptor});
+
+        // Potentially undefined in pre ES5 environments (compilation target)
+        checkedAssert(descriptorWrapper.hasDescriptor, MSG_DECORATE_METHOD_ACCESSOR_ONLY, TypeError);
+        checkedAssert(descriptorWrapper.isMethod || descriptorWrapper.isAccessor, MSG_DECORATE_METHOD_ACCESSOR_ONLY);
+
+        if(descriptorWrapper.isMethod) {
+            descriptorWrapper.descriptor!.value = fnInvariantRequired;
+        } else {
+            if(descriptorWrapper.hasGetter) {
+                descriptorWrapper.descriptor!.get = fnInvariantRequired;
+            }
+            if(descriptorWrapper.hasGetter) {
+                descriptorWrapper.descriptor!.set = fnInvariantRequired;
+            }
+        }
+
+        return registration;
+    }
+
+    static getAncestorRegistration(Clazz: Function, propertyKey: PropertyKey) {
+        let Base = Object.getPrototypeOf(Clazz),
+            ancestry = getAncestry(Base),
+            AncestorRegistryClazz = ancestry.find(Clazz =>
+                this.getOrCreateRegistry(Clazz).has(propertyKey)
+            ),
+            ancestorRegistry = AncestorRegistryClazz != null ? this.getOrCreateRegistry(AncestorRegistryClazz) : null;
+
+        return ancestorRegistry?.get(propertyKey);
     }
 
     /**
@@ -87,6 +136,8 @@ export default abstract class MemberDecorator {
      *
      * @param Clazz
      */
+    // TODO: misnamed?
+    // TODO: BaseClazz is a Constructor
     static restoreFeatures(Clazz: DecoratedConstructor): void {
         let proto = Clazz.prototype;
         if(proto == null) {
@@ -95,9 +146,42 @@ export default abstract class MemberDecorator {
 
         let registry = this.getOrCreateRegistry(Clazz);
         registry.forEach((registration, propertyKey) => {
-            // TODO: is this ever null?
-            let descriptor = registration.descriptorWrapper.descriptor!;
-            Object.defineProperty(proto, propertyKey, descriptor);
+            let {descriptorWrapper} = registration,
+                // TODO: optimize. Don't pay for the lookup if on current registration
+                ancRegistration = this.getAncestorRegistration(Clazz, propertyKey),
+                requires = registration.requires ?? ancRegistration?.requires ?? FN_TRUE,
+                originalDescriptor = descriptorWrapper.descriptor!,
+                newDescriptor = {...originalDescriptor},
+                requiresError = `Precondition failed on ${Clazz.name}.${String(propertyKey)}`;
+
+            if(descriptorWrapper.isMethod) {
+                let method: Function = originalDescriptor.value;
+                newDescriptor.value = function(...args: any[]) {
+                    checkedAssert(requires!.apply(this, args), requiresError);
+
+                    return method.apply(this, args);
+                };
+                newDescriptor.writable = false;
+            } else {
+                if(descriptorWrapper.hasGetter) {
+                    let getter: Function = originalDescriptor.get!;
+                    newDescriptor.get = function() {
+                        checkedAssert(requires!.apply(this), requiresError);
+
+                        return getter.apply(this);
+                    };
+                }
+                if(descriptorWrapper.hasSetter) {
+                    let setter: Function = originalDescriptor.set!;
+                    newDescriptor.set = function(value: any) {
+                        checkedAssert(requires!.apply(this), requiresError);
+                        setter.call(this, value);
+                    };
+                }
+            }
+            newDescriptor.configurable = false;
+
+            Object.defineProperty(proto, propertyKey, newDescriptor);
         });
     }
 
@@ -107,12 +191,12 @@ export default abstract class MemberDecorator {
 
     /**
      * Returns an instance of the decorator in the specified mode.
-     * When debugMode is true the decorator is enabled.
-     * When debugMode is false the decorator has no effect
+     * When checkMode is true the decorator is enabled.
+     * When checkMode is false the decorator has no effect
      *
-     * @param debugMode - A flag representing mode of the decorator
+     * @param checkMode - A flag representing mode of the decorator
      */
-    constructor(protected debugMode: boolean) {
-        this._assert = debugMode ? this._checkedAssert : this._uncheckedAssert;
+    constructor(protected checkMode: boolean) {
+        this._assert = checkMode ? this._checkedAssert : this._uncheckedAssert;
     }
 }

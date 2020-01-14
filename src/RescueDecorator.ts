@@ -16,7 +16,7 @@ export const MSG_SINGLE_RETRY = `retry can only be called once`;
 
 const RESCUE_SET = Symbol('Rescue Map');
 type RescueSetType = Set<PropertyKey>;
-type RescueType = (error: any, args: any[], retry: Function) => void;
+export type RescueType = (error: any, args: any[], retry: Function) => void;
 
 /**
  * The `rescue` decorator enables a mechanism for providing Robustness.
@@ -27,10 +27,10 @@ export default class RescueDecorator extends MemberDecorator {
      * When debugMode is true the decorator is enabled.
      * When debugMode is false the decorator has no effect
      *
-     * @param debugMode - A flag representing mode of the decorator
+     * @param checkMode - A flag representing mode of the decorator
      */
-    constructor(protected debugMode: boolean) {
-        super(debugMode);
+    constructor(protected checkMode: boolean) {
+        super(checkMode);
         this.rescue = this.rescue.bind(this);
     }
 
@@ -44,8 +44,8 @@ export default class RescueDecorator extends MemberDecorator {
         this._checkedAssert(typeof fnRescue == 'function', MSG_INVALID_DECORATOR);
         this._checkedAssert(!isConstructor(fnRescue), MSG_INVALID_DECORATOR);
 
-        return function(target: Function | object, propertyKey: PropertyKey, currentDescriptor: PropertyDescriptor): PropertyDescriptor {
-            if(!self.debugMode) {
+        return function(target: any, propertyKey: PropertyKey, currentDescriptor: PropertyDescriptor): PropertyDescriptor {
+            if(!self.checkMode) {
                 return currentDescriptor;
             }
 

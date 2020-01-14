@@ -5,7 +5,7 @@
  */
 
 import DescriptorWrapper from './lib/DescriptorWrapper';
-import MemberDecorator, { MSG_NO_STATIC, MSG_DECORATE_METHOD_ACCESSOR_ONLY, fnInvariantRequired } from './MemberDecorator';
+import MemberDecorator, { MSG_NO_STATIC } from './MemberDecorator';
 import Assertion from './Assertion';
 
 export const MSG_INVALID_ARG_LENGTH = `An overridden method must have the same number of parameters as its ancestor method`;
@@ -66,35 +66,21 @@ export default class OverrideDecorator extends MemberDecorator {
         let assert = this._assert,
             isStatic = typeof target == 'function',
             dw = new DescriptorWrapper(currentDescriptor);
-
-        // Potentially undefined in pre ES5 environments (compilation target)
-        assert(dw.hasDescriptor, MSG_DECORATE_METHOD_ACCESSOR_ONLY, TypeError);
         assert(!isStatic, MSG_NO_STATIC, TypeError);
-        assert(dw.isMethod || dw.isProperty || dw.isAccessor);
 
         let am = MemberDecorator.ancestorFeature(target, propertyKey);
         assert(am != null && dw.memberType === am.memberType, MSG_NO_MATCHING_FEATURE);
 
         let Clazz = (target as any).constructor,
-            decoratorRegistry = MemberDecorator.getOrCreateRegistry(Clazz),
-            registration = decoratorRegistry.getOrCreate(propertyKey, {...currentDescriptor});
+            registration = MemberDecorator.registerFeature(Clazz, propertyKey, dw);
+        registration.overrides = checkedAssert(!registration.overrides, MSG_DUPLICATE_OVERRIDE);
 
-        registration.overrides = assert(!registration.overrides, MSG_DUPLICATE_OVERRIDE);
-
-        if(dw.isMethod) {
-            let thisMethod: Function = dw.value,
+        if(registration.descriptorWrapper.isMethod) {
+            let thisMethod: Function = registration.descriptorWrapper.value,
                 ancMethod: Function = am!.value;
-            assert(thisMethod.length == ancMethod.length, MSG_INVALID_ARG_LENGTH);
-            dw.descriptor!.value = fnInvariantRequired;
-        } else {
-            if(dw.hasGetter) {
-                dw.descriptor!.get = fnInvariantRequired;
-            }
-            if(dw.hasGetter) {
-                dw.descriptor!.set = fnInvariantRequired;
-            }
+            checkedAssert(thisMethod.length == ancMethod.length, MSG_INVALID_ARG_LENGTH);
         }
 
-        return dw.descriptor!;
+        return currentDescriptor;
     }
 }

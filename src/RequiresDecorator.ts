@@ -2,25 +2,21 @@
  * @license
  * Copyright (C) #{YEAR}# Michael L Haufe
  * SPDX-License-Identifier: AGPL-1.0-only
- *
- * The requires decorator is an assertion of a precondition.
- * It expresses a condition that must be true before the associated class member is executed.
  */
 
-import Assertion from './Assertion';
+import MemberDecorator, { MSG_NO_STATIC, MSG_INVALID_DECORATOR } from './MemberDecorator';
+import isConstructor from './lib/isConstructor';
+import DescriptorWrapper from './lib/DescriptorWrapper';
 
-type PropertyKey = string | number | symbol;
+export type RequireType = (...args: any[]) => boolean;
 
-const MSG_INVALID_DECORATOR = 'Invalid decorator declaration';
-const MSG_OLD_ES = 'Unable to declare decorator in this version of ECMAScript';
+export const MSG_DUPLICATE_REQUIRES = `Only a single @requires decorator can be assigned to a class feature`;
 
 /**
  * The `@requires` decorator is an assertion of a precondition.
  * It expresses a condition that must be true before the associated class member is executed.
  */
-export default class RequiresDecorator {
-    protected _assert: typeof Assertion.prototype.assert;
-
+export default class RequiresDecorator extends MemberDecorator {
     /**
      * Constructs a new instance of the RequiresDecorator in the specified mode
      * Enabled when checkMode is true, and disabled otherwise
@@ -28,52 +24,37 @@ export default class RequiresDecorator {
      * @param checkMode - The flag representing mode of the assertion
      */
     constructor(protected checkMode: boolean) {
-        this._assert =  new Assertion(checkMode).assert;
+        super(checkMode);
+        this.requires = this.requires.bind(this);
     }
 
     /**
-     * TODO
+     * The 'requires' decorator. This is a feature decorator only.
+     *
+     * @param fnRequires - The assertion
      */
-    requires = <Self>(
-        fnCondition: (self: Self, ...args: any[]) => boolean,
-        message: string = 'Precondition failed'
-    ) => {
-        let assert = this._assert,
-            checkMode = this.checkMode;
+    requires(fnRequires: RequireType) {
+        let self = this,
+            assert = this._assert;
+        this._checkedAssert(typeof fnRequires == 'function', MSG_INVALID_DECORATOR);
+        this._checkedAssert(!isConstructor(fnRequires), MSG_INVALID_DECORATOR);
 
-        return function(target: any, propertyKey: PropertyKey, descriptor: PropertyDescriptor) {
-            assert(typeof target == 'object', MSG_INVALID_DECORATOR);
-            assert(['string', 'symbol', 'number'].includes(typeof propertyKey), MSG_INVALID_DECORATOR);
-            // The Property Descriptor will be undefined if the script target is less than ES5.
-            assert(descriptor != undefined, MSG_OLD_ES);
+        return function(target: any, propertyKey: PropertyKey, currentDescriptor: PropertyDescriptor): PropertyDescriptor {
+            let isStatic = typeof target == 'function';
+            assert(!isStatic, MSG_NO_STATIC, TypeError);
 
-            if(!checkMode) {
-                return;
+            if(!self.checkMode) {
+                return currentDescriptor;
             }
-            let {value, get, set} = descriptor;
 
-            if(value != undefined) {
-                descriptor.value = function (this: Self, ...args: any[]) {
-                    assert(fnCondition(this, ...args), message);
+            let Clazz = (target as any).constructor,
+                dw = new DescriptorWrapper(currentDescriptor),
+                registration = MemberDecorator.registerFeature(Clazz, propertyKey, dw);
 
-                    return value.apply(this, args);
-                };
-            } else {
-                if(get != undefined) {
-                    descriptor.get = function(this: Self) {
-                        assert(fnCondition(this), message);
+            registration.hasRequires = assert(!registration.hasRequires, MSG_DUPLICATE_REQUIRES);
+            registration.requires = fnRequires;
 
-                        return get!.apply(this);
-                    };
-                }
-                if(set != undefined) {
-                    descriptor.set = function(this: Self, arg: any) {
-                        assert(fnCondition(this), message);
-
-                        return set!.call(this, arg);
-                    };
-                }
-            }
+            return dw.descriptor!;
         };
     }
 }
