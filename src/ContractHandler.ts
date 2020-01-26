@@ -5,9 +5,13 @@
  */
 
 import Assertion from './Assertion';
-import FnPredTable from './typings/FnPredTable';
+import { DECORATOR_REGISTRY } from './DECORATOR_REGISTRY';
+import Constructor from './typings/Constructor';
+import getAncestry from './lib/getAncestry';
+import innerClass from './lib/innerClass';
+import { TRUE_PRED } from './lib/TRUE_PRED';
 
-const contractHandler = Symbol('Contract handler');
+const CONTRACT_HANDLER = Symbol('Contract handler');
 
 /**
  * The ContractHandler manages the registration and evaluation of contracts associated with a class
@@ -22,8 +26,7 @@ class ContractHandler {
      * @param _assert - The assertion implementation associated with the current checkMode
      */
     constructor(
-        protected readonly _assert: typeof Assertion.prototype.assert,
-        protected readonly _fnInvariantRecord: FnPredTable<any>
+        protected readonly _assert: typeof Assertion.prototype.assert
     ) { }
 
     /**
@@ -46,9 +49,13 @@ class ContractHandler {
      * @param self - The context class
      */
     assertInvariants(self: object) {
-        let predRecord = this._fnInvariantRecord.call(self, self);
-        Object.entries(predRecord).forEach(([name, value]) => {
-            this._assert(value, name);
+        let ancestry = getAncestry(self.constructor as Constructor<any>);
+        ancestry.forEach(Cons => {
+            let predTable = DECORATOR_REGISTRY.get(innerClass(Cons))?.invariant ?? TRUE_PRED;
+            let predRecord = predTable.call(self, self);
+            Object.entries(predRecord).forEach(([name, value]) => {
+                this._assert(value, name);
+            });
         });
     }
 
@@ -95,4 +102,4 @@ class ContractHandler {
     }
 }
 
-export {ContractHandler, contractHandler};
+export {ContractHandler, CONTRACT_HANDLER};

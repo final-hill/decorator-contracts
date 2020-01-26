@@ -6,8 +6,9 @@
 
 import MemberDecorator, { MSG_NO_STATIC, MSG_DECORATE_METHOD_ACCESSOR_ONLY, MSG_INVARIANT_REQUIRED} from './MemberDecorator';
 import DescriptorWrapper from './lib/DescriptorWrapper';
-import isConstructor from './lib/isConstructor';
-import { HAS_INVARIANT } from './InvariantDecorator';
+import isClass from './lib/isClass';
+import Constructor from './typings/Constructor';
+import { DECORATOR_REGISTRY } from './DECORATOR_REGISTRY';
 
 export const MSG_INVALID_DECORATOR = 'Invalid decorator usage. Function expected';
 export const MSG_DUPLICATE_RESCUE = 'Only a single @rescue can be assigned to a feature';
@@ -42,7 +43,7 @@ export default class RescueDecorator extends MemberDecorator {
         let self = this,
             assert = this._assert;
         this._checkedAssert(typeof fnRescue == 'function', MSG_INVALID_DECORATOR);
-        this._checkedAssert(!isConstructor(fnRescue), MSG_INVALID_DECORATOR);
+        this._checkedAssert(!isClass(fnRescue), MSG_INVALID_DECORATOR);
 
         return function(target: any, propertyKey: PropertyKey, currentDescriptor: PropertyDescriptor): PropertyDescriptor {
             if(!self.checkMode) {
@@ -73,8 +74,8 @@ export default class RescueDecorator extends MemberDecorator {
             if(dw.isMethod) {
                 newDescriptor.writable = true;
                 newDescriptor.value = function(this: object, ...args: any[]) {
-                    let Clazz: Function & {[HAS_INVARIANT]?: boolean} = this.constructor,
-                        hasInvariant = Boolean(Clazz[HAS_INVARIANT]);
+                    let Clazz = this.constructor as Constructor<any>,
+                        hasInvariant = DECORATOR_REGISTRY.has(Clazz);
                     assert(hasInvariant, MSG_INVARIANT_REQUIRED);
 
                     let feature: Function = dw.value;
@@ -96,8 +97,8 @@ export default class RescueDecorator extends MemberDecorator {
             } else {
                 if(dw.hasGetter) {
                     newDescriptor.get = function(this: object) {
-                        let Clazz: Function & {[HAS_INVARIANT]?: boolean} = this.constructor,
-                            hasInvariant = Boolean(Clazz[HAS_INVARIANT]);
+                        let Clazz = this.constructor as Constructor<any>,
+                            hasInvariant = DECORATOR_REGISTRY.has(Clazz);
                         assert(hasInvariant, MSG_INVARIANT_REQUIRED);
 
                         try {
@@ -118,8 +119,8 @@ export default class RescueDecorator extends MemberDecorator {
                 }
                 if(dw.hasSetter) {
                     newDescriptor.set = function(this: object, value: any) {
-                        let Clazz: Function & {[HAS_INVARIANT]?: boolean} = this.constructor,
-                            hasInvariant = Boolean(Clazz[HAS_INVARIANT]);
+                        let Clazz = this.constructor as Constructor<any>,
+                            hasInvariant = DECORATOR_REGISTRY.has(Clazz);
                         assert(hasInvariant, MSG_INVARIANT_REQUIRED);
 
                         try {

@@ -9,6 +9,9 @@ import DescriptorWrapper from './lib/DescriptorWrapper';
 import AssertionError from './AssertionError';
 import { DECORATOR_REGISTRY, DecoratorRegistry, IDecoratorRegistration } from './lib/DecoratorRegistry';
 import { RequireType } from './RequiresDecorator';
+import getAncestry from './lib/getAncestry';
+import Constructor from './typings/Constructor';
+import { DecoratedConstructor } from './typings/DecoratedConstructor';
 
 export const MSG_NO_STATIC = `Only instance members can be decorated, not static members`;
 export const MSG_DECORATE_METHOD_ACCESSOR_ONLY = `Only methods and accessors can be decorated.`;
@@ -20,14 +23,7 @@ function fnInvariantRequired(): void {
     throw new AssertionError(MSG_INVARIANT_REQUIRED);
 }
 
-function getAncestry(Clazz: Function): Function[] {
-    return Clazz == null ? [] :
-        [Clazz].concat(getAncestry(Object.getPrototypeOf(Clazz)));
-}
-
 let checkedAssert = new Assertion(true).assert;
-
-export type DecoratedConstructor = Function & {[DECORATOR_REGISTRY]?: DecoratorRegistry};
 
 export default abstract class MemberDecorator {
     /**
@@ -85,10 +81,10 @@ export default abstract class MemberDecorator {
      *
      * @param Clazz
      */
-    static getOrCreateRegistry(Clazz: DecoratedConstructor): DecoratorRegistry {
+    static getOrCreateRegistry(Clazz: Constructor<any>): DecoratorRegistry {
         return Object.getOwnPropertySymbols(Clazz).includes(DECORATOR_REGISTRY) ?
-            Clazz[DECORATOR_REGISTRY]! :
-            Clazz[DECORATOR_REGISTRY] = new DecoratorRegistry();
+            (Clazz as DecoratedConstructor)[DECORATOR_REGISTRY]! :
+            (Clazz as DecoratedConstructor)[DECORATOR_REGISTRY] = new DecoratorRegistry();
     }
 
     /**
@@ -97,7 +93,7 @@ export default abstract class MemberDecorator {
      * @param propertyKey
      * @param descriptorWrapper
      */
-    static registerFeature(Clazz: Function, propertyKey: PropertyKey, descriptorWrapper: DescriptorWrapper): IDecoratorRegistration {
+    static registerFeature(Clazz: Constructor<any>, propertyKey: PropertyKey, descriptorWrapper: DescriptorWrapper): IDecoratorRegistration {
         let decoratorRegistry = this.getOrCreateRegistry(Clazz),
             registration = decoratorRegistry.getOrCreate(propertyKey, {...descriptorWrapper.descriptor});
 
@@ -119,7 +115,7 @@ export default abstract class MemberDecorator {
         return registration;
     }
 
-    static getAncestorRegistration(Clazz: Function, propertyKey: PropertyKey) {
+    static getAncestorRegistration(Clazz: Constructor<any>, propertyKey: PropertyKey) {
         let Base = Object.getPrototypeOf(Clazz),
             ancestry = getAncestry(Base),
             AncestorRegistryClazz = ancestry.find(Clazz =>
@@ -136,19 +132,17 @@ export default abstract class MemberDecorator {
      *
      * @param Clazz
      */
-    // TODO: misnamed?
-    // TODO: BaseClazz is a Constructor
-    static restoreFeatures(Clazz: DecoratedConstructor): void {
+    static restoreFeatures(Clazz: Constructor<any>): void {
         let proto = Clazz.prototype;
         if(proto == null) {
             return;
         }
 
         let registry = this.getOrCreateRegistry(Clazz);
+        // FIXME: Good._inRange is _fnInvariantRequired. why?
         registry.forEach((registration, propertyKey) => {
             let {descriptorWrapper} = registration,
-                // TODO: optimize. Don't pay for the lookup if on current registration
-                ancRegistration = this.getAncestorRegistration(Clazz, propertyKey),
+                ancRegistration = registration.requires != undefined ? undefined : this.getAncestorRegistration(Clazz, propertyKey),
                 requires = registration.requires ?? ancRegistration?.requires ?? FN_TRUE,
                 originalDescriptor = descriptorWrapper.descriptor!,
                 newDescriptor = {...originalDescriptor},
@@ -161,7 +155,6 @@ export default abstract class MemberDecorator {
 
                     return method.apply(this, args);
                 };
-                newDescriptor.writable = false;
             } else {
                 if(descriptorWrapper.hasGetter) {
                     let getter: Function = originalDescriptor.get!;
@@ -179,7 +172,6 @@ export default abstract class MemberDecorator {
                     };
                 }
             }
-            newDescriptor.configurable = false;
 
             Object.defineProperty(proto, propertyKey, newDescriptor);
         });
