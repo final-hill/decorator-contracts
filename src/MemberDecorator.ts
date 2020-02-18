@@ -17,7 +17,6 @@ export const MSG_NO_STATIC = `Only instance members can be decorated, not static
 export const MSG_DECORATE_METHOD_ACCESSOR_ONLY = `Only methods and accessors can be decorated.`;
 export const MSG_INVARIANT_REQUIRED = 'An @invariant must be defined on the current class or one of its ancestors';
 export const MSG_INVALID_DECORATOR = 'Invalid decorator declaration';
-const FN_TRUE: RequireType = () => true;
 
 function fnInvariantRequired(): void {
     throw new AssertionError(MSG_INVARIANT_REQUIRED);
@@ -88,6 +87,9 @@ export default abstract class MemberDecorator {
     }
 
     /**
+     * Tracks the provided class feauture in a registry defined on the class
+     * and then replaces it with an error throwing placeholder until the
+     * invariant decorator can restore it
      *
      * @param Clazz
      * @param propertyKey
@@ -126,6 +128,17 @@ export default abstract class MemberDecorator {
         return ancestorRegistry?.get(propertyKey);
     }
 
+    static getAncestorRequires(Class: Constructor<any>, propertyKey: PropertyKey): RequireType[] {
+        let Base = Object.getPrototypeOf(Class),
+            ancestry = getAncestry(Base),
+            ancestorRegistrations = ancestry.filter(Class =>
+                this.getOrCreateRegistry(Class).has(propertyKey)
+            ).map(Class => this.getOrCreateRegistry(Class).get(propertyKey)!);
+
+        return ancestorRegistrations
+            .filter(reg => reg.hasRequires).map(reg => reg.requires!);
+    }
+
     /**
      * Decorated class features are replaced with the fnInvariantRequired definition.
      * This method restores the original descriptor.
@@ -139,19 +152,23 @@ export default abstract class MemberDecorator {
         }
 
         let registry = this.getOrCreateRegistry(Clazz);
-        // FIXME: Good._inRange is _fnInvariantRequired. why?
         registry.forEach((registration, propertyKey) => {
             let {descriptorWrapper} = registration,
-                ancRegistration = registration.requires != undefined ? undefined : this.getAncestorRegistration(Clazz, propertyKey),
-                requires = registration.requires ?? ancRegistration?.requires ?? FN_TRUE,
+                ancRequires = this.getAncestorRequires(Clazz, propertyKey),
+                requires = registration.requires != undefined ? [registration.requires, ...ancRequires] : ancRequires,
                 originalDescriptor = descriptorWrapper.descriptor!,
                 newDescriptor = {...originalDescriptor},
-                requiresError = `Precondition failed on ${Clazz.name}.${String(propertyKey)}`;
+                requiresError = `Precondition failed on ${Clazz.name}.prototype.${String(propertyKey)}`;
 
             if(descriptorWrapper.isMethod) {
                 let method: Function = originalDescriptor.value;
                 newDescriptor.value = function(...args: any[]) {
-                    checkedAssert(requires!.apply(this, args), requiresError);
+                    if(requires.length > 0) {
+                        checkedAssert(
+                            requires.some((fn => fn.apply(this, args))),
+                            requiresError
+                        );
+                    }
 
                     return method.apply(this, args);
                 };
@@ -159,7 +176,12 @@ export default abstract class MemberDecorator {
                 if(descriptorWrapper.hasGetter) {
                     let getter: Function = originalDescriptor.get!;
                     newDescriptor.get = function() {
-                        checkedAssert(requires!.apply(this), requiresError);
+                        if(requires.length > 0) {
+                            checkedAssert(
+                                requires.some((fn => fn.apply(this))),
+                                requiresError
+                            );
+                        }
 
                         return getter.apply(this);
                     };
@@ -167,7 +189,13 @@ export default abstract class MemberDecorator {
                 if(descriptorWrapper.hasSetter) {
                     let setter: Function = originalDescriptor.set!;
                     newDescriptor.set = function(value: any) {
-                        checkedAssert(requires!.apply(this), requiresError);
+                        if(requires.length > 0) {
+                            checkedAssert(
+                                requires.some((fn => fn.call(this, value))),
+                                requiresError
+                            );
+                        }
+
                         setter.call(this, value);
                     };
                 }

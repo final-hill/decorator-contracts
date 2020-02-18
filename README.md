@@ -214,31 +214,33 @@ anyway on one of the base classes.
 ### Requires
 
 The `@requires` decorator describes and enforces an assertion that must be true
-before its associated feature can execute. In other words, before a client
+before its associated feature can execute. In other words before a client
 of your class can execute a method or accessor the defined precondition
 must first be met or an error will be raised.
 
 ```typescript
 @invariant
 class Stack<T> {
-    protected _notEmpty(){ return !this.isEmpty() }
+    protected _notEmpty(){ return !this.isEmpty(); }
     ...
 
     @requires(Stack.prototype._notEmpty)
-    peek(): T {
-        ...
-    }
-
-    @requires(Stack.prototype._notEmpty)
     pop(): T {
-        ...
+        return this._implementation.pop();
     }
 }
 ```
 
-In the above example the precondition of executing `pop` or `peek`
-on a stack is that the stack is not empty. If this assertion fails
+In the above example the precondition of executing `pop`
+on a stack is that it is not empty. If this assertion fails
 an AssertionError is raised.
+
+An `@invariant` decorator must also be defined either on the current class
+or on an ancestor as shown in the example.
+
+Static features, including the constructor, can not be assigned a `@requires`
+decorator. In the future this may be enabled for non-constructor static methods
+but the implications are not clear at present.
 
 If a class feature is overridden then the `@requires` assertion still applies:
 
@@ -252,15 +254,32 @@ class MyStack<T> extends Stack<T> {
 let myStack = new MyStack()
 
 myStack.pop() // throws
+```
+
+If a class feature with an associated `@requires` is overridden, then the new
+feature can have a `@requires` declaration of its own. This precondition can
+not strengthen the precondition of the original feature. The new precondition
+will be or-ed with it's ancestors. If any are true, then the obligation is
+considered fulfilled by the user of the feature.
+
+```typescript
+@invariant
+class Base {
+    @requires((x: number) => 0 <= x && x <= 10)
+    method(x: number) {
+        ... }
+}
+
+class Sub extends Base {
+    @override
+    @requires((x: number) => -10 <= x && x <= 20)
+    method(x: number) { ... }
+}
 
 ```
 
-An `@invariant` decorator must also be defined either on the current class
-or on an ancestor as shown in the example.
-
-Static features, including the constructor, can not be assigned a `@requires`
-decorator. In the future this may be enabled for non-constructor static methods
-but the implications are not clear at present.
+In the above example the precondition of `Sub.prototype.method` is
+`(-10 <= x && x <= 20) || (0 <= x && x <= 10)`
 
 ### Overrides
 

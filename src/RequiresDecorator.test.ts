@@ -177,3 +177,68 @@ describe('@requires has a checked mode and unchecked mode', () => {
         expect(() => new Foo().method()).not.toThrow();
     });
 });
+
+/**
+ * Requirement 396
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/396
+ */
+describe('Preconditions cannot be strengthened in a subtype', () => {
+    let {invariant, requires, override} = new Contracts(true);
+
+    @invariant
+    class Base {
+        @requires((value: number) => 10 <= value && value <= 30)
+        method(value: number) { return value; }
+    }
+
+    test('Base precondition', () => {
+        let base = new Base();
+
+        expect(base.method(15)).toBe(15);
+        expect(() => base.method(5)).toThrow(
+            `Precondition failed on Base.prototype.method`
+        );
+        expect(() => base.method(35)).toThrow(
+            `Precondition failed on Base.prototype.method`
+        );
+    });
+
+    class Weaker extends Base {
+        @override
+        @requires((value: number) => 1 <= value && value <= 50)
+        method(value: number) { return value; }
+    }
+
+    test('Weaker precondition', () => {
+        let weaker = new Weaker();
+
+        expect(weaker.method(15)).toBe(15);
+        expect(weaker.method(5)).toBe(5);
+        expect(weaker.method(35)).toBe(35);
+        expect(() => weaker.method(0)).toThrow(
+            `Precondition failed on Weaker.prototype.method`
+        );
+        expect(() => weaker.method(60)).toThrow(
+            `Precondition failed on Weaker.prototype.method`
+        );
+    });
+
+    class Stronger extends Base {
+        @override
+        @requires((value: number) => 15 <= value && value <= 20)
+        method(value: number) { return value; }
+    }
+
+    test('Stronger precondition', () => {
+        let stronger = new Stronger();
+
+        expect(stronger.method(15)).toBe(15);
+        expect(() => stronger.method(5)).toThrow(
+            `Precondition failed on Stronger.prototype.method`
+        );
+        expect(() => stronger.method(35)).toThrow(
+            `Precondition failed on Stronger.prototype.method`
+        );
+        expect(stronger.method(25)).toBe(25);
+    });
+});
