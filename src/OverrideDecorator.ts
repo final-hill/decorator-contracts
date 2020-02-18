@@ -15,8 +15,8 @@ export const MSG_DUPLICATE_OVERRIDE = `Only a single @override decorator can be 
 let checkedAssert = new Assertion(true).assert;
 
 /**
- * The 'override' decorator asserts that the current class member is a specialized instance of
- * an ancestor class's member of the same name
+ * The 'override' decorator asserts that the current class feautre is a specialization or
+ * replacement of an ancestor class's feature of the same name and argument count
  */
 export default class OverrideDecorator extends MemberDecorator {
     /**
@@ -55,8 +55,8 @@ export default class OverrideDecorator extends MemberDecorator {
     }
 
     /**
-     * The override decorator specifies that the associated method replaces
-     * a method of the same name in an ancestor class.
+     * The 'override' decorator asserts that the current class feautre is a specialization or
+     * replacement of an ancestor class's feature of the same name and argument count
      */
     override(target: Function | object, propertyKey: PropertyKey, currentDescriptor: PropertyDescriptor): PropertyDescriptor {
         if(!this.checkMode) {
