@@ -7,6 +7,7 @@
 import DescriptorWrapper from './lib/DescriptorWrapper';
 import MemberDecorator, { MSG_NO_STATIC } from './MemberDecorator';
 import Assertion from './Assertion';
+import Constructor from './typings/Constructor';
 
 export const MSG_INVALID_ARG_LENGTH = `An overridden method must have the same number of parameters as its ancestor method`;
 export const MSG_NO_MATCHING_FEATURE = `This feature does not override an ancestor feature.`;
@@ -24,7 +25,7 @@ export default class OverrideDecorator extends MemberDecorator {
      *
      * @param Clazz - The class constructor
      */
-    static checkOverrides(Clazz: Function): void {
+    static checkOverrides(Clazz: Constructor<any>): void {
         let proto = Clazz.prototype;
         if(proto == null) {
             return;

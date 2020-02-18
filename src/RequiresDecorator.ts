@@ -5,7 +5,6 @@
  */
 
 import MemberDecorator, { MSG_NO_STATIC, MSG_INVALID_DECORATOR } from './MemberDecorator';
-import isConstructor from './lib/isConstructor';
 import DescriptorWrapper from './lib/DescriptorWrapper';
 
 export type RequireType = (...args: any[]) => boolean;
@@ -37,7 +36,6 @@ export default class RequiresDecorator extends MemberDecorator {
         let self = this,
             assert = this._assert;
         this._checkedAssert(typeof fnRequires == 'function', MSG_INVALID_DECORATOR);
-        this._checkedAssert(!isConstructor(fnRequires), MSG_INVALID_DECORATOR);
 
         return function(target: any, propertyKey: PropertyKey, currentDescriptor: PropertyDescriptor): PropertyDescriptor {
             let isStatic = typeof target == 'function';
