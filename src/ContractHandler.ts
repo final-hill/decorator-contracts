@@ -17,7 +17,7 @@ const CONTRACT_HANDLER = Symbol('Contract handler');
  * The ContractHandler manages the registration and evaluation of contracts associated with a class
  */
 class ContractHandler {
-    // TODO: requiresRegistry
+    // TODO: demandsRegistry
     // TODO: rescueRegistry
     // TODO: ensuresRegistry
 

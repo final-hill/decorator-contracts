@@ -3,26 +3,26 @@
  * Copyright (C) #{YEAR}# Michael L Haufe
  * SPDX-License-Identifier: AGPL-1.0-only
  *
- * Unit testing for the requires decorator
+ * Unit testing for the demands decorator
  */
 
-import Contracts from './';
+import Contracts from '.';
 import { MSG_NO_STATIC } from './MemberDecorator';
 
 /**
  * Requirement 241
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/241
  */
-describe('The @requires decorator must be a non-static feature decorator only', () => {
+describe('The @demands decorator must be a non-static feature decorator only', () => {
     test('Test declaration', () => {
-        let {requires} = new Contracts(true);
+        let {demands} = new Contracts(true);
 
         expect(() => {
             class Foo {
-                @requires(() => true)
+                @demands(() => true)
                 method1() {}
 
-                @requires(() => false)
+                @demands(() => false)
                 method2() {}
             }
 
@@ -31,7 +31,7 @@ describe('The @requires decorator must be a non-static feature decorator only', 
 
         expect(() => {
             //@ts-ignore: ignoring typescript error for JavaScript testing
-            @requires(() => true)
+            @demands(() => true)
             class Foo {}
 
             return Foo;
@@ -40,18 +40,18 @@ describe('The @requires decorator must be a non-static feature decorator only', 
 
     test('Invalid declaration', () => {
         expect(() => {
-            let {requires} = new Contracts(true);
+            let {demands} = new Contracts(true);
             // @ts-ignore: ignore type error for testing
-            @requires(() => true)
+            @demands(() => true)
             class Foo {}
 
             return Foo;
         }).toThrow();
 
         expect(() => {
-            let {requires} = new Contracts(false);
+            let {demands} = new Contracts(false);
             // @ts-ignore: ignore type error for testing
-            @requires(() => true)
+            @demands(() => true)
             class Foo {}
 
             return Foo;
@@ -63,8 +63,8 @@ describe('The @requires decorator must be a non-static feature decorator only', 
  * Requirement 244
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/244
  */
-describe('Features that override a @requires decorated feature must be subject to that decorator', () => {
-    let {invariant, override, requires} = new Contracts(true);
+describe('Features that override a @demands decorated feature must be subject to that decorator', () => {
+    let {invariant, override, demands} = new Contracts(true);
 
     @invariant
     class Base {
@@ -76,7 +76,7 @@ describe('Features that override a @requires decorated feature must be subject t
 
         inc() { this._value++; }
 
-        @requires(Base.prototype._nonNegative)
+        @demands(Base.prototype._nonNegative)
         dec() { this._value--; }
     }
 
@@ -109,8 +109,8 @@ describe('Features that override a @requires decorated feature must be subject t
  * Requirement 246
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/246
  */
-describe('@requires is evaluated before its associated feature is called', () => {
-    let {invariant, requires} = new Contracts(true);
+describe('@demands is evaluated before its associated feature is called', () => {
+    let {invariant, demands} = new Contracts(true);
 
     @invariant
     class Foo {
@@ -121,9 +121,9 @@ describe('@requires is evaluated before its associated feature is called', () =>
         }
     }
 
-    test('true @requires check does not throw', () => {
+    test('true @demands check does not throw', () => {
         class Bar extends Foo {
-            @requires(Bar.prototype._nonNegative)
+            @demands(Bar.prototype._nonNegative)
             method() {
                 return this._value = -2;
             }
@@ -134,9 +134,9 @@ describe('@requires is evaluated before its associated feature is called', () =>
         expect(bar.method()).toBe(-2);
     });
 
-    test('false @requires check throws', () => {
+    test('false @demands check throws', () => {
         class Bar extends Foo {
-            @requires(() => false)
+            @demands(() => false)
             method() {
                 return this._value = 12;
             }
@@ -151,14 +151,14 @@ describe('@requires is evaluated before its associated feature is called', () =>
  * Requirement 248
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/248
  */
-describe('@requires has a checked mode and unchecked mode', () => {
+describe('@demands has a checked mode and unchecked mode', () => {
 
     test('The associated assertion is evaluated when checkMode = true', () => {
-        let {invariant, requires} = new Contracts(true);
+        let {invariant, demands} = new Contracts(true);
 
         @invariant
         class Foo {
-            @requires(() => false)
+            @demands(() => false)
             method() {}
         }
 
@@ -166,11 +166,11 @@ describe('@requires has a checked mode and unchecked mode', () => {
     });
 
     test('The associated assertion is NOT evaluated in checkMode = false', () => {
-        let {invariant, requires} = new Contracts(false);
+        let {invariant, demands} = new Contracts(false);
 
         @invariant
         class Foo {
-            @requires(() => false)
+            @demands(() => false)
             method() {}
         }
 
@@ -183,11 +183,11 @@ describe('@requires has a checked mode and unchecked mode', () => {
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/396
  */
 describe('Preconditions cannot be strengthened in a subtype', () => {
-    let {invariant, requires, override} = new Contracts(true);
+    let {invariant, demands, override} = new Contracts(true);
 
     @invariant
     class Base {
-        @requires((value: number) => 10 <= value && value <= 30)
+        @demands((value: number) => 10 <= value && value <= 30)
         method(value: number) { return value; }
     }
 
@@ -205,7 +205,7 @@ describe('Preconditions cannot be strengthened in a subtype', () => {
 
     class Weaker extends Base {
         @override
-        @requires((value: number) => 1 <= value && value <= 50)
+        @demands((value: number) => 1 <= value && value <= 50)
         method(value: number) { return value; }
     }
 
@@ -225,7 +225,7 @@ describe('Preconditions cannot be strengthened in a subtype', () => {
 
     class Stronger extends Base {
         @override
-        @requires((value: number) => 15 <= value && value <= 20)
+        @demands((value: number) => 15 <= value && value <= 20)
         method(value: number) { return value; }
     }
 
