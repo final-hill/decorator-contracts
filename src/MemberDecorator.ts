@@ -8,7 +8,7 @@ import Assertion from './Assertion';
 import DescriptorWrapper from './lib/DescriptorWrapper';
 import AssertionError from './AssertionError';
 import { DECORATOR_REGISTRY, DecoratorRegistry, IDecoratorRegistration } from './lib/DecoratorRegistry';
-import { RequireType } from './RequiresDecorator';
+import { PredicateType } from './DemandsDecorator';
 import getAncestry from './lib/getAncestry';
 import Constructor from './typings/Constructor';
 import { DecoratedConstructor } from './typings/DecoratedConstructor';
@@ -128,7 +128,7 @@ export default abstract class MemberDecorator {
         return ancestorRegistry?.get(propertyKey);
     }
 
-    static getAncestorRequires(Class: Constructor<any>, propertyKey: PropertyKey): RequireType[] {
+    static getAncestorDemands(Class: Constructor<any>, propertyKey: PropertyKey): PredicateType[] {
         let Base = Object.getPrototypeOf(Class),
             ancestry = getAncestry(Base),
             ancestorRegistrations = ancestry.filter(Class =>
@@ -136,7 +136,7 @@ export default abstract class MemberDecorator {
             ).map(Class => this.getOrCreateRegistry(Class).get(propertyKey)!);
 
         return ancestorRegistrations
-            .filter(reg => reg.hasRequires).map(reg => reg.requires!);
+            .filter(reg => reg.hasDemands).map(reg => reg.demands!);
     }
 
     /**
@@ -154,19 +154,19 @@ export default abstract class MemberDecorator {
         let registry = this.getOrCreateRegistry(Clazz);
         registry.forEach((registration, propertyKey) => {
             let {descriptorWrapper} = registration,
-                ancRequires = this.getAncestorRequires(Clazz, propertyKey),
-                requires = registration.requires != undefined ? [registration.requires, ...ancRequires] : ancRequires,
+                ancDemands = this.getAncestorDemands(Clazz, propertyKey),
+                demands = registration.demands != undefined ? [registration.demands, ...ancDemands] : ancDemands,
                 originalDescriptor = descriptorWrapper.descriptor!,
                 newDescriptor = {...originalDescriptor},
-                requiresError = `Precondition failed on ${Clazz.name}.prototype.${String(propertyKey)}`;
+                demandsError = `Precondition failed on ${Clazz.name}.prototype.${String(propertyKey)}`;
 
             if(descriptorWrapper.isMethod) {
                 let method: Function = originalDescriptor.value;
                 newDescriptor.value = function(...args: any[]) {
-                    if(requires.length > 0) {
+                    if(demands.length > 0) {
                         checkedAssert(
-                            requires.some((fn => fn.apply(this, args))),
-                            requiresError
+                            demands.some((fn => fn.apply(this, args))),
+                            demandsError
                         );
                     }
 
@@ -176,10 +176,10 @@ export default abstract class MemberDecorator {
                 if(descriptorWrapper.hasGetter) {
                     let getter: Function = originalDescriptor.get!;
                     newDescriptor.get = function() {
-                        if(requires.length > 0) {
+                        if(demands.length > 0) {
                             checkedAssert(
-                                requires.some((fn => fn.apply(this))),
-                                requiresError
+                                demands.some((fn => fn.apply(this))),
+                                demandsError
                             );
                         }
 
@@ -189,10 +189,10 @@ export default abstract class MemberDecorator {
                 if(descriptorWrapper.hasSetter) {
                     let setter: Function = originalDescriptor.set!;
                     newDescriptor.set = function(value: any) {
-                        if(requires.length > 0) {
+                        if(demands.length > 0) {
                             checkedAssert(
-                                requires.some((fn => fn.call(this, value))),
-                                requiresError
+                                demands.some((fn => fn.call(this, value))),
+                                demandsError
                             );
                         }
 

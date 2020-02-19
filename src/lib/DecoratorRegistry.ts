@@ -5,15 +5,15 @@
  */
 
 import DescriptorWrapper from './DescriptorWrapper';
-import { RequireType } from '../RequiresDecorator';
+import { PredicateType } from '../DemandsDecorator';
 
 export const DECORATOR_REGISTRY = Symbol('Decorator Registry');
 
 export interface IDecoratorRegistration {
     descriptorWrapper: DescriptorWrapper
     overrides: boolean
-    hasRequires: boolean
-    requires?: RequireType
+    hasDemands: boolean
+    demands?: PredicateType
 }
 
 export class DecoratorRegistry extends Map<PropertyKey, IDecoratorRegistration> {
@@ -21,7 +21,7 @@ export class DecoratorRegistry extends Map<PropertyKey, IDecoratorRegistration> 
         if(!this.has(propertyKey)) {
             this.set(propertyKey, {
                 descriptorWrapper: new DescriptorWrapper(descriptor),
-                hasRequires: false,
+                hasDemands: false,
                 overrides: false
             });
         }
