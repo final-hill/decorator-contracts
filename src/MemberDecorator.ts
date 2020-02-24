@@ -8,10 +8,10 @@ import Assertion from './Assertion';
 import DescriptorWrapper from './lib/DescriptorWrapper';
 import AssertionError from './AssertionError';
 import { DECORATOR_REGISTRY, DecoratorRegistry, IDecoratorRegistration } from './lib/DecoratorRegistry';
-import { PredicateType } from './DemandsDecorator';
 import getAncestry from './lib/getAncestry';
 import Constructor from './typings/Constructor';
 import { DecoratedConstructor } from './typings/DecoratedConstructor';
+import PredicateType from './typings/PredicateType';
 
 export const MSG_NO_STATIC = `Only instance members can be decorated, not static members`;
 export const MSG_DECORATE_METHOD_ACCESSOR_ONLY = `Only methods and accessors can be decorated.`;
@@ -109,7 +109,7 @@ export default abstract class MemberDecorator {
             if(descriptorWrapper.hasGetter) {
                 descriptorWrapper.descriptor!.get = fnInvariantRequired;
             }
-            if(descriptorWrapper.hasGetter) {
+            if(descriptorWrapper.hasSetter) {
                 descriptorWrapper.descriptor!.set = fnInvariantRequired;
             }
         }
@@ -128,6 +128,7 @@ export default abstract class MemberDecorator {
         return ancestorRegistry?.get(propertyKey);
     }
 
+    // TODO unify these to methods and then deprecate by inlining.
     static getAllAncestorDemands(Class: Constructor<any>, propertyKey: PropertyKey): PredicateType[][] {
         let Base = Object.getPrototypeOf(Class),
             ancestry = getAncestry(Base),
@@ -138,6 +139,18 @@ export default abstract class MemberDecorator {
         return ancestorRegistrations
             .filter(reg => reg.demands.length > 0)
             .map(reg => reg.demands);
+    }
+
+    static getAllAncestorEnsures(Class: Constructor<any>, propertyKey: PropertyKey): PredicateType[][] {
+        let Base = Object.getPrototypeOf(Class),
+            ancestry = getAncestry(Base),
+            ancestorRegistrations = ancestry.filter(Class =>
+                this.getOrCreateRegistry(Class).has(propertyKey)
+            ).map(Class => this.getOrCreateRegistry(Class).get(propertyKey)!);
+
+        return ancestorRegistrations
+            .filter(reg => reg.ensures.length > 0)
+            .map(reg => reg.ensures);
     }
 
     /**
@@ -152,15 +165,19 @@ export default abstract class MemberDecorator {
             return;
         }
 
+        // TODO: optimize
         let registry = this.getOrCreateRegistry(Clazz);
         registry.forEach((registration, propertyKey) => {
             let {descriptorWrapper} = registration,
                 allAncDemands = this.getAllAncestorDemands(Clazz, propertyKey),
+                allAncEnsures = this.getAllAncestorEnsures(Clazz, propertyKey),
                 allDemands = registration.demands.length > 0 ? [registration.demands, ...allAncDemands] : allAncDemands,
+                allEnsures = registration.ensures.length > 0 ? [registration.ensures, ...allAncEnsures] : allAncEnsures,
                 originalDescriptor = descriptorWrapper.descriptor!,
                 newDescriptor = {...originalDescriptor},
                 // TODO: more specific error. Want the specific class name, feature name, and expression
-                demandsError = `Precondition failed on ${Clazz.name}.prototype.${String(propertyKey)}`;
+                demandsError = `Precondition failed on ${Clazz.name}.prototype.${String(propertyKey)}`,
+                ensuresError = `Postcondition failed on ${Clazz.name}.prototype.${String(propertyKey)}`;
 
             let checkedFeature = (feature: Function) => function(this: typeof newDescriptor, ...args: any[]) {
                 if(allDemands.length > 0) {
@@ -174,7 +191,20 @@ export default abstract class MemberDecorator {
                     );
                 }
 
-                return feature.apply(this, args);
+                let result = feature.apply(this, args);
+
+                if(allEnsures.length > 0) {
+                    checkedAssert(
+                        allEnsures.every(
+                            ensures => ensures.every(
+                                ensure => ensure.apply(this, args)
+                            )
+                        ),
+                        ensuresError
+                    );
+                }
+
+                return result;
             };
 
             if(descriptorWrapper.isMethod) {

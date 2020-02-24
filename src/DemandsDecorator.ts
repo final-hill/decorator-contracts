@@ -6,8 +6,7 @@
 
 import MemberDecorator, { MSG_NO_STATIC, MSG_INVALID_DECORATOR } from './MemberDecorator';
 import DescriptorWrapper from './lib/DescriptorWrapper';
-
-export type PredicateType = (...args: any[]) => boolean;
+import PredicateType from './typings/PredicateType';
 
 /**
  * The `@demands` decorator is an assertion of a precondition.

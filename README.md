@@ -4,21 +4,22 @@
 
 ## Table of Contents
 
-1. [Introduction](#introduction)
-2. [Library Installation](#library-installation)
-3. [Usage](#usage)
-   1. [Assertions](#assertions)
-   2. [Invariants](#invariants)
-   3. [Demands](#demands)
-   4. [Overrides](#overrides)
-   5. [Rescue](#rescue)
-4. [Contributing](#contributing)
-5. [Building and Editing](#building-and-editing)
-6. [Getting Started](#getting-started)
-7. [Project Structure](#project-structure)
-8. [Build and Test](#build-and-test)
-9. [Dependencies](#dependencies)
-10. [Further Reading](#further-reading)
+- [Introduction](#introduction)
+- [Library Installation](#library-installation)
+- [Usage](#usage)
+- [Assertions](#assertions)
+- [Invariants](#invariants)
+- [Demands](#demands)
+- [Ensures](#ensures)
+- [Overrides](#overrides)
+- [Rescue](#rescue)
+- [Contributing](#contributing)
+- [Building and Editing](#building-and-editing)
+- [Getting Started](#getting-started)
+- [Project Structure](#project-structure)
+- [Build and Test](#build-and-test)
+- [Dependencies](#dependencies)
+- [Further Reading](#further-reading)
 
 ## Introduction
 
@@ -66,7 +67,7 @@ be numerous, using the appropriate mode becomes increasingly important.
 You are not prevented from mixing modes in the event you desire you maintain
 a number of checks in a production environment.
 
-### Assertions
+## Assertions
 
 Assertions are a fundamental tool for enforcing correctness in an implementation.
 They are used inline to express a condition that must evaluate to true at a
@@ -129,7 +130,7 @@ while(assert(q(s), 'message')) {
 In checked mode the assertions is evaluated and throws an exception of failure,
 otherwise returns true. In production mode, assertions always return true.
 
-### Invariants
+## Invariants
 
 The `@invariant` decorator describes and enforces the semantics of a class
 via a provided assertion. This assertion is checked after the associated class
@@ -211,7 +212,7 @@ relationship.
 Whether you have invariants for a class or not it is necessary to declare one
 anyway on one of the base classes.
 
-### Demands
+## Demands
 
 The `@demands` decorator describes and enforces an assertion that must be true
 before its associated feature can execute. In other words before a client
@@ -309,7 +310,93 @@ The precondition of `Sub.prototype.method` is:
 
 `(-10 <= x && x <= 20) && Number.isInteger(x) || (0 <= x && x <= 10) && (x % 2 == 0)`
 
-### Overrides
+## Ensures
+
+The @ensures decorator describes and enforces an assertion that must be true after its associated feature has executed. In other words after a client of your class has executed a method or accessor the defined postcondition must be met or an error will be raised.
+
+```typescript
+@invariant
+class Stack<T> {
+    protected _notEmpty(){ return !this.isEmpty(); }
+    ...
+
+    @ensures(Stack.prototype._notEmpty)
+    push(value: T) {
+         this._implementation.push(value);
+    }
+}
+```
+
+In the above example the postcondition of executing push on a stack is that it is not empty. If this assertion fails an AssertionError is raised.
+
+An @invariant decorator must also be defined either on the current class or on an ancestor as shown in the example.
+
+Static features, including the constructor, can not be assigned an @ensures decorator. In the future this may be enabled for non-constructor static methods but the implications are not clear at present.
+
+If a class feature is overridden then the @ensures assertion still applies:
+
+```typescript
+class MyStack<T> extends Stack<T> {
+    @overrides
+    push(value: T): { ... }
+}
+
+...
+let myStack = new MyStack()
+
+myStack.push()
+myStack.isEmpty() == false;
+```
+
+If a class feature with an associated @ensures is overridden, then the new feature can have an @ensures declaration of its own. This postcondition can not weaken the postcondition of the original feature. The new postcondition will be and-ed with it's ancestors. If all are true, then the obligation is considered fulfilled by the user of the feature, otherwise an AssertionError is raised.
+
+```typescript
+@invariant
+class Base {
+    @ensures((x: number) => 0 <= x && x <= 10)
+    method(x: number) {
+        ... }
+}
+
+class Sub extends Base {
+    @override
+    @ensures((x: number) => -10 <= x && x <= 20)
+    method(x: number) { ... }
+}
+```
+
+In the above example the postcondition of Sub.prototype.method is:
+
+(-10 <= x && x <= 20) && (0 <= x && x <= 10)
+
+Multiple @ensures can be declared for a feature. Doing so will require that all of these are true after the associated feature has executed:
+
+```typescript
+@invariant
+class Base {
+    @ensures((x: number) => 0 <= x && x <= 10)
+    @ensures((x: number) => x % 2 == 0)
+    method(x: number) {
+        ... }
+}
+
+class Sub extends Base {
+    @override
+    @ensures((x: number) => -10 <= x && x <= 20)
+    @ensures((x: number) => Number.isInteger(x))
+    method(x: number) { ... }
+}
+```
+
+In the above example the postcondition of Base.prototype.method is:
+
+`(0 <= x && x <= 10) && (x % 2 == 0)`
+
+The postcondition of Sub.prototype.method is:
+
+`(-10 <= x && x <= 20) && Number.isInteger(x) && (0 <= x && x <= 10) && (x % 2 == 0)`
+
+## Overrides
 
 Class features implemented in a superclass can be overridden in a subclass. The
 subclass implementation can augment or entirely replace the one belonging
@@ -385,7 +472,7 @@ Static methods, including the constructor, can not be assigned an `@override`
 decorator. In the future this may be enabled for non-constructor static methods
 but the implications are not clear at present.
 
-### Rescue
+## Rescue
 
 The `@rescue` decorator enables a mechanism for providing Robustness.
 Robustness is the ability of an implementation to respond to situations
@@ -444,7 +531,7 @@ Due to current licensing restrictions, contributions are not being accepted curr
 
 ## Building and Editing
 
-### Getting Started
+## Getting Started
 
 - Clone the repository
 
