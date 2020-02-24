@@ -5,7 +5,7 @@
  */
 
 import DescriptorWrapper from './DescriptorWrapper';
-import { PredicateType } from '../DemandsDecorator';
+import PredicateType from '../typings/PredicateType';
 
 export const DECORATOR_REGISTRY = Symbol('Decorator Registry');
 
@@ -13,6 +13,7 @@ export interface IDecoratorRegistration {
     descriptorWrapper: DescriptorWrapper
     overrides: boolean
     demands: PredicateType[]
+    ensures: PredicateType[]
 }
 
 export class DecoratorRegistry extends Map<PropertyKey, IDecoratorRegistration> {
@@ -20,6 +21,7 @@ export class DecoratorRegistry extends Map<PropertyKey, IDecoratorRegistration> 
         if(!this.has(propertyKey)) {
             this.set(propertyKey, {
                 demands: [],
+                ensures: [],
                 descriptorWrapper: new DescriptorWrapper(descriptor),
                 overrides: false
             });

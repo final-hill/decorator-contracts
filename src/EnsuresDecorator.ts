@@ -2,54 +2,52 @@
  * @license
  * Copyright (C) #{YEAR}# Michael L Haufe
  * SPDX-License-Identifier: AGPL-1.0-only
- *
- * The ensures decorator is an assertion of a postcondition.
+ */
+
+import MemberDecorator, { MSG_INVALID_DECORATOR, MSG_NO_STATIC } from './MemberDecorator';
+import PredicateType from './typings/PredicateType';
+import DescriptorWrapper from './lib/DescriptorWrapper';
+
+/**
+ * The `@ensures` decorator is an assertion of a postcondition.
  * It expresses a condition that must be true after the associated class member is executed.
  */
-import Assertion from './Assertion';
-
-export default class EnsuresDecorator {
-    protected _assert: typeof Assertion.prototype.assert;
-
+export default class EnsuresDecorator extends MemberDecorator {
+    /**
+     * Constructs a new instance of the EnsuresDecorator in the specified mode
+     * Enabled when checkMoe is true, and disabled otherwise
+     *
+     * @param checkMode - The flag representing the mode of the assertion
+     */
     constructor(protected checkMode: boolean) {
-        this._assert = new Assertion(checkMode).assert;
+        super(checkMode);
+        this.ensures = this.ensures.bind(this);
     }
 
-    ensures = <Self>(fnCondition: (self: Self, returnValue: any) => boolean, message: string = 'Postcondition failed') => {
-        let assert = this._assert,
-            checkMode = this.checkMode;
+    /**
+     * The 'ensures' decorator. This is a feature decorator only
+     * @param predicate
+     */
+    ensures(predicate: PredicateType) {
+        let self = this,
+            assert = this._assert;
+        this._checkedAssert(typeof predicate == 'function', MSG_INVALID_DECORATOR);
 
-        return function(_target: any, _propertyKey: string, descriptor: PropertyDescriptor) {
-            if(!checkMode) {
-                return;
+        return function(target: any, propertyKey: PropertyKey, currentDescriptor: PropertyDescriptor): PropertyDescriptor {
+            let isStatic = typeof target == 'function';
+            assert(!isStatic, MSG_NO_STATIC, TypeError);
+
+            if(!self.checkMode) {
+                return currentDescriptor;
             }
-            let {value, get, set} = descriptor;
 
-            if(value != undefined) {
-                descriptor.value = function (this: Self, ...args: any[]) {
-                    let result = value.apply(this, args);
-                    assert(fnCondition(this, result), message);
+            let Clazz = (target as any).constructor,
+                dw = new DescriptorWrapper(currentDescriptor),
+                registration = MemberDecorator.registerFeature(Clazz, propertyKey, dw);
 
-                    return result;
-                };
-            } else {
-                if(get != undefined) {
-                    descriptor.get = function(this: Self) {
-                        let result = get!.apply(this);
-                        assert(fnCondition(this, result), message);
+            registration.ensures.push(predicate);
 
-                        return result;
-                    };
-                }
-                if(set != undefined) {
-                    descriptor.set = function(this: Self, arg: any) {
-                        let result = set!.call(this, arg);
-                        assert(fnCondition(this, arg), message);
-
-                        return result;
-                    };
-                }
-            }
+            return dw.descriptor!;
         };
     }
 }
