@@ -8,7 +8,7 @@ import Assertion from './Assertion';
 import EnsuresDecorator from './EnsuresDecorator';
 import InvariantDecorator from './InvariantDecorator';
 import OverrideDecorator from './OverrideDecorator';
-import RequiresDecorator from './RequiresDecorator';
+import DemandsDecorator from './DemandsDecorator';
 import RescueDecorator from './RescueDecorator';
 
 /**
@@ -21,7 +21,7 @@ class Contracts {
     ensures: typeof EnsuresDecorator.prototype.ensures;
     invariant: typeof InvariantDecorator.prototype.invariant;
     override: typeof OverrideDecorator.prototype.override;
-    requires: typeof RequiresDecorator.prototype.requires;
+    demands: typeof DemandsDecorator.prototype.demands;
     rescue: typeof RescueDecorator.prototype.rescue;
 
     /**
@@ -34,7 +34,7 @@ class Contracts {
         this.ensures = new EnsuresDecorator(checkMode).ensures;
         this.invariant = new InvariantDecorator(checkMode).invariant;
         this.override = new OverrideDecorator(checkMode).override;
-        this.requires = new RequiresDecorator(checkMode).requires;
+        this.demands = new DemandsDecorator(checkMode).demands;
         this.rescue = new RescueDecorator(checkMode).rescue;
     }
 }

@@ -8,7 +8,7 @@ import Assertion from './Assertion';
 import DescriptorWrapper from './lib/DescriptorWrapper';
 import AssertionError from './AssertionError';
 import { DECORATOR_REGISTRY, DecoratorRegistry, IDecoratorRegistration } from './lib/DecoratorRegistry';
-import { RequireType } from './RequiresDecorator';
+import { PredicateType } from './DemandsDecorator';
 import getAncestry from './lib/getAncestry';
 import Constructor from './typings/Constructor';
 import { DecoratedConstructor } from './typings/DecoratedConstructor';
@@ -128,7 +128,7 @@ export default abstract class MemberDecorator {
         return ancestorRegistry?.get(propertyKey);
     }
 
-    static getAncestorRequires(Class: Constructor<any>, propertyKey: PropertyKey): RequireType[] {
+    static getAllAncestorDemands(Class: Constructor<any>, propertyKey: PropertyKey): PredicateType[][] {
         let Base = Object.getPrototypeOf(Class),
             ancestry = getAncestry(Base),
             ancestorRegistrations = ancestry.filter(Class =>
@@ -136,7 +136,8 @@ export default abstract class MemberDecorator {
             ).map(Class => this.getOrCreateRegistry(Class).get(propertyKey)!);
 
         return ancestorRegistrations
-            .filter(reg => reg.hasRequires).map(reg => reg.requires!);
+            .filter(reg => reg.demands.length > 0)
+            .map(reg => reg.demands);
     }
 
     /**
@@ -154,51 +155,39 @@ export default abstract class MemberDecorator {
         let registry = this.getOrCreateRegistry(Clazz);
         registry.forEach((registration, propertyKey) => {
             let {descriptorWrapper} = registration,
-                ancRequires = this.getAncestorRequires(Clazz, propertyKey),
-                requires = registration.requires != undefined ? [registration.requires, ...ancRequires] : ancRequires,
+                allAncDemands = this.getAllAncestorDemands(Clazz, propertyKey),
+                allDemands = registration.demands.length > 0 ? [registration.demands, ...allAncDemands] : allAncDemands,
                 originalDescriptor = descriptorWrapper.descriptor!,
                 newDescriptor = {...originalDescriptor},
-                requiresError = `Precondition failed on ${Clazz.name}.prototype.${String(propertyKey)}`;
+                // TODO: more specific error. Want the specific class name, feature name, and expression
+                demandsError = `Precondition failed on ${Clazz.name}.prototype.${String(propertyKey)}`;
+
+            let checkedFeature = (feature: Function) => function(this: typeof newDescriptor, ...args: any[]) {
+                if(allDemands.length > 0) {
+                    checkedAssert(
+                        allDemands.some(
+                            demands => demands.every(
+                                demand => demand.apply(this, args)
+                            )
+                        ),
+                        demandsError
+                    );
+                }
+
+                return feature.apply(this, args);
+            };
 
             if(descriptorWrapper.isMethod) {
-                let method: Function = originalDescriptor.value;
-                newDescriptor.value = function(...args: any[]) {
-                    if(requires.length > 0) {
-                        checkedAssert(
-                            requires.some((fn => fn.apply(this, args))),
-                            requiresError
-                        );
-                    }
-
-                    return method.apply(this, args);
-                };
+                let feature: Function = originalDescriptor.value;
+                newDescriptor.value = checkedFeature(feature);
+            } else if(descriptorWrapper.hasGetter) {
+                let feature: Function = originalDescriptor.get!;
+                newDescriptor.get = checkedFeature(feature);
+            } else if(descriptorWrapper.hasSetter) {
+                let feature: Function = originalDescriptor.set!;
+                newDescriptor.set = checkedFeature(feature);
             } else {
-                if(descriptorWrapper.hasGetter) {
-                    let getter: Function = originalDescriptor.get!;
-                    newDescriptor.get = function() {
-                        if(requires.length > 0) {
-                            checkedAssert(
-                                requires.some((fn => fn.apply(this))),
-                                requiresError
-                            );
-                        }
-
-                        return getter.apply(this);
-                    };
-                }
-                if(descriptorWrapper.hasSetter) {
-                    let setter: Function = originalDescriptor.set!;
-                    newDescriptor.set = function(value: any) {
-                        if(requires.length > 0) {
-                            checkedAssert(
-                                requires.some((fn => fn.call(this, value))),
-                                requiresError
-                            );
-                        }
-
-                        setter.call(this, value);
-                    };
-                }
+                throw new Error(`Unhandled condition. Unable to restore ${Clazz.name}.prototype.${String(propertyKey)}`);
             }
 
             Object.defineProperty(proto, propertyKey, newDescriptor);

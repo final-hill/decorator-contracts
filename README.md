@@ -9,7 +9,7 @@
 3. [Usage](#usage)
    1. [Assertions](#assertions)
    2. [Invariants](#invariants)
-   3. [Requires](#requires)
+   3. [Demands](#demands)
    4. [Overrides](#overrides)
    5. [Rescue](#rescue)
 4. [Contributing](#contributing)
@@ -55,7 +55,7 @@ checked mode: `true`
 unchecked mode: `false`
 
 ```typescript
-let {assert, invariant, override, rescue, requires} = new Contracts(true);
+let {assert, invariant, override, rescue, demands} = new Contracts(true);
 ```
 
 During development and testing you will want to use checked mode. This will
@@ -211,9 +211,9 @@ relationship.
 Whether you have invariants for a class or not it is necessary to declare one
 anyway on one of the base classes.
 
-### Requires
+### Demands
 
-The `@requires` decorator describes and enforces an assertion that must be true
+The `@demands` decorator describes and enforces an assertion that must be true
 before its associated feature can execute. In other words before a client
 of your class can execute a method or accessor the defined precondition
 must first be met or an error will be raised.
@@ -224,7 +224,7 @@ class Stack<T> {
     protected _notEmpty(){ return !this.isEmpty(); }
     ...
 
-    @requires(Stack.prototype._notEmpty)
+    @demands(Stack.prototype._notEmpty)
     pop(): T {
         return this._implementation.pop();
     }
@@ -238,11 +238,11 @@ an AssertionError is raised.
 An `@invariant` decorator must also be defined either on the current class
 or on an ancestor as shown in the example.
 
-Static features, including the constructor, can not be assigned a `@requires`
+Static features, including the constructor, can not be assigned a `@demands`
 decorator. In the future this may be enabled for non-constructor static methods
 but the implications are not clear at present.
 
-If a class feature is overridden then the `@requires` assertion still applies:
+If a class feature is overridden then the `@demands` assertion still applies:
 
 ```typescript
 class MyStack<T> extends Stack<T> {
@@ -256,8 +256,8 @@ let myStack = new MyStack()
 myStack.pop() // throws
 ```
 
-If a class feature with an associated `@requires` is overridden, then the new
-feature can have a `@requires` declaration of its own. This precondition can
+If a class feature with an associated `@demands` is overridden, then the new
+feature can have a `@demands` declaration of its own. This precondition can
 not strengthen the precondition of the original feature. The new precondition
 will be or-ed with it's ancestors. If any are true, then the obligation is
 considered fulfilled by the user of the feature.
@@ -265,21 +265,49 @@ considered fulfilled by the user of the feature.
 ```typescript
 @invariant
 class Base {
-    @requires((x: number) => 0 <= x && x <= 10)
+    @demands((x: number) => 0 <= x && x <= 10)
     method(x: number) {
         ... }
 }
 
 class Sub extends Base {
     @override
-    @requires((x: number) => -10 <= x && x <= 20)
+    @demands((x: number) => -10 <= x && x <= 20)
     method(x: number) { ... }
 }
-
 ```
 
-In the above example the precondition of `Sub.prototype.method` is
+In the above example the precondition of `Sub.prototype.method` is:
+
 `(-10 <= x && x <= 20) || (0 <= x && x <= 10)`
+
+Multiple `@demands` can be declared for a feature. Doing so will require that
+all of these are true before the associated feature will execute:
+
+```typescript
+@invariant
+class Base {
+    @demands((x: number) => 0 <= x && x <= 10)
+    @demands((x: number) => x % 2 == 0)
+    method(x: number) {
+        ... }
+}
+
+class Sub extends Base {
+    @override
+    @demands((x: number) => -10 <= x && x <= 20)
+    @demands((x: number) => Number.isInteger(x))
+    method(x: number) { ... }
+}
+```
+
+In the above example the precondition of `Base.prototype.method` is:
+
+`(0 <= x && x <= 10) && (x % 2 == 0)`.
+
+The precondition of `Sub.prototype.method` is:
+
+`(-10 <= x && x <= 20) && Number.isInteger(x) || (0 <= x && x <= 10) && (x % 2 == 0)`
 
 ### Overrides
 
