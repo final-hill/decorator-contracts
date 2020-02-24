@@ -275,11 +275,39 @@ class Sub extends Base {
     @demands((x: number) => -10 <= x && x <= 20)
     method(x: number) { ... }
 }
-
 ```
 
-In the above example the precondition of `Sub.prototype.method` is
+In the above example the precondition of `Sub.prototype.method` is:
+
 `(-10 <= x && x <= 20) || (0 <= x && x <= 10)`
+
+Multiple `@demands` can be declared for a feature. Doing so will require that
+all of these are true before the associated feature will execute:
+
+```typescript
+@invariant
+class Base {
+    @demands((x: number) => 0 <= x && x <= 10)
+    @demands((x: number) => x % 2 == 0)
+    method(x: number) {
+        ... }
+}
+
+class Sub extends Base {
+    @override
+    @demands((x: number) => -10 <= x && x <= 20)
+    @demands((x: number) => Number.isInteger(x))
+    method(x: number) { ... }
+}
+```
+
+In the above example the precondition of `Base.prototype.method` is:
+
+`(0 <= x && x <= 10) && (x % 2 == 0)`.
+
+The precondition of `Sub.prototype.method` is:
+
+`(-10 <= x && x <= 20) && Number.isInteger(x) || (0 <= x && x <= 10) && (x % 2 == 0)`
 
 ### Overrides
 

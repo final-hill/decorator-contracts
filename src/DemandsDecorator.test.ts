@@ -8,6 +8,7 @@
 
 import Contracts from '.';
 import { MSG_NO_STATIC } from './MemberDecorator';
+import AssertionError from './AssertionError';
 
 /**
  * Requirement 241
@@ -60,6 +61,47 @@ describe('The @demands decorator must be a non-static feature decorator only', (
 });
 
 /**
+ * Requirement 242
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/242
+ */
+describe('There can be multiple @demands decorators assigned to a class feature', () => {
+    let {invariant, demands} = new Contracts(true);
+
+    @invariant
+    class Foo {
+        protected _value = 0;
+
+        get value() { return this._value; }
+
+        protected _nonNegative() {
+            return this._value >= 0;
+        }
+        protected _isEven() {
+            return this._value % 2 == 0;
+        }
+
+        @demands(Foo.prototype._nonNegative)
+        @demands(Foo.prototype._isEven)
+        inc() { this._value += 2; }
+
+        @demands(Foo.prototype._nonNegative)
+        @demands(Foo.prototype._isEven)
+        dec() { this._value -= 1; }
+    }
+
+    let foo = new Foo();
+
+    expect(() => foo.inc()).not.toThrow();
+
+    expect(foo.value).toBe(2);
+
+    expect(() => {
+        foo.dec();
+        foo.dec();
+    }).toThrow(AssertionError); // TODO: more specific error
+});
+
+/**
  * Requirement 244
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/244
  */
@@ -86,6 +128,8 @@ describe('Features that override a @demands decorated feature must be subject to
             this._value -= 2;
         }
     }
+
+    // TODO: test multiple overrides
 
     test('inc(); inc(); dec(); does not throw', () => {
         expect(() => {

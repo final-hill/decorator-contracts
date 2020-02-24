@@ -9,8 +9,6 @@ import DescriptorWrapper from './lib/DescriptorWrapper';
 
 export type PredicateType = (...args: any[]) => boolean;
 
-export const MSG_DUPLICATE_DEMANDS = `Only a single @demands decorator can be assigned to a class feature`;
-
 /**
  * The `@demands` decorator is an assertion of a precondition.
  * It expresses a condition that must be true before the associated class member is executed.
@@ -30,12 +28,12 @@ export default class DemandsDecorator extends MemberDecorator {
     /**
      * The 'demands' decorator. This is a feature decorator only.
      *
-     * @param fnPredicate - The assertion
+     * @param predicate - The assertion
      */
-    demands(fnPredicate: PredicateType) {
+    demands(predicate: PredicateType) {
         let self = this,
             assert = this._assert;
-        this._checkedAssert(typeof fnPredicate == 'function', MSG_INVALID_DECORATOR);
+        this._checkedAssert(typeof predicate == 'function', MSG_INVALID_DECORATOR);
 
         return function(target: any, propertyKey: PropertyKey, currentDescriptor: PropertyDescriptor): PropertyDescriptor {
             let isStatic = typeof target == 'function';
@@ -49,8 +47,7 @@ export default class DemandsDecorator extends MemberDecorator {
                 dw = new DescriptorWrapper(currentDescriptor),
                 registration = MemberDecorator.registerFeature(Clazz, propertyKey, dw);
 
-            registration.hasDemands = assert(!registration.hasDemands, MSG_DUPLICATE_DEMANDS);
-            registration.demands = fnPredicate;
+            registration.demands.push(predicate);
 
             return dw.descriptor!;
         };

@@ -12,16 +12,15 @@ export const DECORATOR_REGISTRY = Symbol('Decorator Registry');
 export interface IDecoratorRegistration {
     descriptorWrapper: DescriptorWrapper
     overrides: boolean
-    hasDemands: boolean
-    demands?: PredicateType
+    demands: PredicateType[]
 }
 
 export class DecoratorRegistry extends Map<PropertyKey, IDecoratorRegistration> {
     getOrCreate(propertyKey: PropertyKey, descriptor: PropertyDescriptor): IDecoratorRegistration {
         if(!this.has(propertyKey)) {
             this.set(propertyKey, {
+                demands: [],
                 descriptorWrapper: new DescriptorWrapper(descriptor),
-                hasDemands: false,
                 overrides: false
             });
         }
