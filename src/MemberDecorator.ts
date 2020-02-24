@@ -9,9 +9,9 @@ import DescriptorWrapper from './lib/DescriptorWrapper';
 import AssertionError from './AssertionError';
 import { DECORATOR_REGISTRY, DecoratorRegistry, IDecoratorRegistration } from './lib/DecoratorRegistry';
 import getAncestry from './lib/getAncestry';
-import Constructor from './typings/Constructor';
+import type {Constructor} from './typings/Constructor';
 import { DecoratedConstructor } from './typings/DecoratedConstructor';
-import PredicateType from './typings/PredicateType';
+import type {PredicateType} from './typings/PredicateType';
 
 export const MSG_NO_STATIC = `Only instance members can be decorated, not static members`;
 export const MSG_DECORATE_METHOD_ACCESSOR_ONLY = `Only methods and accessors can be decorated.`;

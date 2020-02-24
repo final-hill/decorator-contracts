@@ -8,8 +8,8 @@ import Assertion from './Assertion';
 import {ContractHandler, CONTRACT_HANDLER} from './ContractHandler';
 import OverrideDecorator from './OverrideDecorator';
 import isClass from './lib/isClass';
-import FnPredTable from './typings/FnPredTable';
-import Constructor from './typings/Constructor';
+import type {FnPredTable} from './typings/FnPredTable';
+import type {Constructor} from './typings/Constructor';
 import MemberDecorator from './MemberDecorator';
 import getAncestry from './lib/getAncestry';
 // FIXME: The symbols don't belong here

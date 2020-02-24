@@ -5,7 +5,7 @@
  */
 
 import { DecoratedConstructor, IS_PROXY, INNER_CLASS } from '../typings/DecoratedConstructor';
-import Constructor from '../typings/Constructor';
+import type {Constructor} from '../typings/Constructor';
 
 /**
  * If the provided constructor is a ClazzProxy return the inner class

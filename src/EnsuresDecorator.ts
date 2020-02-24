@@ -5,7 +5,7 @@
  */
 
 import MemberDecorator, { MSG_INVALID_DECORATOR, MSG_NO_STATIC } from './MemberDecorator';
-import PredicateType from './typings/PredicateType';
+import type {PredicateType} from './typings/PredicateType';
 import DescriptorWrapper from './lib/DescriptorWrapper';
 
 /**
