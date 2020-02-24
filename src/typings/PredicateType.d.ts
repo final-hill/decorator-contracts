@@ -4,6 +4,4 @@
  * SPDX-License-Identifier: AGPL-1.0-only
  */
 
-type PredicateType = (...args: any[]) => boolean;
-
-export default PredicateType;
+export type PredicateType = (...args: any[]) => boolean;

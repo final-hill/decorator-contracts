@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: AGPL-1.0-only
  */
 
-import Constructor from './typings/Constructor';
-import FnPredTable from './typings/FnPredTable';
+import type {Constructor} from './typings/Constructor';
+import type {FnPredTable} from './typings/FnPredTable';
 
 export interface IDecoratorRegistration {
     /**

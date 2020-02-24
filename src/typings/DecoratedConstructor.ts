@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: AGPL-1.0-only
  */
 
-import Constructor from './Constructor';
+import type {Constructor} from './Constructor';
 import { DECORATOR_REGISTRY, DecoratorRegistry } from '../lib/DecoratorRegistry';
 import { ContractHandler, CONTRACT_HANDLER } from '../ContractHandler';
 
