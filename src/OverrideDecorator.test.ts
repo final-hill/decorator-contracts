@@ -311,9 +311,9 @@ describe('Accessors must support @override', () => {
         expect(() => {
             @invariant
             class Base {
-                private _value_: number = 0;
-                get value() { return this._value_; }
-                set value(x: number) { this._value_ = x; }
+                #value: number = 0;
+                get value() { return this.#value; }
+                set value(x: number) { this.#value = x; }
             }
 
             class Sub extends Base {
@@ -331,9 +331,9 @@ describe('Accessors must support @override', () => {
         expect(() => {
             @invariant
             class Base {
-                private _value_: number = 0;
-                get value() { return this._value_; }
-                set value(x: number) { this._value_ = x; }
+                #value: number = 0;
+                get value() { return this.#value; }
+                set value(x: number) { this.#value = x; }
             }
 
             class Sub extends Base {

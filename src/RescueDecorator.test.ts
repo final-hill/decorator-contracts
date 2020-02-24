@@ -151,19 +151,19 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
     test('rescuing error getter then retry returns ok', () => {
         @invariant
         class Base {
-            private _value = 0;
+            #value = 0;
             protected _valueRescue(_error: any, _args: any[], retry: Function) {
-                this._value = 7;
+                this.#value = 7;
 
                 return retry();
             }
 
             @rescue(Base.prototype._valueRescue)
             get value() {
-                if(this._value == 0) {
+                if(this.#value == 0) {
                     throw new Error('Bad State');
                 } else {
-                    return this._value;
+                    return this.#value;
                 }
              }
         }
@@ -190,11 +190,11 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
     test('rescuing non-error setter then getting returns normal', () => {
         @invariant
         class Base {
-            private _value = NaN;
+            #value = NaN;
 
-            get value() { return this._value; }
+            get value() { return this.#value; }
             @rescue(() => {})
-            set value(value: number) { this._value = value; }
+            set value(value: number) { this.#value = value; }
         }
         let base = new Base();
         base.value = 12;
@@ -204,19 +204,19 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
     test('rescue of error setter then retry then getting returns ok', () => {
         @invariant
         class Base {
-            private _value = NaN;
+            #value = NaN;
 
             protected _valueRescue(_error: any, _args: any[], retry: Function) {
                 return retry(0);
             }
 
-            get value() { return this._value; }
+            get value() { return this.#value; }
             @rescue(Base.prototype._valueRescue)
             set value(value: number) {
                 if(Number.isNaN(value)) {
                     throw new Error('NaN not allowed');
                 }
-                this._value = value;
+                this.#value = value;
             }
         }
         let base = new Base();
@@ -227,11 +227,11 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
     test('rescue of error setter then rethrow throw error at caller', () => {
         @invariant
         class Base {
-            private _value = NaN;
+            #value = NaN;
 
             protected _valueRescue() { throw new Error('Rescue fail'); }
 
-            get value() { return this._value; }
+            get value() { return this.#value; }
             @rescue(Base.prototype._valueRescue)
             set value(_: number) { throw new Error('Setter fail'); }
         }
