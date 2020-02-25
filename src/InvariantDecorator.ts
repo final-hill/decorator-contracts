@@ -52,7 +52,7 @@ export default class InvariantDecorator {
                 return Clazz;
             }
 
-            let registration = DECORATOR_REGISTRY.getOrCreate(Clazz);
+            let registration = DECORATOR_REGISTRY.getOrCreate(innerClass(Clazz));
             if(predicate != undefined) {
                 registration.invariants.push(predicate);
             }

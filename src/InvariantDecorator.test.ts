@@ -57,6 +57,7 @@ describe('There can be multiple invariant decorators assigned to a class', () =>
             }).not.toThrow();
 
             expect(() => {
+                // including falsey invariant but not evaluated
                 @invariant(function(this: Foo) { return this instanceof Foo; })
                 @invariant(function(this: Foo) { return this instanceof Array; })
                 class Foo extends Object {}
