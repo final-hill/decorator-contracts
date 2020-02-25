@@ -5,7 +5,7 @@
  */
 
 import DescriptorWrapper from './DescriptorWrapper';
-import PredicateType from '../typings/PredicateType';
+import type {PredicateType} from '../typings/PredicateType';
 
 export const DECORATOR_REGISTRY = Symbol('Decorator Registry');
 

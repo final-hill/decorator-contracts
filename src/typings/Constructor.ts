@@ -7,6 +7,4 @@
  /**
   * Constructs a type representing a constructor
   */
-type Constructor<T> = new(...args: any[]) => T;
-
-export default Constructor;
+export type Constructor<T> = new(...args: any[]) => T;

@@ -7,7 +7,7 @@
 import MemberDecorator, { MSG_NO_STATIC, MSG_DECORATE_METHOD_ACCESSOR_ONLY, MSG_INVARIANT_REQUIRED} from './MemberDecorator';
 import DescriptorWrapper from './lib/DescriptorWrapper';
 import isClass from './lib/isClass';
-import Constructor from './typings/Constructor';
+import type {Constructor} from './typings/Constructor';
 import { DECORATOR_REGISTRY } from './DECORATOR_REGISTRY';
 
 export const MSG_INVALID_DECORATOR = 'Invalid decorator usage. Function expected';

@@ -6,7 +6,7 @@
 
 import Assertion from './Assertion';
 import { DECORATOR_REGISTRY } from './DECORATOR_REGISTRY';
-import Constructor from './typings/Constructor';
+import type {Constructor} from './typings/Constructor';
 import getAncestry from './lib/getAncestry';
 import innerClass from './lib/innerClass';
 import { TRUE_PRED } from './lib/TRUE_PRED';
