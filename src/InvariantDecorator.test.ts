@@ -644,23 +644,3 @@ describe('The invariant decorator supports use with no arguments', () => {
         }).not.toThrow();
     });
 });
-
-/**
- * Requirement 370
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/370
- */
-describe('@invariant must accept a function that returns a record of invariants', () => {
-    // TODO: Pending deletion
-    // let {invariant} = new Contracts(true);
-
-    // test('Define invariant', () => {
-    //     expect(() => {
-    //         @invariant<Foo>(self => ({
-    //             selfIsFoo: self instanceof Foo
-    //         }))
-    //         class Foo {}
-
-    //         return Foo;
-    //     }).not.toThrow();
-    // });
-});
