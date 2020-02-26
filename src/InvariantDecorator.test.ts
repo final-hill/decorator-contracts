@@ -646,34 +646,6 @@ describe('The invariant decorator supports use with no arguments', () => {
 });
 
 /**
- * Requirement 353
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/353
- */
-describe('Only one @invariant declaration is allowed per class', () => {
-    // TODO: Pending deletion
-    // let {invariant} = new Contracts(true);
-
-    // test('Duplicate declaration', () => {
-    //     expect(() => {
-    //         @invariant
-    //         @invariant
-    //         class Foo {}
-
-    //         return Foo;
-    //     }).toThrow(MSG_DUPLICATE_INVARIANT);
-    // });
-
-    // test('Single declaration', () => {
-    //     expect(() => {
-    //         @invariant
-    //         class Foo {}
-
-    //         return Foo;
-    //     }).not.toThrow();
-    // });
-});
-
-/**
  * Requirement 370
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/370
  */
