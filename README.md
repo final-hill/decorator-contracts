@@ -140,42 +140,52 @@ usage, an `AssertionError` will be thrown. Truthy assertions do not throw an
 error. An example of this is given below using a Stack:
 
 ```typescript
-@invariant<Stack<any>>(self => ({
-    sizeClamped: self.size >= 0 && self.size <= self.limit,
-    emptyHasNoSize: self.isEmpty() == (self.size == 0),
-    fullIsLimited: self.isFull() == (self.size == self.limit)
-}))
+function sizeClamped(this: Stack<any>) {
+    return this.size >= 0 && this.size <= this.limit;
+}
+
+function emptyHasNoSize(this: Stack<any>) {
+    return this.isEmpty() == (this.size == 0);
+}
+
+function fullIsLimited(this: Stack<any>) {
+    return this.isFull() == (this.size == this.limit);
+}
+
+@invariant(sizeClamped)
+@invariant(emptyHasNoSize)
+@invariant(fullIsLimited)
 class Stack<T> {
-    protected _implementation: Array<T> = []
+    #implementation: T[] = [];
 
     constructor(readonly limit: number) {}
 
     clear(): void {
-        this._implementation = []
+        this.#implementation = [];
     }
 
     isEmpty(): boolean {
-        return this._implementation.length == 0
+        return this.#implementation.length == 0;
     }
 
     isFull(): boolean {
-        return this._implementation.length == this.limit
+        return this.#implementation.length == this.limit;
     }
 
     pop(): T {
-        return this._implementation.pop()!
+        return this.#implementation.pop()!;
     }
 
     push(item: T): void {
-        this._implementation.push(item)
+        this.#implementation.push(item);
     }
 
     get size(): number {
-        return this._implementation.length
+        return this.#implementation.length;
     }
 
     top(): T {
-        return this._implementation[this._implementation.length - 1];
+        return this.#implementation[this.#implementation.length - 1];
     }
 }
 ```
@@ -187,16 +197,16 @@ let myStack = new Stack(-1)
 ```
 
 Additionally, attempting to pop an item from an empty stack would be
-nonsensical according to the invariants. Therefore the following will
-throw an AssertionError and prevent pop() from being executed:
+nonsensical according to the invariants therefore the following will
+throw an `AssertionError` and prevent `pop()` from being executed:
 
 ```typescript
 let myStack = new Stack(3)
 let item = myStack.pop();
 ```
 
-Whether you have invariants for a class or not it is necessary to declare one
-anyway on one of the base classes.
+Whether you have invariants for a class or not it is necessary to use the
+decorator anyway on one of the base classes.
 
 ```typescript
 @invariant
@@ -464,9 +474,8 @@ This decorator does not only document and verify that the method is
 overridden; it will also verify that the parameter count matches.
 
 An `@invariant` decorator must also be defined either on the current class
-or on an ancestor. When defined candidate overrides are identified and an
-error is raised if an associated `@override` decorator is missing on that
-feature.
+or on an ancestor. When defined, candidate overrides are identified and an
+error is raised if an associated `@override` is missing on that feature.
 
 Static methods, including the constructor, can not be assigned an `@override`
 decorator. In the future this may be enabled for non-constructor static methods
