@@ -8,7 +8,7 @@
  * Determines if the provided object is a constructor
  */
 const isConstructor = (object: any): boolean => {
-    let P = new Proxy(object, {
+    const P = new Proxy(object, {
         construct() { return this; }
     });
     try {

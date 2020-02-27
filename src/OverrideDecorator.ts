@@ -13,7 +13,7 @@ export const MSG_INVALID_ARG_LENGTH = `An overridden method must have the same n
 export const MSG_NO_MATCHING_FEATURE = `This feature does not override an ancestor feature.`;
 export const MSG_DUPLICATE_OVERRIDE = `Only a single @override decorator can be assigned to a class member`;
 
-let checkedAssert = new Assertion(true).assert;
+const checkedAssert = new Assertion(true).assert;
 
 /**
  * The 'override' decorator asserts that the current class feautre is a specialization or
@@ -26,17 +26,17 @@ export default class OverrideDecorator extends MemberDecorator {
      * @param Clazz - The class constructor
      */
     static checkOverrides(Clazz: Constructor<any>): void {
-        let proto = Clazz.prototype;
+        const proto = Clazz.prototype;
         if(proto == null) {
             return;
         }
 
-        let registry = MemberDecorator.getOrCreateRegistry(Clazz),
+        const registry = MemberDecorator.getOrCreateRegistry(Clazz),
             featureNames = MemberDecorator.featureNames(proto),
             ancestorFeatureNames = this.ancestorFeatureNames(proto);
 
         featureNames.forEach(featureName => {
-            let registration = registry.get(featureName);
+            const registration = registry.get(featureName);
             checkedAssert(
                 (registration != null && registration.overrides) || !ancestorFeatureNames.has(featureName),
                 `@override decorator missing on ${Clazz.name}.${String(featureName)}`
@@ -64,20 +64,20 @@ export default class OverrideDecorator extends MemberDecorator {
             return currentDescriptor;
         }
 
-        let assert = this._assert,
+        const assert = this._assert,
             isStatic = typeof target == 'function',
             dw = new DescriptorWrapper(currentDescriptor);
         assert(!isStatic, MSG_NO_STATIC, TypeError);
 
-        let am = MemberDecorator.ancestorFeature(target, propertyKey);
+        const am = MemberDecorator.ancestorFeature(target, propertyKey);
         assert(am != null && dw.memberType === am.memberType, MSG_NO_MATCHING_FEATURE);
 
-        let Clazz = (target as any).constructor,
+        const Clazz = (target as any).constructor,
             registration = MemberDecorator.registerFeature(Clazz, propertyKey, dw);
         registration.overrides = checkedAssert(!registration.overrides, MSG_DUPLICATE_OVERRIDE);
 
         if(registration.descriptorWrapper.isMethod) {
-            let thisMethod: Function = registration.descriptorWrapper.value,
+            const thisMethod: Function = registration.descriptorWrapper.value,
                 ancMethod: Function = am!.value;
             checkedAssert(thisMethod.length == ancMethod.length, MSG_INVALID_ARG_LENGTH);
         }

@@ -15,7 +15,7 @@ import { MSG_DUPLICATE_INVARIANT } from './InvariantDecorator';
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/132
  */
 describe('The invariant decorator MUST be class decorator only', () => {
-    let {invariant} = new Contracts(true);
+    const {invariant} = new Contracts(true);
 
     test('Define invariant', () => {
         expect(() => {
@@ -44,7 +44,7 @@ describe('The invariant decorator MUST be class decorator only', () => {
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/133
  */
 describe('There can be multiple invariant decorators assigned to a class', () => {
-    let invariants = [
+    const invariants = [
         new Contracts(true).invariant,
         new Contracts(false).invariant
     ];
@@ -74,7 +74,7 @@ describe('There can be multiple invariant decorators assigned to a class', () =>
     });
 
     test('Constructing with multiple invariants in debug mode', () => {
-        let {invariant} = new Contracts(true);
+        const {invariant} = new Contracts(true);
 
         expect(() => {
             @invariant<Foo>(self => ({
@@ -109,7 +109,7 @@ describe('There can be multiple invariant decorators assigned to a class', () =>
     });
 
     test('Constructing with multiple invariants in prod mode', () => {
-        let {invariant} = new Contracts(false);
+        const {invariant} = new Contracts(false);
 
         expect(() => {
             @invariant<Foo>(self => ({
@@ -150,7 +150,7 @@ describe('There can be multiple invariant decorators assigned to a class', () =>
  */
 describe('The subclasses of an invariant decorated class must obey the invariant', () => {
     test('Test subclassing in debug mode', () => {
-        let {invariant, override} = new Contracts(true);
+        const {invariant, override} = new Contracts(true);
 
         @invariant<Foo>(self => ({
             nonNegative: self.value >= 0
@@ -166,29 +166,29 @@ describe('The subclasses of an invariant decorated class must obey the invariant
         class Bar extends Foo {}
 
         expect(() => {
-            let bar = new Bar();
+            const bar = new Bar();
             bar.inc();
             bar.dec();
         }).not.toThrow();
 
         expect(() => {
-            let bar = new Bar();
+            const bar = new Bar();
             bar.dec();
         }).toThrow(AssertionError);
 
         expect(() => {
-            let bar = new Bar();
+            const bar = new Bar();
             bar.value = 3;
         }).not.toThrow();
 
         expect(() => {
-            let bar = new Bar();
+            const bar = new Bar();
 
             return bar.value == 0;
         }).not.toThrow(AssertionError);
 
         expect(() => {
-            let bar = new Bar();
+            const bar = new Bar();
             bar.value = -1;
         }).toThrow(AssertionError);
 
@@ -204,35 +204,35 @@ describe('The subclasses of an invariant decorated class must obey the invariant
         }
 
         expect(() => {
-            let baz = new Baz();
+            const baz = new Baz();
             baz.inc();
             baz.dec();
         }).not.toThrow();
 
         expect(() => {
-            let baz = new Baz();
+            const baz = new Baz();
             baz.dec();
         }).toThrow(AssertionError);
 
         expect(() => {
-            let baz = new Baz();
+            const baz = new Baz();
             baz.value = 3;
         }).not.toThrow();
 
         expect(() => {
-            let baz = new Baz();
+            const baz = new Baz();
 
             return baz.value == 0;
         }).not.toThrow(AssertionError);
 
         expect(() => {
-            let baz = new Baz();
+            const baz = new Baz();
             baz.value = -1;
         }).toThrow(AssertionError);
     });
 
     test('Test subclassing in prod mode', () => {
-        let {invariant} = new Contracts(false);
+        const {invariant} = new Contracts(false);
         @invariant<Foo>(self => ({
             nonNegative: self.value >= 0
         }))
@@ -247,29 +247,29 @@ describe('The subclasses of an invariant decorated class must obey the invariant
         class Bar extends Foo {}
 
         expect(() => {
-            let bar = new Bar();
+            const bar = new Bar();
             bar.inc();
             bar.dec();
         }).not.toThrow();
 
         expect(() => {
-            let bar = new Bar();
+            const bar = new Bar();
             bar.dec();
         }).not.toThrow();
 
         expect(() => {
-            let bar = new Bar();
+            const bar = new Bar();
             bar.value = 3;
         }).not.toThrow();
 
         expect(() => {
-            let bar = new Bar();
+            const bar = new Bar();
 
             return bar.value == 0;
         }).not.toThrow(AssertionError);
 
         expect(() => {
-            let bar = new Bar();
+            const bar = new Bar();
             bar.value = -1;
         }).not.toThrow(AssertionError);
     });
@@ -280,7 +280,7 @@ describe('The subclasses of an invariant decorated class must obey the invariant
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/135
  */
 describe('A truthy invariant does not throw an exception when evaluated', () => {
-    let invariants = [
+    const invariants = [
         new Contracts(true).invariant,
         new Contracts(false).invariant
     ];
@@ -309,7 +309,7 @@ describe('A truthy invariant does not throw an exception when evaluated', () => 
                     inc() { this.value++; }
                 }
 
-                let foo = new Foo();
+                const foo = new Foo();
                 foo.inc();
                 foo.dec();
 
@@ -326,7 +326,7 @@ describe('A truthy invariant does not throw an exception when evaluated', () => 
 describe('A falsy invariant throws an exception when evaluated', () => {
 
     test('Construction throws in checkMode', () => {
-        let {invariant} = new Contracts(true);
+        const {invariant} = new Contracts(true);
 
         expect(() => {
             @invariant<Foo>(self => ({
@@ -339,7 +339,7 @@ describe('A falsy invariant throws an exception when evaluated', () => {
     });
 
     test('Construction does not throw in production mode', () => {
-        let {invariant} = new Contracts(false);
+        const {invariant} = new Contracts(false);
 
         expect(() => {
             @invariant<Foo>(self => ({
@@ -352,7 +352,7 @@ describe('A falsy invariant throws an exception when evaluated', () => {
     });
 
     test('Method throws in checkMode', () => {
-        let {invariant} = new Contracts(true);
+        const {invariant} = new Contracts(true);
 
         expect(() => {
             @invariant<Foo>(self => ({
@@ -365,7 +365,7 @@ describe('A falsy invariant throws an exception when evaluated', () => {
                 inc() { this.value++; }
             }
 
-            let foo = new Foo();
+            const foo = new Foo();
             foo.inc();
             foo.dec();
 
@@ -374,7 +374,7 @@ describe('A falsy invariant throws an exception when evaluated', () => {
     });
 
     test('Method does not throw in production mode', () => {
-        let {invariant} = new Contracts(false);
+        const {invariant} = new Contracts(false);
 
         expect(() => {
             @invariant<Foo>(self => ({
@@ -387,7 +387,7 @@ describe('A falsy invariant throws an exception when evaluated', () => {
                 inc() { this.value++; }
             }
 
-            let foo = new Foo();
+            const foo = new Foo();
             foo.inc();
             foo.dec();
 
@@ -402,7 +402,7 @@ describe('A falsy invariant throws an exception when evaluated', () => {
  */
 describe('An invariant is evaluated after it\'s associated class is constructed', () => {
     test('truthy construction does not throw in debug and prod mode', () => {
-        let invariants = [
+        const invariants = [
             new Contracts(true).invariant,
             new Contracts(false).invariant
         ];
@@ -420,7 +420,7 @@ describe('An invariant is evaluated after it\'s associated class is constructed'
     });
 
     test('falsy construction throws in debug mode', () => {
-        let {invariant} = new Contracts(true);
+        const {invariant} = new Contracts(true);
 
         expect(() => {
             @invariant<Foo>(self => ({
@@ -433,7 +433,7 @@ describe('An invariant is evaluated after it\'s associated class is constructed'
     });
 
     test('falsy construction does not throw in prod mode', () => {
-        let {invariant} = new Contracts(false);
+        const {invariant} = new Contracts(false);
 
         expect(() => {
             @invariant<Foo>(self => ({
@@ -453,7 +453,7 @@ describe('An invariant is evaluated after it\'s associated class is constructed'
  */
 describe('An invariant is evaluated before and after every method call on the associated class', () => {
     test('Test method call in checkMode', () => {
-        let {invariant} = new Contracts(true);
+        const {invariant} = new Contracts(true);
 
         @invariant<Foo>(self => ({
             nonNegative: self.value >= 0
@@ -465,7 +465,7 @@ describe('An invariant is evaluated before and after every method call on the as
             dec() { this._value--; }
         }
 
-        let foo = new Foo();
+        const foo = new Foo();
 
         expect(() => {
             foo.inc();
@@ -481,7 +481,7 @@ describe('An invariant is evaluated before and after every method call on the as
     });
 
     test('Test method call in prodMode', () => {
-        let {invariant} = new Contracts(false);
+        const {invariant} = new Contracts(false);
 
         @invariant<Foo>(self => ({
             nonNegative: self.value >= 0
@@ -493,7 +493,7 @@ describe('An invariant is evaluated before and after every method call on the as
             dec() { this._value--; }
         }
 
-        let foo = new Foo();
+        const foo = new Foo();
 
         expect(() => {
             foo.inc();
@@ -529,7 +529,7 @@ describe('The invariant decorator has a debug mode and production mode', () => {
  */
 describe('In debug mode the invariant decorator evaluates its assertions', () => {
     test('Construction throws in checkMode', () => {
-        let {invariant} = new Contracts(true);
+        const {invariant} = new Contracts(true);
 
         expect(() => {
             @invariant<Foo>(self => ({
@@ -542,7 +542,7 @@ describe('In debug mode the invariant decorator evaluates its assertions', () =>
     });
 
     test('Method throws in checkMode', () => {
-        let {invariant} = new Contracts(true);
+        const {invariant} = new Contracts(true);
 
         expect(() => {
             @invariant<Foo>(self => ({
@@ -555,7 +555,7 @@ describe('In debug mode the invariant decorator evaluates its assertions', () =>
                 inc() { this.value++; }
             }
 
-            let foo = new Foo();
+            const foo = new Foo();
             foo.inc();
             foo.dec();
 
@@ -564,7 +564,7 @@ describe('In debug mode the invariant decorator evaluates its assertions', () =>
     });
 
     test('Test getter/setter', () => {
-        let {invariant} = new Contracts(true);
+        const {invariant} = new Contracts(true);
 
         @invariant<Foo>(self => ({
             nonNegative: self.value >= 0
@@ -575,7 +575,7 @@ describe('In debug mode the invariant decorator evaluates its assertions', () =>
             set value(value: number) { this._value = value; }
         }
 
-        let foo = new Foo();
+        const foo = new Foo();
 
         expect(() => {
             foo.value = 3;
@@ -592,7 +592,7 @@ describe('In debug mode the invariant decorator evaluates its assertions', () =>
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/148
  */
 describe('In production mode the invariant decorator does not evaluate its assertions', () => {
-    let {invariant} = new Contracts(false);
+    const {invariant} = new Contracts(false);
 
     test('Construction does not throw', () => {
         expect(() => {
@@ -617,7 +617,7 @@ describe('In production mode the invariant decorator does not evaluate its asser
                 inc() { this.value++; }
             }
 
-            let foo = new Foo();
+            const foo = new Foo();
             foo.inc();
             foo.dec();
 
@@ -632,7 +632,7 @@ describe('In production mode the invariant decorator does not evaluate its asser
  */
 describe('A subclass with its own invariants must enforce all ancestor invariants', () => {
     test('Debug Mode', () => {
-        let {invariant} = new Contracts(true);
+        const {invariant} = new Contracts(true);
 
         expect(() => {
             @invariant<Base>(self => ({
@@ -685,7 +685,7 @@ describe('A subclass with its own invariants must enforce all ancestor invariant
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/199
  */
 describe('The invariant decorator supports use with no arguments', () => {
-    let invariants = [
+    const invariants = [
         new Contracts(true).invariant,
         new Contracts(false).invariant
     ];
@@ -705,7 +705,7 @@ describe('The invariant decorator supports use with no arguments', () => {
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/353
  */
 describe('Only one @invariant declaration is allowed per class', () => {
-    let {invariant} = new Contracts(true);
+    const {invariant} = new Contracts(true);
 
     test('Duplicate declaration', () => {
         expect(() => {
@@ -732,7 +732,7 @@ describe('Only one @invariant declaration is allowed per class', () => {
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/370
  */
 describe('@invariant must accept a function that returns a record of invariants', () => {
-    let {invariant} = new Contracts(true);
+    const {invariant} = new Contracts(true);
 
     test('Define invariant', () => {
         expect(() => {

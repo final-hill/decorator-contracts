@@ -29,19 +29,19 @@ export default class EnsuresDecorator extends MemberDecorator {
      * @param predicate
      */
     ensures(predicate: PredicateType) {
-        let self = this,
+        const self = this,
             assert = this._assert;
         this._checkedAssert(typeof predicate == 'function', MSG_INVALID_DECORATOR);
 
         return function(target: any, propertyKey: PropertyKey, currentDescriptor: PropertyDescriptor): PropertyDescriptor {
-            let isStatic = typeof target == 'function';
+            const isStatic = typeof target == 'function';
             assert(!isStatic, MSG_NO_STATIC, TypeError);
 
             if(!self.checkMode) {
                 return currentDescriptor;
             }
 
-            let Clazz = (target as any).constructor,
+            const Clazz = (target as any).constructor,
                 dw = new DescriptorWrapper(currentDescriptor),
                 registration = MemberDecorator.registerFeature(Clazz, propertyKey, dw);
 
