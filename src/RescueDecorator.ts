@@ -25,8 +25,8 @@ export type RescueType = (error: any, args: any[], retry: Function) => void;
 export default class RescueDecorator extends MemberDecorator {
     /**
      * Returns an instance of the 'rescue' decorator in the specified mode.
-     * When debugMode is true the decorator is enabled.
-     * When debugMode is false the decorator has no effect
+     * When checkMode is true the decorator is enabled.
+     * When checkMode is false the decorator has no effect
      *
      * @param checkMode - A flag representing mode of the decorator
      */

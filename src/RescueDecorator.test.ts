@@ -244,7 +244,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
  * Requirement 434
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/434
  */
-describe('The @rescue constructor has a debugMode that enables its execution', () => {
+describe('The @rescue constructor has a checked mode that enables its execution', () => {
     test('enabled', () => {
         let {invariant, rescue} = new Contracts(true);
 
