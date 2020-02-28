@@ -24,15 +24,22 @@
     "url": "https://thenewobjective@dev.azure.com/thenewobjective/decorator-contracts/_git/decorator-contracts"
   },
   "keywords": [
+    "assertion",
     "code-contracts",
-    "contracts",
     "decorators",
-    "test",
-    "assert",
-    "require",
+    "demands",
+    "design-by-contract",
     "invariant",
+    "liskov-substitution-principle",
+    "LSP",
+    "open-closed-principle",
+    "organized-panic",
+    "overrides",
     "precondition",
-    "postcondition"
+    "postcondition",
+    "rescue",
+    "requires",
+    "SOLID"
   ],
   "author": "Michael L Haufe <tno@thenewobjective.com> (https://thenewobjective.com)",
   "license": "AGPL-1.0-only",
