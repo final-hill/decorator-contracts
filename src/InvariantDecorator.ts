@@ -40,7 +40,7 @@ export default class InvariantDecorator {
     invariant<T extends Constructor<any>>(Base: T): T;
     invariant<Self>(fnPredTable: FnPredTable<Self>): ClassDecorator;
     invariant<U extends (Constructor<any> | any)>(fn: Function | Constructor<any>) {
-        let predTable = isClass(fn) ? TRUE_PRED : fn as FnPredTable<U>,
+        const predTable = isClass(fn) ? TRUE_PRED : fn as FnPredTable<U>,
             Clazz = isClass(fn) ? innerClass(fn as Constructor<any>) : undefined,
             assert = this._assert,
             checkMode = this.checkMode,
@@ -56,10 +56,10 @@ export default class InvariantDecorator {
                 return Clazz;
             }
 
-            let hasInvariant = DECORATOR_REGISTRY.has(Clazz);
+            const hasInvariant = DECORATOR_REGISTRY.has(Clazz);
             assert(!hasInvariant, MSG_DUPLICATE_INVARIANT);
 
-            let handler: ContractHandler = new ContractHandler(assert);
+            const handler: ContractHandler = new ContractHandler(assert);
 
             // TODO: move to registry
             (Clazz as DecoratedConstructor)[CONTRACT_HANDLER] = handler;
@@ -67,15 +67,15 @@ export default class InvariantDecorator {
             DECORATOR_REGISTRY.set(Clazz, { isRestored: false, invariant: predTable });
 
             // TODO: lift
-            let ClazzProxy = new Proxy((Clazz as DecoratedConstructor), {
+            const ClazzProxy = new Proxy((Clazz as DecoratedConstructor), {
                 construct(Target: Constructor<any>, args: any[], NewTarget: Constructor<any>) {
-                    let ancestry = getAncestry(NewTarget).reverse();
+                    const ancestry = getAncestry(NewTarget).reverse();
                     ancestry.forEach(Cons => {
-                        let InnerClass = innerClass(Cons);
+                        const InnerClass = innerClass(Cons);
                         if(!DECORATOR_REGISTRY.has(InnerClass)) {
                             DECORATOR_REGISTRY.set(InnerClass, {isRestored: false, invariant: TRUE_PRED});
                         }
-                        let registration = DECORATOR_REGISTRY.get(InnerClass)!;
+                        const registration = DECORATOR_REGISTRY.get(InnerClass)!;
                         if(!registration.isRestored) {
                             OverrideDecorator.checkOverrides(InnerClass);
                             MemberDecorator.restoreFeatures(InnerClass);
@@ -84,7 +84,7 @@ export default class InvariantDecorator {
                     });
 
                     // https://stackoverflow.com/a/43104489/153209
-                    let obj = Reflect.construct(Target, args, NewTarget);
+                    const obj = Reflect.construct(Target, args, NewTarget);
                     handler.assertInvariants(obj);
 
                     return new Proxy(obj, handler);

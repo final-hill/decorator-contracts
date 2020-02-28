@@ -15,7 +15,7 @@ import { MSG_INVARIANT_REQUIRED } from './MemberDecorator';
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/210
  */
 describe('The override decorator is a non-static member decorator only', () => {
-    let {override} = new Contracts(true);
+    const {override} = new Contracts(true);
 
     test('class decorator throws', () => {
         expect(() => {
@@ -59,7 +59,7 @@ describe('The override decorator is a non-static member decorator only', () => {
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/211
  */
 describe('In production mode the @override decorator is a no-op', () => {
-    let {override} = new Contracts(false);
+    const {override} = new Contracts(false);
 
     test('base class with @override decorator', () => {
         expect(() => {
@@ -78,7 +78,7 @@ describe('In production mode the @override decorator is a no-op', () => {
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/212
  */
 describe('Using @override on a class member with no ancestor member is an error', () => {
-    let {override} = new Contracts(true);
+    const {override} = new Contracts(true);
 
     test('base class with @override decorator', () => {
         expect(() => {
@@ -126,7 +126,7 @@ describe('Using @override on a class member with no ancestor member is an error'
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/214
  */
 describe('using @override on a method with an ancestor with a different parameter count is an error', () => {
-    let {invariant, override} = new Contracts(true);
+    const {invariant, override} = new Contracts(true);
 
     test('bad override', () => {
         expect(() => {
@@ -194,7 +194,7 @@ describe('using @override on a method with an ancestor with a different paramete
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/215
  */
 describe('A subclass with an overriding member missing @override is an error', () => {
-    let {invariant, override} = new Contracts(true);
+    const {invariant, override} = new Contracts(true);
 
     test('@override defined', () => {
         expect(() => {
@@ -251,7 +251,7 @@ describe('A subclass with an overriding member missing @override is an error', (
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/337
  */
 describe('Only a single @override can be assigned to a member per class', () => {
-    let {override} = new Contracts(true);
+    const {override} = new Contracts(true);
 
     test('duplicate @override', () => {
         expect(() => {
@@ -305,7 +305,7 @@ describe('Only a single @override can be assigned to a member per class', () => 
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/341
  */
 describe('Accessors must support @override', () => {
-    let {invariant, override} = new Contracts(true);
+    const {invariant, override} = new Contracts(true);
 
     test('instance accessor decorator does not throw', () => {
         expect(() => {
@@ -353,7 +353,7 @@ describe('Accessors must support @override', () => {
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/346
  */
 describe('A class with an @override defined must also have an @invariant defined', () => {
-    let {invariant, override} = new Contracts(true);
+    const {invariant, override} = new Contracts(true);
 
     test('override without invariant throws on usage', () => {
         class Base {
@@ -365,7 +365,7 @@ describe('A class with an @override defined must also have an @invariant defined
             method() { return 2; }
         }
 
-        let sub = new Sub();
+        const sub = new Sub();
         expect(() => sub.method()).toThrow(MSG_INVARIANT_REQUIRED);
     });
 
@@ -380,7 +380,7 @@ describe('A class with an @override defined must also have an @invariant defined
             method() { return 2; }
         }
 
-        let sub = new Sub();
+        const sub = new Sub();
         expect(sub.method()).toBe(2);
     });
 });

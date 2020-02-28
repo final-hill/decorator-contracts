@@ -128,6 +128,7 @@
             "check-whitespace"
         ],
         "one-variable-per-declaration": false,
+        "prefer-const": true,
         "prefer-for-of": true,
         "prefer-method-signature": true,
         "prefer-object-spread": true,
@@ -146,7 +147,7 @@
             "ignore-interfaces"
         ],
         "space-before-function-paren": false,
-        "space-within-parens": 0,
+        "space-within-parens": [true, 0],
         "strict-boolean-expressions": true,
         "switch-default": true,
         "trailing-comma": false,

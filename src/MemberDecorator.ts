@@ -22,7 +22,7 @@ function fnInvariantRequired(): void {
     throw new AssertionError(MSG_INVARIANT_REQUIRED);
 }
 
-let checkedAssert = new Assertion(true).assert;
+const checkedAssert = new Assertion(true).assert;
 
 export default abstract class MemberDecorator {
     /**
@@ -33,12 +33,12 @@ export default abstract class MemberDecorator {
      * @param propertyKey - The name of the feature to search for
      */
     static ancestorFeature(targetProto: any, propertyKey: PropertyKey): DescriptorWrapper | null {
-        let proto = Object.getPrototypeOf(targetProto);
+        const proto = Object.getPrototypeOf(targetProto);
         if(proto == null) {
             return null;
         }
 
-        let registry = MemberDecorator.getOrCreateRegistry(proto.constructor),
+        const registry = MemberDecorator.getOrCreateRegistry(proto.constructor),
             descriptorWrapper = registry.has(propertyKey) ?
                 registry.get(propertyKey)!.descriptorWrapper :
                 new DescriptorWrapper(Object.getOwnPropertyDescriptor(proto, propertyKey)!);
@@ -53,7 +53,7 @@ export default abstract class MemberDecorator {
         if(targetProto == null) {
             return new Set();
         }
-        let proto = Object.getPrototypeOf(targetProto);
+        const proto = Object.getPrototypeOf(targetProto);
 
         return proto == null ? new Set() :
             new Set([...this.featureNames(proto), ...this.ancestorFeatureNames(proto)]);
@@ -66,7 +66,7 @@ export default abstract class MemberDecorator {
         return proto == null ? new Set() : new Set(
             Object.entries(Object.getOwnPropertyDescriptors(proto))
             .filter(([key, descriptor]) => {
-                let dw = new DescriptorWrapper(descriptor);
+                const dw = new DescriptorWrapper(descriptor);
 
                 return (dw.isMethod || dw.isAccessor) && key != 'constructor';
             })
@@ -96,7 +96,7 @@ export default abstract class MemberDecorator {
      * @param descriptorWrapper
      */
     static registerFeature(Clazz: Constructor<any>, propertyKey: PropertyKey, descriptorWrapper: DescriptorWrapper): IDecoratorRegistration {
-        let decoratorRegistry = this.getOrCreateRegistry(Clazz),
+        const decoratorRegistry = this.getOrCreateRegistry(Clazz),
             registration = decoratorRegistry.getOrCreate(propertyKey, {...descriptorWrapper.descriptor});
 
         // Potentially undefined in pre ES5 environments (compilation target)
@@ -118,7 +118,7 @@ export default abstract class MemberDecorator {
     }
 
     static getAncestorRegistration(Clazz: Constructor<any>, propertyKey: PropertyKey) {
-        let Base = Object.getPrototypeOf(Clazz),
+        const Base = Object.getPrototypeOf(Clazz),
             ancestry = getAncestry(Base),
             AncestorRegistryClazz = ancestry.find(Clazz =>
                 this.getOrCreateRegistry(Clazz).has(propertyKey)
@@ -130,7 +130,7 @@ export default abstract class MemberDecorator {
 
     // TODO unify these to methods and then deprecate by inlining.
     static getAllAncestorDemands(Class: Constructor<any>, propertyKey: PropertyKey): PredicateType[][] {
-        let Base = Object.getPrototypeOf(Class),
+        const Base = Object.getPrototypeOf(Class),
             ancestry = getAncestry(Base),
             ancestorRegistrations = ancestry.filter(Class =>
                 this.getOrCreateRegistry(Class).has(propertyKey)
@@ -142,7 +142,7 @@ export default abstract class MemberDecorator {
     }
 
     static getAllAncestorEnsures(Class: Constructor<any>, propertyKey: PropertyKey): PredicateType[][] {
-        let Base = Object.getPrototypeOf(Class),
+        const Base = Object.getPrototypeOf(Class),
             ancestry = getAncestry(Base),
             ancestorRegistrations = ancestry.filter(Class =>
                 this.getOrCreateRegistry(Class).has(propertyKey)
@@ -160,15 +160,15 @@ export default abstract class MemberDecorator {
      * @param Clazz
      */
     static restoreFeatures(Clazz: Constructor<any>): void {
-        let proto = Clazz.prototype;
+        const proto = Clazz.prototype;
         if(proto == null) {
             return;
         }
 
         // TODO: optimize
-        let registry = this.getOrCreateRegistry(Clazz);
+        const registry = this.getOrCreateRegistry(Clazz);
         registry.forEach((registration, propertyKey) => {
-            let {descriptorWrapper} = registration,
+            const {descriptorWrapper} = registration,
                 allAncDemands = this.getAllAncestorDemands(Clazz, propertyKey),
                 allAncEnsures = this.getAllAncestorEnsures(Clazz, propertyKey),
                 allDemands = registration.demands.length > 0 ? [registration.demands, ...allAncDemands] : allAncDemands,
@@ -179,7 +179,7 @@ export default abstract class MemberDecorator {
                 demandsError = `Precondition failed on ${Clazz.name}.prototype.${String(propertyKey)}`,
                 ensuresError = `Postcondition failed on ${Clazz.name}.prototype.${String(propertyKey)}`;
 
-            let checkedFeature = (feature: Function) => function(this: typeof newDescriptor, ...args: any[]) {
+            const checkedFeature = (feature: Function) => function(this: typeof newDescriptor, ...args: any[]) {
                 if(allDemands.length > 0) {
                     checkedAssert(
                         allDemands.some(
@@ -191,7 +191,7 @@ export default abstract class MemberDecorator {
                     );
                 }
 
-                let result = feature.apply(this, args);
+                const result = feature.apply(this, args);
 
                 if(allEnsures.length > 0) {
                     checkedAssert(
@@ -208,13 +208,13 @@ export default abstract class MemberDecorator {
             };
 
             if(descriptorWrapper.isMethod) {
-                let feature: Function = originalDescriptor.value;
+                const feature: Function = originalDescriptor.value;
                 newDescriptor.value = checkedFeature(feature);
             } else if(descriptorWrapper.hasGetter) {
-                let feature: Function = originalDescriptor.get!;
+                const feature: Function = originalDescriptor.get!;
                 newDescriptor.get = checkedFeature(feature);
             } else if(descriptorWrapper.hasSetter) {
-                let feature: Function = originalDescriptor.set!;
+                const feature: Function = originalDescriptor.set!;
                 newDescriptor.set = checkedFeature(feature);
             } else {
                 throw new Error(`Unhandled condition. Unable to restore ${Clazz.name}.prototype.${String(propertyKey)}`);
