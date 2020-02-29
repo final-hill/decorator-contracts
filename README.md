@@ -23,7 +23,14 @@
 
 ## Introduction
 
-TODO
+Decorator Contracts is a library that provides the ability to create and assign
+Code Contracts to ECMAScript and TypeScript classes. This enables
+enforcement of the
+[Liskov substitution principle](https://en.wikipedia.org/wiki/Liskov_substitution_principle)
+and the
+[Open-closed principle](https://en.wikipedia.org/wiki/Open%E2%80%93closed_principle)
+of [SOLID](https://en.wikipedia.org/wiki/SOLID) to support
+[Design By Contract™](https://en.wikipedia.org/wiki/Design_by_contract).
 
 ## Library Installation
 
