@@ -93,7 +93,10 @@ export default class InvariantDecorator {
                         : property;
                 },
                 ownKeys(target) {
-                    return Reflect.ownKeys(target).concat([IS_PROXY, INNER_CLASS]);
+                    let ownSet = new Set(Reflect.ownKeys(target));
+                    ownSet.add(IS_PROXY).add(INNER_CLASS);
+
+                    return [...ownSet];
                 }
             });
 
