@@ -6,6 +6,7 @@
   "scripts": {
     "prebuild": "npm run clean && npm run lint",
     "build": "npm run build-types && parcel build src/index.ts",
+    "build-changelog": "node ./scripts/commands.js build-changelog",
     "prebuild-nofix": "npm run clean && npm run lint-nofix",
     "build-nofix": "npm run build-types && parcel build src/index.ts",
     "build-types": "tsc -p tsconfig.json --emitDeclarationOnly --outDir dist",
@@ -49,7 +50,9 @@
     "@babel/preset-env": "^7.8.4",
     "@babel/preset-typescript": "^7.8.3",
     "@types/jest": "^24.9.1",
+    "@types/node": "^13.9.0",
     "babel-jest": "^24.9.0",
+    "commander": "^4.1.1",
     "jest": "^24.9.0",
     "jest-junit": "^8.0.0",
     "parcel-bundler": "^1.12.4",
