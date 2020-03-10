@@ -10,7 +10,7 @@
     "prebuild-nofix": "npm run clean && npm run lint-nofix",
     "build-nofix": "npm run build-types && parcel build src/index.ts",
     "build-types": "tsc -p tsconfig.json --emitDeclarationOnly --outDir dist",
-    "clean": "rimraf dist && rimraf coverage",
+    "clean": "rimraf dist && rimraf coverage && rimraf CHANGELOG.md",
     "clean-full": "npm run clean && rimraf .cache && rimraf node_modules",
     "debug": "node --debug-brk --inspect ./node_modules/jest/bin/jest -i",
     "prelint": "npm run type-check",
