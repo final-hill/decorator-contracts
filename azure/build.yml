@@ -26,6 +26,11 @@ steps:
   displayName: 'npm run build-nofix'
 
 - script: |
+    npm run build-changelog
+  workingDirectory: ./
+  displayName: 'npm run build-changelog'
+
+- script: |
     npm run test
   workingDirectory: ./
   displayName: 'npm run test'

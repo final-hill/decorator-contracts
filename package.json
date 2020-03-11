@@ -6,10 +6,11 @@
   "scripts": {
     "prebuild": "npm run clean && npm run lint",
     "build": "npm run build-types && parcel build src/index.ts",
+    "build-changelog": "node ./scripts/commands.js build-changelog",
     "prebuild-nofix": "npm run clean && npm run lint-nofix",
     "build-nofix": "npm run build-types && parcel build src/index.ts",
     "build-types": "tsc -p tsconfig.json --emitDeclarationOnly --outDir dist",
-    "clean": "rimraf dist && rimraf coverage",
+    "clean": "rimraf dist && rimraf coverage && rimraf CHANGELOG.md",
     "clean-full": "npm run clean && rimraf .cache && rimraf node_modules",
     "debug": "node --debug-brk --inspect ./node_modules/jest/bin/jest -i",
     "prelint": "npm run type-check",
@@ -44,19 +45,21 @@
   "author": "Michael L Haufe <tno@thenewobjective.com> (https://thenewobjective.com)",
   "license": "AGPL-1.0-only",
   "devDependencies": {
-    "@babel/core": "^7.8.4",
+    "@babel/core": "^7.8.7",
     "@babel/plugin-proposal-class-properties": "^7.8.3",
-    "@babel/preset-env": "^7.8.4",
+    "@babel/preset-env": "^7.8.7",
     "@babel/preset-typescript": "^7.8.3",
     "@types/jest": "^24.9.1",
+    "@types/node": "^13.9.0",
     "babel-jest": "^24.9.0",
-    "jest": "^24.9.0",
+    "commander": "^4.1.1",
+    "jest": "^25.1.0",
     "jest-junit": "^8.0.0",
     "parcel-bundler": "^1.12.4",
     "rimraf": "^3.0.2",
     "ts-jest": "^24.3.0",
     "tslint": "^5.20.1",
-    "typescript": "^3.8.2"
+    "typescript": "^3.8.3"
   },
   "dependencies": {},
   "files": [
