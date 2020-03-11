@@ -628,6 +628,11 @@ The development dependencies are as follows:
 | `tslint`         | TypeScript linting library                            |
 | `typescript`     | TypeScript compiler                                   |
 
+If you're using Windows and a newer version of NodeJS then you may additionally
+need to run the following command due to a transitive dependency on [node-gyp](https://github.com/nodejs/node-gyp):
+
+`npm install -g windows-build-tools`
+
 ## Further Reading
 
 - [Design by Contract](https://en.wikipedia.org/wiki/Design_by_contract)
