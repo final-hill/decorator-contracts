@@ -349,38 +349,40 @@ describe('Accessors must support @override', () => {
 });
 
 /**
- * Requirement 346
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/346
+ * Requirement 539
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/539
  */
-describe('A class with an @override defined must also have an @invariant defined', () => {
+describe('A class feature with a decorator must not be functional until the @invariant is defined', () => {
     let {invariant, override} = new Contracts(true);
 
-    test('override without invariant throws on usage', () => {
-        class Base {
-            method() { return 1; }
-        }
+    @invariant
+    class Base {
+        method(value: number) { return value; }
+    }
 
-        class Sub extends Base {
-            @override
-            method() { return 2; }
-        }
+    class Okay extends Base {
+        @override
+        method(value: number) { return value; }
+    }
 
-        let sub = new Sub();
-        expect(() => sub.method()).toThrow(MSG_INVARIANT_REQUIRED);
+    test('Valid declaration', () => {
+        let okay = new Okay();
+
+        expect(okay.method(15)).toBe(15);
     });
 
-    test('override with invariant defined does not throw', () => {
-        @invariant
-        class Base {
-            method() { return 1; }
-        }
+    class BadBase {
+        method(value: number) { return value; }
+    }
 
-        class Sub extends Base {
-            @override
-            method() { return 2; }
-        }
+    class Fail extends BadBase {
+        @override
+        method(value: number) { return value; }
+    }
 
-        let sub = new Sub();
-        expect(sub.method()).toBe(2);
+    test('Invalid declaration', () => {
+        let fail = new Fail();
+
+        expect(() => fail.method(15)).toThrow(MSG_INVARIANT_REQUIRED);
     });
 });

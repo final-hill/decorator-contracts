@@ -7,7 +7,7 @@
  */
 
 import Contracts from '.';
-import { MSG_NO_STATIC } from './MemberDecorator';
+import { MSG_NO_STATIC, MSG_INVARIANT_REQUIRED } from './MemberDecorator';
 import AssertionError from './AssertionError';
 
 /**
@@ -284,5 +284,36 @@ describe('Preconditions cannot be strengthened in a subtype', () => {
             `Precondition failed on Stronger.prototype.method`
         );
         expect(stronger.method(25)).toBe(25);
+    });
+});
+
+/**
+ * Requirement 539
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/539
+ */
+describe('A class feature with a decorator must not be functional until the @invariant is defined', () => {
+    let {invariant, demands} = new Contracts(true);
+
+    @invariant
+    class Okay {
+        @demands((value: number) => 10 <= value && value <= 30)
+        method(value: number) { return value; }
+    }
+
+    test('Valid declaration', () => {
+        let okay = new Okay();
+
+        expect(okay.method(15)).toBe(15);
+    });
+
+    class Fail {
+        @demands((value: number) => 10 <= value && value <= 30)
+        method(value: number) { return value; }
+    }
+
+    test('Invalid declaration', () => {
+        let fail = new Fail();
+
+        expect(() => fail.method(15)).toThrow(MSG_INVARIANT_REQUIRED);
     });
 });
