@@ -11,40 +11,9 @@ import { MSG_DUPLICATE_RESCUE, MSG_SINGLE_RETRY } from './RescueDecorator';
 import { MSG_INVARIANT_REQUIRED } from './MemberDecorator';
 
 /**
- * Requirement 398
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/398
+ * Requirement 399
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/399
  */
-describe('A feature with a @rescue defined must also have an @invariant defined on its class or ancestor class', () => {
-    let {invariant, rescue} = new Contracts(true);
-
-    test('Missing @invariant throws', () => {
-        expect(() => {
-            class Base {
-                @rescue(() => {})
-                method() {}
-            }
-
-            return new Base().method();
-        }).toThrow(MSG_INVARIANT_REQUIRED);
-    });
-
-    test('@rescue w/ @invariant on same class okay', () => {
-        expect(() => {
-            @invariant
-            class Base {
-                @rescue(() => {})
-                method() {}
-            }
-
-            return new Base().method();
-        }).not.toThrow();
-    });
-});
-
- /**
-  * Requirement 399
-  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/399
-  */
 describe('@rescue is a non-static member decorator only', () => {
     let {rescue} = new Contracts(true);
 
@@ -82,7 +51,7 @@ describe('@rescue is a non-static member decorator only', () => {
             return Sub;
         }).not.toThrow();
     });
- });
+});
 
 /**
  * Requirement 400
@@ -364,5 +333,36 @@ describe('The \'retry\' argument of the @rescue function can only be called once
         }
         let base = new Base();
         expect(() => { base.method(0); }).toThrow(MSG_SINGLE_RETRY);
+    });
+});
+
+/**
+ * Requirement 539
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/539
+ */
+describe('A class feature with a decorator must not be functional until the @invariant is defined', () => {
+    let {invariant, rescue} = new Contracts(true);
+
+    @invariant
+    class Okay {
+        @rescue(() => {})
+        method(value: number) { return value; }
+    }
+
+    test('Valid declaration', () => {
+        let okay = new Okay();
+
+        expect(okay.method(15)).toBe(15);
+    });
+
+    class Fail {
+        @rescue(() => {})
+        method(value: number) { return value; }
+    }
+
+    test('Invalid declaration', () => {
+        let fail = new Fail();
+
+        expect(() => fail.method(15)).toThrow(MSG_INVARIANT_REQUIRED);
     });
 });
