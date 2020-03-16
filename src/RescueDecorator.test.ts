@@ -366,3 +366,34 @@ describe('The \'retry\' argument of the @rescue function can only be called once
         expect(() => { base.method(0); }).toThrow(MSG_SINGLE_RETRY);
     });
 });
+
+/**
+ * Requirement 465
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/465
+ */
+describe('The @rescue function must preserve the invariant after execution', () => {
+    let {invariant, rescue} = new Contracts(true);
+
+    @invariant((self: Base) => ({
+        wellFormed: self.value > 0
+    }))
+    class Base {
+        #value = 3;
+        get value() { return this.#value; }
+        set value(v: number) { this.#value = v; }
+
+        @rescue(function(this: Base) { this.value = 5; })
+        method1() { throw new Error('I am error'); }
+
+        @rescue(function(this: Base) { this.value = -1; })
+        method2() { throw new Error('I am error'); }
+    }
+
+    test('test', () => {
+        let base = new Base();
+        expect(() => base.method1()).not.toThrow();
+        expect(base.value).toBe(5);
+        expect(() => base.method2()).toThrow();
+        expect(base.value).toBe(-1);
+    });
+});

@@ -38,7 +38,6 @@ export default class RescueDecorator extends MemberDecorator {
     /**
      * The `rescue` decorator enables a mechanism for providing Robustness.
      */
-    // TODO: more specific type
     rescue(fnRescue: RescueType) {
         let self = this,
             assert = this._assert;
@@ -57,7 +56,6 @@ export default class RescueDecorator extends MemberDecorator {
             assert(!isStatic, MSG_NO_STATIC, TypeError);
             assert(dw.isMethod || dw.isAccessor, MSG_DECORATE_METHOD_ACCESSOR_ONLY);
 
-            // TODO: enforce rescue method as an instance/ancestor member of target
             let Clazz = (target as any).constructor,
                 rescueSet: RescueSetType = Object.getOwnPropertySymbols(Clazz).includes(RESCUE_SET) ?
                     Clazz[RESCUE_SET]! : Clazz[RESCUE_SET] = new Set();
@@ -70,74 +68,39 @@ export default class RescueDecorator extends MemberDecorator {
                 enumerable: true
             };
 
-            // TODO: generalize
-            if(dw.isMethod) {
-                newDescriptor.writable = true;
-                newDescriptor.value = function(this: object, ...args: any[]) {
-                    let Clazz = this.constructor as Constructor<any>,
-                        hasInvariant = DECORATOR_REGISTRY.has(Clazz);
-                    assert(hasInvariant, MSG_INVARIANT_REQUIRED);
+            let rescueFeature = (feature: Function) => function(this: object,  ...args: any[]) {
+                let Clazz = this.constructor as Constructor<any>,
+                    hasInvariant = DECORATOR_REGISTRY.has(Clazz);
+                assert(hasInvariant, MSG_INVARIANT_REQUIRED);
 
-                    let feature: Function = dw.value;
+                try {
+                    return feature.call(this, ...args);
+                } catch(error) {
+                    let hasRetried = false;
                     try {
-                        return feature.call(this, ...args);
-                    } catch(error) {
-                        let hasRetried = false;
-                        try {
-                            return fnRescue.call(this, error, args, (...retryArgs: any[]) => {
-                                hasRetried = assert(!hasRetried, MSG_SINGLE_RETRY);
+                        return fnRescue.call(this, error, args, (...retryArgs: any[]) => {
+                            hasRetried = assert(!hasRetried, MSG_SINGLE_RETRY);
 
-                                return feature.call(this, ...retryArgs);
-                            });
-                        } catch(error) {
-                            throw error;
-                        }
+                            return feature.call(this, ...retryArgs);
+                        });
+                    } catch(error) {
+                        throw error;
                     }
-                };
+                }
+            };
+
+            if(dw.isMethod) {
+                let feature: Function = dw.value;
+                newDescriptor.writable = true;
+                newDescriptor.value = rescueFeature(feature);
             } else {
                 if(dw.hasGetter) {
-                    newDescriptor.get = function(this: object) {
-                        let Clazz = this.constructor as Constructor<any>,
-                            hasInvariant = DECORATOR_REGISTRY.has(Clazz);
-                        assert(hasInvariant, MSG_INVARIANT_REQUIRED);
-
-                        try {
-                            return dw.descriptor!.get!.call(this);
-                        } catch(error) {
-                            let hasRetried = false;
-                            try {
-                                return fnRescue.call(this, error, [], () => {
-                                    hasRetried = assert(!hasRetried, MSG_SINGLE_RETRY);
-
-                                    return dw.descriptor!.get!.call(this);
-                                });
-                            } catch(error) {
-                                throw error;
-                            }
-                        }
-                    };
+                    let feature = dw.descriptor!.get!;
+                    newDescriptor.get = rescueFeature(feature);
                 }
                 if(dw.hasSetter) {
-                    newDescriptor.set = function(this: object, value: any) {
-                        let Clazz = this.constructor as Constructor<any>,
-                            hasInvariant = DECORATOR_REGISTRY.has(Clazz);
-                        assert(hasInvariant, MSG_INVARIANT_REQUIRED);
-
-                        try {
-                            dw.descriptor!.set!.call(this, value);
-                        } catch(error) {
-                            let hasRetried = false;
-                            try {
-                                return fnRescue.call(this, error, [value], (retryValue: any) => {
-                                    hasRetried = assert(!hasRetried, MSG_SINGLE_RETRY);
-
-                                    dw.descriptor!.set!.call(this, retryValue);
-                                });
-                            } catch(error) {
-                                throw error;
-                            }
-                        }
-                    };
+                    let feature = dw.descriptor!.set!;
+                    newDescriptor.set = rescueFeature(feature);
                 }
             }
 
