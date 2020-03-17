@@ -64,7 +64,10 @@ export default class InvariantDecorator {
             // TODO: move to registry
             (Clazz as DecoratedConstructor)[CONTRACT_HANDLER] = handler;
 
-            DECORATOR_REGISTRY.set(Clazz, { isRestored: false, invariant: predTable });
+            DECORATOR_REGISTRY.set(Clazz, {
+                isRestored: false,
+                invariant: predTable
+            });
 
             // TODO: lift
             let ClazzProxy = new Proxy((Clazz as DecoratedConstructor), {
@@ -73,7 +76,10 @@ export default class InvariantDecorator {
                     ancestry.forEach(Cons => {
                         let InnerClass = innerClass(Cons);
                         if(!DECORATOR_REGISTRY.has(InnerClass)) {
-                            DECORATOR_REGISTRY.set(InnerClass, {isRestored: false, invariant: TRUE_PRED});
+                            DECORATOR_REGISTRY.set(InnerClass, {
+                                isRestored: false,
+                                invariant: TRUE_PRED
+                            });
                         }
                         let registration = DECORATOR_REGISTRY.get(InnerClass)!;
                         if(!registration.isRestored) {

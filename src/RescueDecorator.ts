@@ -9,6 +9,7 @@ import DescriptorWrapper from './lib/DescriptorWrapper';
 import isClass from './lib/isClass';
 import type {Constructor} from './typings/Constructor';
 import { DECORATOR_REGISTRY } from './DECORATOR_REGISTRY';
+import type { RescueType } from './typings/RescueType';
 
 export const MSG_INVALID_DECORATOR = 'Invalid decorator usage. Function expected';
 export const MSG_DUPLICATE_RESCUE = 'Only a single @rescue can be assigned to a feature';
@@ -17,7 +18,6 @@ export const MSG_SINGLE_RETRY = `retry can only be called once`;
 
 const RESCUE_SET = Symbol('Rescue Map');
 type RescueSetType = Set<PropertyKey>;
-export type RescueType = (error: any, args: any[], retry: Function) => void;
 
 /**
  * The `rescue` decorator enables a mechanism for providing Robustness.
