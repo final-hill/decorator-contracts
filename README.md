@@ -482,20 +482,21 @@ The intent of this is to restore any invariants of the class and optionally retr
 execution.
 
 ```typescript
+function popRescue(
+    error: any,
+    args: Parameters<typeof Stack.prototype.pop>,
+    retry: (...retryArgs: typeof args) => void
+) {
+    console.log(error)
+}
+
 @invariant
 class Stack<T> {
-    protected _popRescue(
-        error: any,
-        args: Parameters<typeof Stack.prototype.pop>,
-        retry: (...retryArgs: typeof args) => void
-    ) {
-        console.log(error)
-    }
     ...
-    @rescue(Stack.protoype._popRescue)
+    @rescue(popRescue)
     pop(): T {
-        if(this.isEmpty())
-            throw new Error('You can not pop from an empty stack')
+        assert(!this.isEmpty(), 'You can not pop from an empty stack')
+
         return this._implementation.pop()!
     }
     ...

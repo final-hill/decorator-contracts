@@ -7,8 +7,8 @@
  */
 
 import Contracts from './';
-import { MSG_DUPLICATE_RESCUE, MSG_SINGLE_RETRY } from './RescueDecorator';
-import { MSG_INVARIANT_REQUIRED } from './MemberDecorator';
+import { MSG_DUPLICATE_RESCUE } from './RescueDecorator';
+import { MSG_INVARIANT_REQUIRED, MSG_SINGLE_RETRY } from './MemberDecorator';
 
 /**
  * Requirement 398
@@ -105,11 +105,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
     test('rescue of method with an error then retrying returns ok', () => {
         @invariant
         class Base {
-            protected _methodRescue(_error: any, _args: any[], retry: any) {
-                return retry(3);
-            }
-
-            @rescue(Base.prototype._methodRescue)
+            @rescue((_error: any, _args: any[], retry: any) => retry(3))
             method(value: number) {
                 if(value <= 0) {
                     throw new Error('value must be greater than 0');
@@ -125,11 +121,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
     test('rescue of method with an error then rethrow throws to caller', () => {
         @invariant
         class Base {
-            protected _methodRescue(_error: any, _args: any[], _retry: any) {
-                throw new Error('Rescue throw');
-            }
-
-            @rescue(Base.prototype._methodRescue)
+            @rescue(() => {throw new Error('Rescue throw'); })
             method() {
                 throw new Error('Method error');
             }
@@ -152,20 +144,21 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
         @invariant
         class Base {
             #value = 0;
-            protected _valueRescue(_error: any, _args: any[], retry: Function) {
-                this.#value = 7;
 
-                return retry();
-            }
-
-            @rescue(Base.prototype._valueRescue)
+            @rescue(function(this: Base, _error: any, _args: any[], retry: Function) {
+                this.value = 7;
+                retry();
+            })
             get value() {
                 if(this.#value == 0) {
                     throw new Error('Bad State');
                 } else {
                     return this.#value;
                 }
-             }
+            }
+            set value(v: number) {
+                this.#value = v;
+            }
         }
         let base = new Base();
         expect(base.value).toBe(7);
@@ -174,14 +167,12 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
     test('rescue of error getter then rethrow throws to caller', () => {
         @invariant
         class Base {
-            protected _valueRescue(_error: any, _args: any[], _retry: Function) {
+            @rescue((_error: any, _args: any[], _retry: Function) => {
                 throw new Error('Not Rescued');
-            }
-
-            @rescue(Base.prototype._valueRescue)
+            })
             get value() {
                 throw new Error('Not implemented');
-             }
+            }
         }
         let base = new Base();
         expect(() => base.value).toThrow('Not Rescued');
@@ -206,12 +197,11 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
         class Base {
             #value = NaN;
 
-            protected _valueRescue(_error: any, _args: any[], retry: Function) {
-                return retry(0);
-            }
-
             get value() { return this.#value; }
-            @rescue(Base.prototype._valueRescue)
+
+            @rescue((_error: any, _args: any[], retry: Function) => {
+                retry(0);
+            })
             set value(value: number) {
                 if(Number.isNaN(value)) {
                     throw new Error('NaN not allowed');
@@ -224,15 +214,13 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
         expect(base.value).toBe(0);
     });
 
-    test('rescue of error setter then rethrow throw error at caller', () => {
+    test('rescue of error setter then rethrow throws error at caller', () => {
         @invariant
         class Base {
             #value = NaN;
 
-            protected _valueRescue() { throw new Error('Rescue fail'); }
-
             get value() { return this.#value; }
-            @rescue(Base.prototype._valueRescue)
+            @rescue(() => { throw new Error('Rescue fail'); })
             set value(_: number) { throw new Error('Setter fail'); }
         }
         let base = new Base();
@@ -391,9 +379,44 @@ describe('The @rescue function must preserve the invariant after execution', () 
 
     test('test', () => {
         let base = new Base();
-        expect(() => base.method1()).not.toThrow();
+        expect(() => base.method1()).toThrow('I am error');
         expect(base.value).toBe(5);
-        expect(() => base.method2()).toThrow();
-        expect(base.value).toBe(-1);
+        expect(() => base.method2()).toThrow('wellFormed');
+        expect(() => base.value).toThrow('wellFormed');
+    });
+});
+
+/**
+ * Requirement 558
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/558
+ */
+describe('If a @rescue is executed and the retry argument is not called, then an error is thrown', () => {
+    let {invariant, rescue} = new Contracts(true);
+
+    @invariant
+    class Base {
+        @rescue((_error, _args, retry) => { retry(false); })
+        throwRescue(trigger: boolean) {
+            if(trigger) {
+                throw new Error('I am error');
+            } else {
+                return true;
+            }
+        }
+
+        @rescue(() => { /* Do nothing */ })
+        throwFail() {
+            throw new Error('I am error');
+        }
+    }
+
+    let base = new Base();
+
+    test('Rescued error', () => {
+        expect(base.throwRescue(true)).toBe(true);
+    });
+
+    test('Unrescued error', () => {
+        expect(() => base.throwFail()).toThrow('I am error');
     });
 });
