@@ -17,6 +17,7 @@ export const MSG_NO_STATIC = `Only instance members can be decorated, not static
 export const MSG_DECORATE_METHOD_ACCESSOR_ONLY = `Only methods and accessors can be decorated.`;
 export const MSG_INVARIANT_REQUIRED = 'An @invariant must be defined on the current class or one of its ancestors';
 export const MSG_INVALID_DECORATOR = 'Invalid decorator declaration';
+export const MSG_SINGLE_RETRY = `retry can only be called once`;
 
 function fnInvariantRequired(): void {
     throw new AssertionError(MSG_INVARIANT_REQUIRED);
@@ -105,13 +106,15 @@ export default abstract class MemberDecorator {
 
         if(descriptorWrapper.isMethod) {
             descriptorWrapper.descriptor!.value = fnInvariantRequired;
-        } else {
+        } else if(descriptorWrapper.isAccessor) {
             if(descriptorWrapper.hasGetter) {
                 descriptorWrapper.descriptor!.get = fnInvariantRequired;
             }
             if(descriptorWrapper.hasSetter) {
                 descriptorWrapper.descriptor!.set = fnInvariantRequired;
             }
+        } else {
+            throw new Error(`Unhandled condition. Unable to register ${Clazz.name}.prototype.${String(propertyKey)}`);
         }
 
         return registration;
@@ -173,13 +176,14 @@ export default abstract class MemberDecorator {
                 allAncEnsures = this.getAllAncestorEnsures(Clazz, propertyKey),
                 allDemands = registration.demands.length > 0 ? [registration.demands, ...allAncDemands] : allAncDemands,
                 allEnsures = registration.ensures.length > 0 ? [registration.ensures, ...allAncEnsures] : allAncEnsures,
+                fnRescue = registration.rescue,
                 originalDescriptor = descriptorWrapper.descriptor!,
                 newDescriptor = {...originalDescriptor},
                 // TODO: more specific error. Want the specific class name, feature name, and expression
                 demandsError = `Precondition failed on ${Clazz.name}.prototype.${String(propertyKey)}`,
                 ensuresError = `Postcondition failed on ${Clazz.name}.prototype.${String(propertyKey)}`;
 
-            let checkedFeature = (feature: Function) => function(this: typeof newDescriptor, ...args: any[]) {
+            let checkedFeature = (feature: Function) => function _checkedFeature(this: typeof newDescriptor, ...args: any[]) {
                 if(allDemands.length > 0) {
                     checkedAssert(
                         allDemands.some(
@@ -191,17 +195,31 @@ export default abstract class MemberDecorator {
                     );
                 }
 
-                let result = feature.apply(this, args);
-
-                if(allEnsures.length > 0) {
-                    checkedAssert(
-                        allEnsures.every(
-                            ensures => ensures.every(
-                                ensure => ensure.apply(this, args)
-                            )
-                        ),
-                        ensuresError
-                    );
+                let result;
+                try {
+                    result = feature.apply(this, args);
+                    if(allEnsures.length > 0) {
+                        checkedAssert(
+                            allEnsures.every(
+                                ensures => ensures.every(
+                                    ensure => ensure.apply(this, args)
+                                )
+                            ),
+                            ensuresError
+                        );
+                    }
+                } catch(error) {
+                    if(fnRescue == null) {
+                        throw error;
+                    }
+                    let hasRetried = false;
+                    fnRescue.call(this, error, args, (...retryArgs: any[]) => {
+                        hasRetried = checkedAssert(!hasRetried, MSG_SINGLE_RETRY);
+                        result = _checkedFeature.call(this, ...retryArgs);
+                    });
+                    if(!hasRetried) {
+                        throw error;
+                    }
                 }
 
                 return result;
@@ -210,12 +228,15 @@ export default abstract class MemberDecorator {
             if(descriptorWrapper.isMethod) {
                 let feature: Function = originalDescriptor.value;
                 newDescriptor.value = checkedFeature(feature);
-            } else if(descriptorWrapper.hasGetter) {
-                let feature: Function = originalDescriptor.get!;
-                newDescriptor.get = checkedFeature(feature);
-            } else if(descriptorWrapper.hasSetter) {
-                let feature: Function = originalDescriptor.set!;
-                newDescriptor.set = checkedFeature(feature);
+            } else if(descriptorWrapper.isAccessor) {
+                if(descriptorWrapper.hasGetter) {
+                   let feature: Function = originalDescriptor.get!;
+                   newDescriptor.get = checkedFeature(feature);
+                }
+                if(descriptorWrapper.hasSetter) {
+                    let feature: Function = originalDescriptor.set!;
+                    newDescriptor.set = checkedFeature(feature);
+                }
             } else {
                 throw new Error(`Unhandled condition. Unable to restore ${Clazz.name}.prototype.${String(propertyKey)}`);
             }

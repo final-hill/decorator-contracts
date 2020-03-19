@@ -63,42 +63,29 @@ class ContractHandler {
      * The handler trap for getting property values
      *
      * @param target - The target object
-     * @param prop - The name or Symbol  of the property to get
+     * @param propertyKey - The name or Symbol  of the property to get
      */
-    get(target: object, prop: keyof typeof target) {
-        // TODO: use descriptorWrapper
-        // What if not ownProperty?
-        let feature = target[prop];
+    get(target: object, propertyKey: PropertyKey) {
+        this.assertInvariants(target);
+        let result = Reflect.get(target, propertyKey);
+        this.assertInvariants(target);
 
-        switch(typeof feature) {
-            case 'function':
-                return (...args: any[]) => {
-                    this.assertInvariants(target);
-                    let result = (feature as Function).call(target, ...args);
-                    this.assertInvariants(target);
-
-                    return result;
-                };
-            // TODO: get could be a getter
-            // TODO: if it's a rescue method, no precondition and no invariant
-            default:
-                return feature;
-        }
+        return result;
     }
 
     /**
      * The handler trap for setting property values
      *
      * @param target - The target object
-     * @param prop - The name or Symbol  of the property to set
+     * @param prop - The name or Symbol of the property to set
      * @param value - The new value of the property to set.
      */
-    set(target: object, prop: keyof typeof target, value: (typeof target)[keyof typeof target]) {
+    set(target: object, propertyKey: PropertyKey, value: (typeof target)[keyof typeof target]) {
         this.assertInvariants(target);
-        target[prop] = value;
+        let result = Reflect.set(target, propertyKey, value);
         this.assertInvariants(target);
 
-        return true;
+        return result;
     }
 }
 
