@@ -6,7 +6,7 @@ trigger:
       - v*.*.*
 
 pool:
-  name: Hosted Windows Container
+  vmImage: windows-latest
   demands: npm
 
 steps:
