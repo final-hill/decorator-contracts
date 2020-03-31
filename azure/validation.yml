@@ -8,7 +8,7 @@ pr:
     - master
 
 pool:
-  name: Hosted Windows Container
+  vmImage: windows-latest
   demands: npm
 
 steps:
@@ -26,6 +26,11 @@ steps:
     npm run build-nofix
   workingDirectory: ./
   displayName: 'npm run build-nofix'
+
+- script: |
+    npm run build-changelog
+  workingDirectory: ./
+  displayName: 'npm run build-changelog'
 
 - script: |
     npm run test

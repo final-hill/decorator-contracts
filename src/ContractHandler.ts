@@ -9,9 +9,6 @@ import { DECORATOR_REGISTRY } from './DECORATOR_REGISTRY';
 import type {Constructor} from './typings/Constructor';
 import getAncestry from './lib/getAncestry';
 import innerClass from './lib/innerClass';
-import { TRUE_PRED } from './lib/TRUE_PRED';
-
-const CONTRACT_HANDLER = Symbol('Contract handler');
 
 /**
  * The ContractHandler manages the registration and evaluation of contracts associated with a class
@@ -51,10 +48,10 @@ class ContractHandler {
     assertInvariants(self: object) {
         const ancestry = getAncestry(self.constructor as Constructor<any>);
         ancestry.forEach(Cons => {
-            const predTable = DECORATOR_REGISTRY.get(innerClass(Cons))?.invariant ?? TRUE_PRED;
-            const predRecord = predTable.call(self, self);
-            Object.entries(predRecord).forEach(([name, value]) => {
-                this._assert(value, name);
+            const invariants = DECORATOR_REGISTRY.get(innerClass(Cons))?.invariants ?? [];
+            invariants.forEach(invariant => {
+                const name = invariant.name;
+                this._assert(invariant.apply(self), `Invariant violated. ${name}: ${invariant.toString()}`);
             });
         });
     }
@@ -102,4 +99,4 @@ class ContractHandler {
     }
 }
 
-export {ContractHandler, CONTRACT_HANDLER};
+export default ContractHandler;

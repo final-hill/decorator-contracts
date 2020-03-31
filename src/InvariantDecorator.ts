@@ -5,23 +5,20 @@
  */
 
 import Assertion from './Assertion';
-import {ContractHandler, CONTRACT_HANDLER} from './ContractHandler';
 import OverrideDecorator from './OverrideDecorator';
 import isClass from './lib/isClass';
-import type {FnPredTable} from './typings/FnPredTable';
-import type {Constructor} from './typings/Constructor';
 import MemberDecorator from './MemberDecorator';
 import getAncestry from './lib/getAncestry';
 // FIXME: The symbols don't belong here
 import { DecoratedConstructor, INNER_CLASS, IS_PROXY } from './typings/DecoratedConstructor';
 import { DECORATOR_REGISTRY } from './DECORATOR_REGISTRY';
 import innerClass from './lib/innerClass';
-import { TRUE_PRED } from './lib/TRUE_PRED';
+import type {Constructor} from './typings/Constructor';
+import { PredicateType } from './typings/PredicateType';
 
 export type ClassDecorator = <T extends Constructor<any>>(Constructor: T) => T;
 
 export const MSG_INVALID_DECORATOR = 'Invalid decorator usage. Function expected';
-export const MSG_DUPLICATE_INVARIANT = `Only a single @invariant can be assigned per class`;
 
 /**
  * The `@invariant` decorator describes and enforces the properties of a class
@@ -38,15 +35,14 @@ export default class InvariantDecorator {
     }
 
     invariant<T extends Constructor<any>>(Base: T): T;
-    invariant<Self>(fnPredTable: FnPredTable<Self>): ClassDecorator;
-    invariant<U extends (Constructor<any> | any)>(fn: Function | Constructor<any>) {
-        const predTable = isClass(fn) ? TRUE_PRED : fn as FnPredTable<U>,
-            Clazz = isClass(fn) ? innerClass(fn as Constructor<any>) : undefined,
+    invariant<Self>(predicate: PredicateType): ClassDecorator;
+    invariant(fn: Function | Constructor<any>) {
+        const isClazz = isClass(fn),
+            predicate = isClazz ? undefined : fn as PredicateType,
+            Clazz = isClazz ? innerClass(fn as Constructor<any>) : undefined,
             assert = this._assert,
-            checkMode = this.checkMode,
-            hasInvariant = Clazz == undefined ? false : DECORATOR_REGISTRY.has(Clazz);
+            checkMode = this.checkMode;
 
-        assert(!hasInvariant, MSG_DUPLICATE_INVARIANT);
         assert(typeof fn == 'function', MSG_INVALID_DECORATOR);
 
         function decorator(Clazz: Constructor<any>) {
@@ -56,15 +52,10 @@ export default class InvariantDecorator {
                 return Clazz;
             }
 
-            const hasInvariant = DECORATOR_REGISTRY.has(Clazz);
-            assert(!hasInvariant, MSG_DUPLICATE_INVARIANT);
-
-            const handler: ContractHandler = new ContractHandler(assert);
-
-            // TODO: move to registry
-            (Clazz as DecoratedConstructor)[CONTRACT_HANDLER] = handler;
-
-            DECORATOR_REGISTRY.set(Clazz, { isRestored: false, invariant: predTable });
+            const registration = DECORATOR_REGISTRY.getOrCreate(innerClass(Clazz));
+            if(predicate != undefined) {
+                registration.invariants.push(predicate);
+            }
 
             // TODO: lift
             const ClazzProxy = new Proxy((Clazz as DecoratedConstructor), {
@@ -72,10 +63,8 @@ export default class InvariantDecorator {
                     const ancestry = getAncestry(NewTarget).reverse();
                     ancestry.forEach(Cons => {
                         const InnerClass = innerClass(Cons);
-                        if(!DECORATOR_REGISTRY.has(InnerClass)) {
-                            DECORATOR_REGISTRY.set(InnerClass, {isRestored: false, invariant: TRUE_PRED});
-                        }
-                        const registration = DECORATOR_REGISTRY.get(InnerClass)!;
+                        const registration = DECORATOR_REGISTRY.getOrCreate(InnerClass);
+
                         if(!registration.isRestored) {
                             OverrideDecorator.checkOverrides(InnerClass);
                             MemberDecorator.restoreFeatures(InnerClass);
@@ -85,9 +74,9 @@ export default class InvariantDecorator {
 
                     // https://stackoverflow.com/a/43104489/153209
                     const obj = Reflect.construct(Target, args, NewTarget);
-                    handler.assertInvariants(obj);
+                    registration.contractHandler.assertInvariants(obj);
 
-                    return new Proxy(obj, handler);
+                    return new Proxy(obj, registration.contractHandler);
                 },
                 get(target, name) {
                     switch(name) {
@@ -104,7 +93,10 @@ export default class InvariantDecorator {
                         : property;
                 },
                 ownKeys(target) {
-                    return Reflect.ownKeys(target).concat([IS_PROXY, INNER_CLASS]);
+                    const ownSet = new Set(Reflect.ownKeys(target));
+                    ownSet.add(IS_PROXY).add(INNER_CLASS);
+
+                    return [...ownSet];
                 }
             });
 
