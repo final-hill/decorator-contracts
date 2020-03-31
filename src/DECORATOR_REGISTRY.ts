@@ -18,7 +18,7 @@ export interface IDecoratorRegistration {
     invariants: PredicateType[]
 }
 
-let {assert} = new Assertion(true);
+const {assert} = new Assertion(true);
 
 /**
  * TODO: Description

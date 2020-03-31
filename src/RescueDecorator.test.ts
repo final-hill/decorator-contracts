@@ -11,54 +11,11 @@ import { MSG_DUPLICATE_RESCUE, MSG_SINGLE_RETRY } from './RescueDecorator';
 import { MSG_INVARIANT_REQUIRED } from './MemberDecorator';
 
 /**
- * Requirement 399
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/399
- */
-describe('@rescue is a non-static member decorator only', () => {
-    let {rescue} = new Contracts(true);
-
-    test('class decorator throws', () => {
-        expect(() => {
-            // @ts-ignore: Ignoring type error for JS test
-            @rescue
-            class Base {}
-
-            return Base;
-        }).toThrow();
-    });
-
-    test('static method decorator throws', () => {
-        expect(() => {
-            class Base {
-                @rescue(() => {})
-                static method() {}
-            }
-
-            return Base;
-        }).toThrow();
-    });
-    test('instance method decorator does not throw', () => {
-        expect(() => {
-            class Base {
-                method() {}
-            }
-
-            class Sub extends Base {
-                @rescue(() => {})
-                method() {}
-            }
-
-            return Sub;
-        }).not.toThrow();
-    });
-});
-
-/**
  * Requirement 400
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/400
  */
 describe('Any error thrown by a class feature must be captured by its @rescue', () => {
-    let {invariant, rescue} = new Contracts(true);
+    const {invariant, rescue} = new Contracts(true);
 
     test('rescuing non-error method returns normal', () => {
         @invariant
@@ -66,7 +23,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
             @rescue(() => {})
             method() { return 7; }
         }
-        let base = new Base();
+        const base = new Base();
 
         expect(base.method()).toBe(7);
     });
@@ -87,7 +44,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
                 }
             }
         }
-        let base = new Base();
+        const base = new Base();
         expect(base.method(0)).toBe(3);
     });
 
@@ -103,7 +60,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
                 throw new Error('Method error');
             }
         }
-        let base = new Base();
+        const base = new Base();
         expect(() => base.method()).toThrow('Rescue throw');
     });
 
@@ -113,7 +70,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
             @rescue(() => {})
             get value() { return 7; }
         }
-        let base = new Base();
+        const base = new Base();
         expect(base.value).toBe(7);
     });
 
@@ -136,7 +93,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
                 }
              }
         }
-        let base = new Base();
+        const base = new Base();
         expect(base.value).toBe(7);
     });
 
@@ -152,7 +109,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
                 throw new Error('Not implemented');
              }
         }
-        let base = new Base();
+        const base = new Base();
         expect(() => base.value).toThrow('Not Rescued');
     });
 
@@ -165,7 +122,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
             @rescue(() => {})
             set value(value: number) { this.#value = value; }
         }
-        let base = new Base();
+        const base = new Base();
         base.value = 12;
         expect(base.value).toBe(12);
     });
@@ -188,7 +145,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
                 this.#value = value;
             }
         }
-        let base = new Base();
+        const base = new Base();
         base.value = NaN;
         expect(base.value).toBe(0);
     });
@@ -204,7 +161,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
             @rescue(Base.prototype._valueRescue)
             set value(_: number) { throw new Error('Setter fail'); }
         }
-        let base = new Base();
+        const base = new Base();
         expect(() => base.value = 12).toThrow('Rescue fail');
     });
 });
@@ -215,7 +172,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
  */
 describe('The @rescue constructor has a checked mode that enables its execution', () => {
     test('enabled', () => {
-        let {invariant, rescue} = new Contracts(true);
+        const {invariant, rescue} = new Contracts(true);
 
         expect(() => {
             @invariant
@@ -230,13 +187,13 @@ describe('The @rescue constructor has a checked mode that enables its execution'
                 }
             }
 
-            let base = new Base();
+            const base = new Base();
             base.throws('I am Error');
         }).toThrow('I am still an Error');
     });
 
     test('disabled', () => {
-        let {invariant, rescue} = new Contracts(false);
+        const {invariant, rescue} = new Contracts(false);
 
         expect(() => {
             @invariant
@@ -249,7 +206,7 @@ describe('The @rescue constructor has a checked mode that enables its execution'
                 }
             }
 
-            let base = new Base();
+            const base = new Base();
             base.throws('I am Error');
         }).toThrow('I am Error');
     });
@@ -260,7 +217,7 @@ describe('The @rescue constructor has a checked mode that enables its execution'
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/455
  */
 describe('Only a single @rescue can be assigned to a method or accessor', () => {
-    let {invariant, rescue} = new Contracts(true);
+    const {invariant, rescue} = new Contracts(true);
 
     test('Single rescue ok', () => {
         expect(() => {
@@ -293,7 +250,7 @@ describe('Only a single @rescue can be assigned to a method or accessor', () => 
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/456
  */
 describe('The \'retry\' argument of the @rescue function can only be called once during rescue execution', () => {
-    let {invariant, rescue} = new Contracts(true);
+    const {invariant, rescue} = new Contracts(true);
 
     test('Call retry once succeeds', () => {
         @invariant
@@ -311,7 +268,7 @@ describe('The \'retry\' argument of the @rescue function can only be called once
                 }
             }
         }
-        let base = new Base();
+        const base = new Base();
         expect(base.method(0)).toBe(3);
     });
 
@@ -331,7 +288,7 @@ describe('The \'retry\' argument of the @rescue function can only be called once
                 }
             }
         }
-        let base = new Base();
+        const base = new Base();
         expect(() => { base.method(0); }).toThrow(MSG_SINGLE_RETRY);
     });
 });
@@ -341,7 +298,7 @@ describe('The \'retry\' argument of the @rescue function can only be called once
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/539
  */
 describe('A class feature with a decorator must not be functional until the @invariant is defined', () => {
-    let {invariant, rescue} = new Contracts(true);
+    const {invariant, rescue} = new Contracts(true);
 
     @invariant
     class Okay {
@@ -350,7 +307,7 @@ describe('A class feature with a decorator must not be functional until the @inv
     }
 
     test('Valid declaration', () => {
-        let okay = new Okay();
+        const okay = new Okay();
 
         expect(okay.method(15)).toBe(15);
     });
@@ -361,7 +318,7 @@ describe('A class feature with a decorator must not be functional until the @inv
     }
 
     test('Invalid declaration', () => {
-        let fail = new Fail();
+        const fail = new Fail();
 
         expect(() => fail.method(15)).toThrow(MSG_INVARIANT_REQUIRED);
     });

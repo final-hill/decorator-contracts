@@ -15,7 +15,7 @@ import Contracts from './';
  */
 describe('Assertions must support a means of enabling/disabling', () => {
     test('false assertions', () => {
-        let {assert: assertDebug} = new Contracts(true),
+        const {assert: assertDebug} = new Contracts(true),
             {assert: assertProd} = new Contracts(false);
 
         expect(() => assertDebug(false)).toThrow(AssertionError);
@@ -29,7 +29,7 @@ describe('Assertions must support a means of enabling/disabling', () => {
  */
 describe('Assertions must return a boolean in all modes', () => {
     test('return values', () => {
-        let {assert: assertDebug} = new Contracts(true),
+        const {assert: assertDebug} = new Contracts(true),
             {assert: assertProd} = new Contracts(false);
 
         expect(assertDebug(true)).toBe(true);
@@ -43,8 +43,8 @@ describe('Assertions must return a boolean in all modes', () => {
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/71
  */
 describe('Assertions must support throwing custom error types', () => {
-    let {assert} = new Contracts(true);
-    let fn = () => assert(false, 'BOOM!');
+    const {assert} = new Contracts(true);
+    const fn = () => assert(false, 'BOOM!');
     expect(fn).toThrow(AssertionError);
     expect(fn).toThrowError('BOOM!');
 });

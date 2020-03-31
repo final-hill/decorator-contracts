@@ -40,7 +40,7 @@ export default class RescueDecorator extends MemberDecorator {
      */
     // TODO: more specific type
     rescue(fnRescue: RescueType) {
-        let self = this,
+        const self = this,
             assert = this._assert;
         this._checkedAssert(typeof fnRescue == 'function', MSG_INVALID_DECORATOR);
         this._checkedAssert(!isClass(fnRescue), MSG_INVALID_DECORATOR);
@@ -50,7 +50,7 @@ export default class RescueDecorator extends MemberDecorator {
                 return currentDescriptor;
             }
 
-            let isStatic = typeof target == 'function',
+            const isStatic = typeof target == 'function',
                 dw = new DescriptorWrapper(currentDescriptor);
             // Potentially undefined in pre ES5 environments (compilation target)
             assert(dw.hasDescriptor, MSG_DECORATE_METHOD_ACCESSOR_ONLY, TypeError);
@@ -58,14 +58,14 @@ export default class RescueDecorator extends MemberDecorator {
             assert(dw.isMethod || dw.isAccessor, MSG_DECORATE_METHOD_ACCESSOR_ONLY);
 
             // TODO: enforce rescue method as an instance/ancestor member of target
-            let Clazz = (target as any).constructor,
+            const Clazz = (target as any).constructor,
                 rescueSet: RescueSetType = Object.getOwnPropertySymbols(Clazz).includes(RESCUE_SET) ?
                     Clazz[RESCUE_SET]! : Clazz[RESCUE_SET] = new Set();
 
             assert(!rescueSet.has(propertyKey), MSG_DUPLICATE_RESCUE);
             rescueSet.add(propertyKey);
 
-            let newDescriptor: PropertyDescriptor = {
+            const newDescriptor: PropertyDescriptor = {
                 configurable: true,
                 enumerable: true
             };
@@ -74,11 +74,11 @@ export default class RescueDecorator extends MemberDecorator {
             if(dw.isMethod) {
                 newDescriptor.writable = true;
                 newDescriptor.value = function(this: object, ...args: any[]) {
-                    let Clazz = this.constructor as Constructor<any>,
+                    const Clazz = this.constructor as Constructor<any>,
                         hasInvariant = DECORATOR_REGISTRY.has(Clazz);
                     assert(hasInvariant, MSG_INVARIANT_REQUIRED);
 
-                    let feature: Function = dw.value;
+                    const feature: Function = dw.value;
                     try {
                         return feature.call(this, ...args);
                     } catch(error) {
@@ -97,7 +97,7 @@ export default class RescueDecorator extends MemberDecorator {
             } else {
                 if(dw.hasGetter) {
                     newDescriptor.get = function(this: object) {
-                        let Clazz = this.constructor as Constructor<any>,
+                        const Clazz = this.constructor as Constructor<any>,
                             hasInvariant = DECORATOR_REGISTRY.has(Clazz);
                         assert(hasInvariant, MSG_INVARIANT_REQUIRED);
 
@@ -119,7 +119,7 @@ export default class RescueDecorator extends MemberDecorator {
                 }
                 if(dw.hasSetter) {
                     newDescriptor.set = function(this: object, value: any) {
-                        let Clazz = this.constructor as Constructor<any>,
+                        const Clazz = this.constructor as Constructor<any>,
                             hasInvariant = DECORATOR_REGISTRY.has(Clazz);
                         assert(hasInvariant, MSG_INVARIANT_REQUIRED);
 

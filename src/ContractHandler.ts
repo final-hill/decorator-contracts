@@ -34,7 +34,7 @@ class ContractHandler {
      */
     protected _decorated(feature: Function, target: object) {
         this.assertInvariants(target);
-        let result = feature.apply(target, arguments);
+        const result = feature.apply(target, arguments);
         this.assertInvariants(target);
 
         return result;
@@ -46,11 +46,11 @@ class ContractHandler {
      * @param self - The context class
      */
     assertInvariants(self: object) {
-        let ancestry = getAncestry(self.constructor as Constructor<any>);
+        const ancestry = getAncestry(self.constructor as Constructor<any>);
         ancestry.forEach(Cons => {
-            let invariants = DECORATOR_REGISTRY.get(innerClass(Cons))?.invariants ?? [];
+            const invariants = DECORATOR_REGISTRY.get(innerClass(Cons))?.invariants ?? [];
             invariants.forEach(invariant => {
-                let name = invariant.name;
+                const name = invariant.name;
                 this._assert(invariant.apply(self), `Invariant violated. ${name}: ${invariant.toString()}`);
             });
         });
@@ -65,13 +65,13 @@ class ContractHandler {
     get(target: object, prop: keyof typeof target) {
         // TODO: use descriptorWrapper
         // What if not ownProperty?
-        let feature = target[prop];
+        const feature = target[prop];
 
         switch(typeof feature) {
             case 'function':
                 return (...args: any[]) => {
                     this.assertInvariants(target);
-                    let result = (feature as Function).call(target, ...args);
+                    const result = (feature as Function).call(target, ...args);
                     this.assertInvariants(target);
 
                     return result;

@@ -37,7 +37,7 @@ export default class InvariantDecorator {
     invariant<T extends Constructor<any>>(Base: T): T;
     invariant<Self>(predicate: PredicateType): ClassDecorator;
     invariant(fn: Function | Constructor<any>) {
-        let isClazz = isClass(fn),
+        const isClazz = isClass(fn),
             predicate = isClazz ? undefined : fn as PredicateType,
             Clazz = isClazz ? innerClass(fn as Constructor<any>) : undefined,
             assert = this._assert,
@@ -52,18 +52,18 @@ export default class InvariantDecorator {
                 return Clazz;
             }
 
-            let registration = DECORATOR_REGISTRY.getOrCreate(innerClass(Clazz));
+            const registration = DECORATOR_REGISTRY.getOrCreate(innerClass(Clazz));
             if(predicate != undefined) {
                 registration.invariants.push(predicate);
             }
 
             // TODO: lift
-            let ClazzProxy = new Proxy((Clazz as DecoratedConstructor), {
+            const ClazzProxy = new Proxy((Clazz as DecoratedConstructor), {
                 construct(Target: Constructor<any>, args: any[], NewTarget: Constructor<any>) {
-                    let ancestry = getAncestry(NewTarget).reverse();
+                    const ancestry = getAncestry(NewTarget).reverse();
                     ancestry.forEach(Cons => {
-                        let InnerClass = innerClass(Cons);
-                        let registration = DECORATOR_REGISTRY.getOrCreate(InnerClass);
+                        const InnerClass = innerClass(Cons);
+                        const registration = DECORATOR_REGISTRY.getOrCreate(InnerClass);
 
                         if(!registration.isRestored) {
                             OverrideDecorator.checkOverrides(InnerClass);
@@ -73,7 +73,7 @@ export default class InvariantDecorator {
                     });
 
                     // https://stackoverflow.com/a/43104489/153209
-                    let obj = Reflect.construct(Target, args, NewTarget);
+                    const obj = Reflect.construct(Target, args, NewTarget);
                     registration.contractHandler.assertInvariants(obj);
 
                     return new Proxy(obj, registration.contractHandler);
@@ -93,7 +93,7 @@ export default class InvariantDecorator {
                         : property;
                 },
                 ownKeys(target) {
-                    let ownSet = new Set(Reflect.ownKeys(target));
+                    const ownSet = new Set(Reflect.ownKeys(target));
                     ownSet.add(IS_PROXY).add(INNER_CLASS);
 
                     return [...ownSet];

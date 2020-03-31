@@ -16,7 +16,7 @@ import AssertionError from './AssertionError';
  */
 describe('The @ensures decorator must be a non-static method decorator only', () => {
     test('Test declaration', () => {
-        let {ensures} = new Contracts(true);
+        const {ensures} = new Contracts(true);
 
         expect(() => {
             class Foo {
@@ -41,7 +41,7 @@ describe('The @ensures decorator must be a non-static method decorator only', ()
 
     test('Invalid declaration', () => {
         expect(() => {
-            let {ensures} = new Contracts(true);
+            const {ensures} = new Contracts(true);
             // @ts-ignore: ignore type error for testing
             @ensures(() => true)
             class Foo {}
@@ -50,7 +50,7 @@ describe('The @ensures decorator must be a non-static method decorator only', ()
         }).toThrow();
 
         expect(() => {
-            let {ensures} = new Contracts(false);
+            const {ensures} = new Contracts(false);
             // @ts-ignore: ignore type error for testing
             @ensures(() => true)
             class Foo {}
@@ -65,7 +65,7 @@ describe('The @ensures decorator must be a non-static method decorator only', ()
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/278
  */
 describe('There can be multiple @ensures decorators assigned to a class feature', () => {
-    let {invariant, ensures} = new Contracts(true);
+    const {invariant, ensures} = new Contracts(true);
 
     @invariant
     class Foo {
@@ -89,7 +89,7 @@ describe('There can be multiple @ensures decorators assigned to a class feature'
         dec() { this._value -= 1; }
     }
 
-    let foo = new Foo();
+    const foo = new Foo();
 
     expect(() => foo.inc()).not.toThrow();
 
@@ -105,7 +105,7 @@ describe('There can be multiple @ensures decorators assigned to a class feature'
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/280
  */
 describe('Features that override a @ensures decorated method must be subject to that decorator', () => {
-    let {invariant, override, ensures} = new Contracts(true);
+    const {invariant, override, ensures} = new Contracts(true);
 
     @invariant
     class Base {
@@ -132,7 +132,7 @@ describe('Features that override a @ensures decorated method must be subject to 
 
     test('inc(); inc(); dec(); does not throw', () => {
         expect(() => {
-            let sub = new Sub();
+            const sub = new Sub();
             sub.inc();
             sub.inc();
             sub.dec();
@@ -141,7 +141,7 @@ describe('Features that override a @ensures decorated method must be subject to 
 
     test('dec(); throws', () => {
         expect(() => {
-            let sub = new Sub();
+            const sub = new Sub();
             sub.dec();
         }).toThrow();
     });
@@ -152,7 +152,7 @@ describe('Features that override a @ensures decorated method must be subject to 
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/284
  */
 describe('@ensures is evaluated after its associated member is called', () => {
-    let {invariant, ensures} = new Contracts(true);
+    const {invariant, ensures} = new Contracts(true);
 
     @invariant
     class Foo {
@@ -171,7 +171,7 @@ describe('@ensures is evaluated after its associated member is called', () => {
             }
         }
 
-        let bar = new Bar();
+        const bar = new Bar();
 
         expect(bar.method()).toBe(2);
     });
@@ -183,7 +183,7 @@ describe('@ensures is evaluated after its associated member is called', () => {
                 return this._value = 12;
             }
         }
-        let bar = new Bar();
+        const bar = new Bar();
 
         expect(() => { bar.method(); }).toThrow();
     });
@@ -195,7 +195,7 @@ describe('@ensures is evaluated after its associated member is called', () => {
  */
 describe('@ensures has a checked mode and unchecked mode', () => {
     test('The associated assertion is evaluated when checkMode = true', () => {
-        let {invariant, ensures} = new Contracts(true);
+        const {invariant, ensures} = new Contracts(true);
 
         @invariant
         class Foo {
@@ -207,7 +207,7 @@ describe('@ensures has a checked mode and unchecked mode', () => {
     });
 
     test('The associated assertion is NOT evaluated in checkMode = false', () => {
-        let {invariant, ensures} = new Contracts(false);
+        const {invariant, ensures} = new Contracts(false);
 
         @invariant
         class Foo {
@@ -224,7 +224,7 @@ describe('@ensures has a checked mode and unchecked mode', () => {
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/397
  */
 describe('Postconditions cannot be weakened in a subtype', () => {
-    let {invariant, ensures, override} = new Contracts(true);
+    const {invariant, ensures, override} = new Contracts(true);
 
     @invariant
     class Base {
@@ -233,7 +233,7 @@ describe('Postconditions cannot be weakened in a subtype', () => {
     }
 
     test('Base postcondition', () => {
-        let base = new Base();
+        const base = new Base();
 
         expect(base.method(15)).toBe(15);
         expect(base.method(25)).toBe(25);
@@ -248,7 +248,7 @@ describe('Postconditions cannot be weakened in a subtype', () => {
     }
 
     test('Weaker postcondition', () => {
-        let weaker = new Weaker();
+        const weaker = new Weaker();
 
         expect(weaker.method(15)).toBe(15);
         expect(weaker.method(25)).toBe(25);
@@ -263,7 +263,7 @@ describe('Postconditions cannot be weakened in a subtype', () => {
     }
 
     test('Stronger precondition', () => {
-        let stronger = new Stronger();
+        const stronger = new Stronger();
 
         expect(stronger.method(15)).toBe(15);
         expect(stronger.method(20)).toBe(20);
@@ -278,7 +278,7 @@ describe('Postconditions cannot be weakened in a subtype', () => {
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/539
  */
 describe('A class feature with a decorator must not be functional until the @invariant is defined', () => {
-    let {invariant, ensures} = new Contracts(true);
+    const {invariant, ensures} = new Contracts(true);
 
     @invariant
     class Okay {
@@ -287,7 +287,7 @@ describe('A class feature with a decorator must not be functional until the @inv
     }
 
     test('Valid declaration', () => {
-        let okay = new Okay();
+        const okay = new Okay();
 
         expect(okay.method(15)).toBe(15);
     });
@@ -298,7 +298,7 @@ describe('A class feature with a decorator must not be functional until the @inv
     }
 
     test('Invalid declaration', () => {
-        let fail = new Fail();
+        const fail = new Fail();
 
         expect(() => fail.method(15)).toThrow(MSG_INVARIANT_REQUIRED);
     });
