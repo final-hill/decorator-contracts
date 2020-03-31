@@ -7,7 +7,7 @@
  */
 
 import Contracts from '.';
-import { MSG_NO_STATIC } from './MemberDecorator';
+import { MSG_NO_STATIC, MSG_INVARIANT_REQUIRED } from './MemberDecorator';
 import AssertionError from './AssertionError';
 
 /**
@@ -270,5 +270,36 @@ describe('Postconditions cannot be weakened in a subtype', () => {
         expect(() => stronger.method(25)).toThrow(`Postcondition failed on Stronger.prototype.method`);
         expect(() => stronger.method(5)).toThrow(`Postcondition failed on Stronger.prototype.method`);
         expect(() => stronger.method(35)).toThrow(`Postcondition failed on Stronger.prototype.method`);
+    });
+});
+
+/**
+ * Requirement 539
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/539
+ */
+describe('A class feature with a decorator must not be functional until the @invariant is defined', () => {
+    const {invariant, ensures} = new Contracts(true);
+
+    @invariant
+    class Okay {
+        @ensures((value: number) => 10 <= value && value <= 30)
+        method(value: number) { return value; }
+    }
+
+    test('Valid declaration', () => {
+        const okay = new Okay();
+
+        expect(okay.method(15)).toBe(15);
+    });
+
+    class Fail {
+        @ensures((value: number) => 10 <= value && value <= 30)
+        method(value: number) { return value; }
+    }
+
+    test('Invalid declaration', () => {
+        const fail = new Fail();
+
+        expect(() => fail.method(15)).toThrow(MSG_INVARIANT_REQUIRED);
     });
 });
