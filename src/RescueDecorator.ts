@@ -19,8 +19,8 @@ export const MSG_NO_PROPERTY_RESCUE = 'A property can not be assigned a @rescue'
 export default class RescueDecorator extends MemberDecorator {
     /**
      * Returns an instance of the 'rescue' decorator in the specified mode.
-     * When debugMode is true the decorator is enabled.
-     * When debugMode is false the decorator has no effect
+     * When checkMode is true the decorator is enabled.
+     * When checkMode is false the decorator has no effect
      *
      * @param checkMode - A flag representing mode of the decorator
      */
@@ -33,21 +33,20 @@ export default class RescueDecorator extends MemberDecorator {
      * The `rescue` decorator enables a mechanism for providing Robustness.
      */
     rescue(fnRescue: RescueType) {
-        let self = this,
+        const self = this,
             assert = this._assert;
         this._checkedAssert(typeof fnRescue == 'function', MSG_INVALID_DECORATOR);
         this._checkedAssert(!isClass(fnRescue), MSG_INVALID_DECORATOR);
 
         return function(target: any, propertyKey: PropertyKey, currentDescriptor: PropertyDescriptor): PropertyDescriptor {
-            let isStatic = typeof target == 'function';
-
             if(!self.checkMode) {
                 return currentDescriptor;
             }
 
-            let Clazz = (target as any).constructor,
+            const Clazz = (target as any).constructor,
                 dw = new DescriptorWrapper(currentDescriptor),
-                registration = MemberDecorator.registerFeature(Clazz, propertyKey, dw);
+                registration = MemberDecorator.registerFeature(Clazz, propertyKey, dw),
+                isStatic = typeof target == 'function';
             // Potentially undefined in pre ES5 environments (compilation target)
             assert(dw.hasDescriptor, MSG_DECORATE_METHOD_ACCESSOR_ONLY, TypeError);
             assert(!isStatic, MSG_NO_STATIC, TypeError);

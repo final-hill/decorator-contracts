@@ -7,7 +7,7 @@
  */
 
 import Contracts from '.';
-import { MSG_NO_STATIC } from './MemberDecorator';
+import { MSG_NO_STATIC, MSG_INVARIANT_REQUIRED } from './MemberDecorator';
 import AssertionError from './AssertionError';
 
 /**
@@ -16,7 +16,7 @@ import AssertionError from './AssertionError';
  */
 describe('The @demands decorator must be a non-static feature decorator only', () => {
     test('Test declaration', () => {
-        let {demands} = new Contracts(true);
+        const {demands} = new Contracts(true);
 
         expect(() => {
             class Foo {
@@ -41,7 +41,7 @@ describe('The @demands decorator must be a non-static feature decorator only', (
 
     test('Invalid declaration', () => {
         expect(() => {
-            let {demands} = new Contracts(true);
+            const {demands} = new Contracts(true);
             // @ts-ignore: ignore type error for testing
             @demands(() => true)
             class Foo {}
@@ -50,7 +50,7 @@ describe('The @demands decorator must be a non-static feature decorator only', (
         }).toThrow();
 
         expect(() => {
-            let {demands} = new Contracts(false);
+            const {demands} = new Contracts(false);
             // @ts-ignore: ignore type error for testing
             @demands(() => true)
             class Foo {}
@@ -65,7 +65,7 @@ describe('The @demands decorator must be a non-static feature decorator only', (
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/242
  */
 describe('There can be multiple @demands decorators assigned to a class feature', () => {
-    let {invariant, demands} = new Contracts(true);
+    const {invariant, demands} = new Contracts(true);
 
     @invariant
     class Foo {
@@ -89,7 +89,7 @@ describe('There can be multiple @demands decorators assigned to a class feature'
         dec() { this._value -= 1; }
     }
 
-    let foo = new Foo();
+    const foo = new Foo();
 
     expect(() => foo.inc()).not.toThrow();
 
@@ -106,7 +106,7 @@ describe('There can be multiple @demands decorators assigned to a class feature'
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/244
  */
 describe('Features that override a @demands decorated feature must be subject to that decorator', () => {
-    let {invariant, override, demands} = new Contracts(true);
+    const {invariant, override, demands} = new Contracts(true);
 
     @invariant
     class Base {
@@ -133,7 +133,7 @@ describe('Features that override a @demands decorated feature must be subject to
 
     test('inc(); inc(); dec(); does not throw', () => {
         expect(() => {
-            let sub = new Sub();
+            const sub = new Sub();
             sub.inc();
             sub.inc();
             sub.dec();
@@ -142,7 +142,7 @@ describe('Features that override a @demands decorated feature must be subject to
 
     test('dec(); dec(); throws', () => {
         expect(() => {
-            let sub = new Sub();
+            const sub = new Sub();
             sub.dec();
             sub.dec();
         }).toThrow();
@@ -154,7 +154,7 @@ describe('Features that override a @demands decorated feature must be subject to
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/246
  */
 describe('@demands is evaluated before its associated feature is called', () => {
-    let {invariant, demands} = new Contracts(true);
+    const {invariant, demands} = new Contracts(true);
 
     @invariant
     class Foo {
@@ -173,7 +173,7 @@ describe('@demands is evaluated before its associated feature is called', () => 
             }
         }
 
-        let bar = new Bar();
+        const bar = new Bar();
 
         expect(bar.method()).toBe(-2);
     });
@@ -185,7 +185,7 @@ describe('@demands is evaluated before its associated feature is called', () => 
                 return this._value = 12;
             }
         }
-        let bar = new Bar();
+        const bar = new Bar();
 
         expect(() => { bar.method(); }).toThrow();
     });
@@ -198,7 +198,7 @@ describe('@demands is evaluated before its associated feature is called', () => 
 describe('@demands has a checked mode and unchecked mode', () => {
 
     test('The associated assertion is evaluated when checkMode = true', () => {
-        let {invariant, demands} = new Contracts(true);
+        const {invariant, demands} = new Contracts(true);
 
         @invariant
         class Foo {
@@ -210,7 +210,7 @@ describe('@demands has a checked mode and unchecked mode', () => {
     });
 
     test('The associated assertion is NOT evaluated in checkMode = false', () => {
-        let {invariant, demands} = new Contracts(false);
+        const {invariant, demands} = new Contracts(false);
 
         @invariant
         class Foo {
@@ -227,7 +227,7 @@ describe('@demands has a checked mode and unchecked mode', () => {
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/396
  */
 describe('Preconditions cannot be strengthened in a subtype', () => {
-    let {invariant, demands, override} = new Contracts(true);
+    const {invariant, demands, override} = new Contracts(true);
 
     @invariant
     class Base {
@@ -236,7 +236,7 @@ describe('Preconditions cannot be strengthened in a subtype', () => {
     }
 
     test('Base precondition', () => {
-        let base = new Base();
+        const base = new Base();
 
         expect(base.method(15)).toBe(15);
         expect(() => base.method(5)).toThrow(
@@ -254,7 +254,7 @@ describe('Preconditions cannot be strengthened in a subtype', () => {
     }
 
     test('Weaker precondition', () => {
-        let weaker = new Weaker();
+        const weaker = new Weaker();
 
         expect(weaker.method(15)).toBe(15);
         expect(weaker.method(5)).toBe(5);
@@ -274,7 +274,7 @@ describe('Preconditions cannot be strengthened in a subtype', () => {
     }
 
     test('Stronger precondition', () => {
-        let stronger = new Stronger();
+        const stronger = new Stronger();
 
         expect(stronger.method(15)).toBe(15);
         expect(() => stronger.method(5)).toThrow(
@@ -284,5 +284,36 @@ describe('Preconditions cannot be strengthened in a subtype', () => {
             `Precondition failed on Stronger.prototype.method`
         );
         expect(stronger.method(25)).toBe(25);
+    });
+});
+
+/**
+ * Requirement 539
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/539
+ */
+describe('A class feature with a decorator must not be functional until the @invariant is defined', () => {
+    const {invariant, demands} = new Contracts(true);
+
+    @invariant
+    class Okay {
+        @demands((value: number) => 10 <= value && value <= 30)
+        method(value: number) { return value; }
+    }
+
+    test('Valid declaration', () => {
+        const okay = new Okay();
+
+        expect(okay.method(15)).toBe(15);
+    });
+
+    class Fail {
+        @demands((value: number) => 10 <= value && value <= 30)
+        method(value: number) { return value; }
+    }
+
+    test('Invalid declaration', () => {
+        const fail = new Fail();
+
+        expect(() => fail.method(15)).toThrow(MSG_INVARIANT_REQUIRED);
     });
 });

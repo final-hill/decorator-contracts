@@ -9,9 +9,6 @@ import { DECORATOR_REGISTRY } from './DECORATOR_REGISTRY';
 import type {Constructor} from './typings/Constructor';
 import getAncestry from './lib/getAncestry';
 import innerClass from './lib/innerClass';
-import { TRUE_PRED } from './lib/TRUE_PRED';
-
-const CONTRACT_HANDLER = Symbol('Contract handler');
 
 /**
  * The ContractHandler manages the registration and evaluation of contracts associated with a class
@@ -37,7 +34,7 @@ class ContractHandler {
      */
     protected _decorated(feature: Function, target: object) {
         this.assertInvariants(target);
-        let result = feature.apply(target, arguments);
+        const result = feature.apply(target, arguments);
         this.assertInvariants(target);
 
         return result;
@@ -49,12 +46,12 @@ class ContractHandler {
      * @param self - The context class
      */
     assertInvariants(self: object) {
-        let ancestry = getAncestry(self.constructor as Constructor<any>);
+        const ancestry = getAncestry(self.constructor as Constructor<any>);
         ancestry.forEach(Cons => {
-            let predTable = DECORATOR_REGISTRY.get(innerClass(Cons))?.invariant ?? TRUE_PRED;
-            let predRecord = predTable.call(self, self);
-            Object.entries(predRecord).forEach(([name, value]) => {
-                this._assert(value, name);
+            const invariants = DECORATOR_REGISTRY.get(innerClass(Cons))?.invariants ?? [];
+            invariants.forEach(invariant => {
+                const name = invariant.name;
+                this._assert(invariant.apply(self), `Invariant violated. ${name}: ${invariant.toString()}`);
             });
         });
     }
@@ -67,7 +64,7 @@ class ContractHandler {
      */
     get(target: object, propertyKey: PropertyKey) {
         this.assertInvariants(target);
-        let result = Reflect.get(target, propertyKey);
+        const result = Reflect.get(target, propertyKey);
         this.assertInvariants(target);
 
         return result;
@@ -82,11 +79,11 @@ class ContractHandler {
      */
     set(target: object, propertyKey: PropertyKey, value: (typeof target)[keyof typeof target]) {
         this.assertInvariants(target);
-        let result = Reflect.set(target, propertyKey, value);
+        const result = Reflect.set(target, propertyKey, value);
         this.assertInvariants(target);
 
         return result;
     }
 }
 
-export {ContractHandler, CONTRACT_HANDLER};
+export default ContractHandler;
