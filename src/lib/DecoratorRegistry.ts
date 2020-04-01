@@ -6,6 +6,7 @@
 
 import DescriptorWrapper from './DescriptorWrapper';
 import type {PredicateType} from '../typings/PredicateType';
+import { RescueType } from 'src/typings/RescueType';
 
 export const DECORATOR_REGISTRY = Symbol('Decorator Registry');
 
@@ -14,6 +15,7 @@ export interface IDecoratorRegistration {
     overrides: boolean
     demands: PredicateType[]
     ensures: PredicateType[]
+    rescue?: RescueType
 }
 
 export class DecoratorRegistry extends Map<PropertyKey, IDecoratorRegistration> {
