@@ -1,6 +1,6 @@
 {
     "editor.codeActionsOnSave": {
-        "source.fixAll.tslint": true
+        "source.fixAll.eslint": true
     },
     "files.associations": {
         "**/azure/*.yml": "azure-pipelines"
