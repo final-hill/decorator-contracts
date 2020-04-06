@@ -1,10 +1,10 @@
-/**
+/*!
  * @license
  * Copyright (C) #{YEAR}# Michael L Haufe
  * SPDX-License-Identifier: AGPL-1.0-only
- *
- * Unit testing for the 'rescue' decorator
- */
+*/
+
+/* eslint "require-jsdoc": "off" */
 
 import Contracts from './';
 import { MSG_DUPLICATE_RESCUE } from './RescueDecorator';
@@ -21,7 +21,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
         @invariant
         class Base {
             @rescue(() => {})
-            method() { return 7; }
+            method(): number { return 7; }
         }
         const base = new Base();
 
@@ -32,7 +32,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
         @invariant
         class Base {
             @rescue((_error: any, _args: any[], retry: any) => retry(3))
-            method(value: number) {
+            method(value: number): number {
                 if(value <= 0) {
                     throw new Error('value must be greater than 0');
                 } else {
@@ -47,8 +47,8 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
     test('rescue of method with an error then rethrow throws to caller', () => {
         @invariant
         class Base {
-            @rescue(() => {throw new Error('Rescue throw'); })
-            method() {
+            @rescue(() => { throw new Error('Rescue throw'); })
+            method(): void {
                 throw new Error('Method error');
             }
         }
@@ -60,7 +60,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
         @invariant
         class Base {
             @rescue(() => {})
-            get value() { return 7; }
+            get value(): number { return 7; }
         }
         const base = new Base();
         expect(base.value).toBe(7);
@@ -75,7 +75,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
                 this.value = 7;
                 retry();
             })
-            get value() {
+            get value(): number {
                 if(this.#value == 0) {
                     throw new Error('Bad State');
                 } else {
@@ -93,10 +93,10 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
     test('rescue of error getter then rethrow throws to caller', () => {
         @invariant
         class Base {
-            @rescue((_error: any, _args: any[], _retry: Function) => {
+            @rescue(() => {
                 throw new Error('Not Rescued');
             })
-            get value() {
+            get value(): void {
                 throw new Error('Not implemented');
             }
         }
@@ -109,7 +109,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
         class Base {
             #value = NaN;
 
-            get value() { return this.#value; }
+            get value(): number { return this.#value; }
             @rescue(() => {})
             set value(value: number) { this.#value = value; }
         }
@@ -123,7 +123,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
         class Base {
             #value = NaN;
 
-            get value() { return this.#value; }
+            get value(): number { return this.#value; }
 
             @rescue((_error: any, _args: any[], retry: Function) => {
                 retry(0);
@@ -145,7 +145,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
         class Base {
             #value = NaN;
 
-            get value() { return this.#value; }
+            get value(): number { return this.#value; }
             @rescue(() => { throw new Error('Rescue fail'); })
             set value(_: number) { throw new Error('Setter fail'); }
         }
@@ -162,15 +162,18 @@ describe('The @rescue constructor has a checked mode that enables its execution'
     test('enabled', () => {
         const {invariant, rescue} = new Contracts(true);
 
+        /**
+         * Throws arbitrary error
+         */
+        function baseRescue(): void {
+            throw new Error('I am still an Error');
+        }
+
         expect(() => {
             @invariant
             class Base {
-                protected _baseRescue() {
-                    throw new Error('I am still an Error');
-                }
-
-                @rescue(Base.prototype._baseRescue)
-                throws(value: string) {
+                @rescue(baseRescue)
+                throws(value: string): void {
                     throw new Error(value);
                 }
             }
@@ -189,7 +192,7 @@ describe('The @rescue constructor has a checked mode that enables its execution'
                 @rescue(() => {
                     throw new Error('I am still an Error');
                 })
-                throws(value: string) {
+                throws(value: string): void {
                     throw new Error(value);
                 }
             }
@@ -212,7 +215,7 @@ describe('Only a single @rescue can be assigned to a method or accessor', () => 
             @invariant
             class Base {
                 @rescue(() => {})
-                method() {}
+                method(): void {}
             }
 
             return Base;
@@ -225,7 +228,7 @@ describe('Only a single @rescue can be assigned to a method or accessor', () => 
             class Base {
                 @rescue(() => {})
                 @rescue(() => {})
-                method() {}
+                method(): void {}
             }
 
             return Base;
@@ -241,14 +244,14 @@ describe('The \'retry\' argument of the @rescue function can only be called once
     const {invariant, rescue} = new Contracts(true);
 
     test('Call retry once succeeds', () => {
+        function methodRescue(_error: any, _args: any[], retry: any): void {
+            retry(3);
+        }
+
         @invariant
         class Base {
-            protected _methodRescue(_error: any, _args: any[], retry: any) {
-                return retry(3);
-            }
-
-            @rescue(Base.prototype._methodRescue)
-            method(value: number) {
+            @rescue(methodRescue)
+            method(value: number): number {
                 if(value <= 0) {
                     throw new Error('value must be greater than 0');
                 } else {
@@ -261,14 +264,14 @@ describe('The \'retry\' argument of the @rescue function can only be called once
     });
 
     test('Call retry twice throws error', () => {
+        function methodRescue(_error: any, _args: any[], retry: any): void {
+            retry(retry(3));
+        }
+
         @invariant
         class Base {
-            protected _methodRescue(_error: any, _args: any[], retry: any) {
-                return retry(retry(3));
-            }
-
-            @rescue(Base.prototype._methodRescue)
-            method(value: number) {
+            @rescue(methodRescue)
+            method(value: number): number {
                 if(value <= 0) {
                     throw new Error('value must be greater than 0');
                 } else {
@@ -291,14 +294,14 @@ describe('The @rescue function must preserve the invariant after execution', () 
     @invariant(function(this: Base) { return this.value > 0; })
     class Base {
         #value = 3;
-        get value() { return this.#value; }
+        get value(): number { return this.#value; }
         set value(v: number) { this.#value = v; }
 
         @rescue(function(this: Base) { this.value = 5; })
-        method1() { throw new Error('I am error'); }
+        method1(): void { throw new Error('I am error'); }
 
         @rescue(function(this: Base) { this.value = -1; })
-        method2() { throw new Error('I am error'); }
+        method2(): void { throw new Error('I am error'); }
     }
 
     test('test', () => {
@@ -320,7 +323,7 @@ describe('If a @rescue is executed and the retry argument is not called, then an
     @invariant
     class Base {
         @rescue((_error, _args, retry) => { retry(false); })
-        throwRescue(trigger: boolean) {
+        throwRescue(trigger: boolean): boolean {
             if(trigger) {
                 throw new Error('I am error');
             } else {
@@ -329,7 +332,7 @@ describe('If a @rescue is executed and the retry argument is not called, then an
         }
 
         @rescue(() => { /* Do nothing */ })
-        throwFail() {
+        throwFail(): void {
             throw new Error('I am error');
         }
     }
@@ -355,7 +358,7 @@ describe('A class feature with a decorator must not be functional until the @inv
     @invariant
     class Okay {
         @rescue(() => {})
-        method(value: number) { return value; }
+        method(value: number): number { return value; }
     }
 
     test('Valid declaration', () => {
@@ -366,7 +369,7 @@ describe('A class feature with a decorator must not be functional until the @inv
 
     class Fail {
         @rescue(() => {})
-        method(value: number) { return value; }
+        method(value: number): number { return value; }
     }
 
     test('Invalid declaration', () => {

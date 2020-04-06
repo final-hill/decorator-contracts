@@ -2,23 +2,27 @@
  * @license
  * Copyright (C) #{YEAR}# Michael L Haufe
  * SPDX-License-Identifier: AGPL-1.0-only
- */
+*/
 
 import Assertion from './Assertion';
 import DescriptorWrapper from './lib/DescriptorWrapper';
 import AssertionError from './AssertionError';
-import { DECORATOR_REGISTRY, DecoratorRegistry, IDecoratorRegistration } from './lib/DecoratorRegistry';
+import { DECORATOR_REGISTRY, DecoratorRegistry, DecoratorRegistration } from './lib/DecoratorRegistry';
 import getAncestry from './lib/getAncestry';
 import type {Constructor} from './typings/Constructor';
 import { DecoratedConstructor } from './typings/DecoratedConstructor';
 import type {PredicateType} from './typings/PredicateType';
 
-export const MSG_NO_STATIC = `Only instance members can be decorated, not static members`;
-export const MSG_DECORATE_METHOD_ACCESSOR_ONLY = `Only methods and accessors can be decorated.`;
+export const MSG_NO_STATIC = 'Only instance members can be decorated, not static members';
+export const MSG_DECORATE_METHOD_ACCESSOR_ONLY = 'Only methods and accessors can be decorated.';
 export const MSG_INVARIANT_REQUIRED = 'An @invariant must be defined on the current class or one of its ancestors';
 export const MSG_INVALID_DECORATOR = 'Invalid decorator declaration';
-export const MSG_SINGLE_RETRY = `retry can only be called once`;
+export const MSG_SINGLE_RETRY = 'retry can only be called once';
 
+/**
+ * The default feature implementation until an invariant is
+ * assigned to the class ancestry
+ */
 function fnInvariantRequired(): void {
     throw new AssertionError(MSG_INVARIANT_REQUIRED);
 }
@@ -26,12 +30,27 @@ function fnInvariantRequired(): void {
 const checkedAssert = new Assertion(true).assert;
 
 export default abstract class MemberDecorator {
+    protected _assert: typeof Assertion.prototype.assert;
+    protected _checkedAssert = new Assertion(true).assert;
+    protected _uncheckedAssert = new Assertion(false).assert;
+
+    /**
+     * Returns an instance of the decorator in the specified mode.
+     * When checkMode is true the decorator is enabled.
+     * When checkMode is false the decorator has no effect
+     *
+     * @param {boolean} checkMode - A flag representing mode of the decorator
+     */
+    constructor(protected checkMode: boolean) {
+        this._assert = checkMode ? this._checkedAssert : this._uncheckedAssert;
+    }
+
     /**
      * Finds the nearest ancestor feature for the given propertyKey by walking the prototype chain of the target
      *
-     * @param assert - The assertion implementation
-     * @param targetProto - The prototype of the object
-     * @param propertyKey - The name of the feature to search for
+     * @param {any} targetProto - The prototype of the object
+     * @param {PropertyKey} propertyKey - The name of the feature to search for
+     * @returns {DescriptorWrapper | null} = The DescriptorWrapper if it exists
      */
     static ancestorFeature(targetProto: any, propertyKey: PropertyKey): DescriptorWrapper | null {
         const proto = Object.getPrototypeOf(targetProto);
@@ -49,8 +68,11 @@ export default abstract class MemberDecorator {
 
     /**
      * Returns the feature names defined on the provided prototype and its ancestors
+     *
+     * @param {object} targetProto - The prototype
+     * @returns {Set<PropertyKey>} - The feature names
      */
-    static ancestorFeatureNames(targetProto: any): Set<PropertyKey> {
+    static ancestorFeatureNames(targetProto: object): Set<PropertyKey> {
         if(targetProto == null) {
             return new Set();
         }
@@ -62,16 +84,19 @@ export default abstract class MemberDecorator {
 
     /**
      * Returns the feature names associated with the provided prototype
+     *
+     * @param {object} proto - The prototype
+     * @returns {Set<PropertyKey>} - The feature names
      */
     static featureNames(proto: object): Set<PropertyKey> {
         return proto == null ? new Set() : new Set(
             Object.entries(Object.getOwnPropertyDescriptors(proto))
-            .filter(([key, descriptor]) => {
-                const dw = new DescriptorWrapper(descriptor);
+                .filter(([key, descriptor]) => {
+                    const dw = new DescriptorWrapper(descriptor);
 
-                return (dw.isMethod || dw.isAccessor) && key != 'constructor';
-            })
-            .map(([key, _]) => key)
+                    return (dw.isMethod || dw.isAccessor) && key != 'constructor';
+                })
+                .map(([key]) => key)
         );
     }
 
@@ -79,7 +104,8 @@ export default abstract class MemberDecorator {
      * Returns the decorator registry defined in the current class.
      * If the registry is undefined, a new one is created
      *
-     * @param Clazz
+     * @param {Constructor<any>} Clazz - The class
+     * @returns {DecoratorRegistry} - The DecoratorRegistry
      */
     static getOrCreateRegistry(Clazz: Constructor<any>): DecoratorRegistry {
         return Object.getOwnPropertySymbols(Clazz).includes(DECORATOR_REGISTRY) ?
@@ -92,11 +118,12 @@ export default abstract class MemberDecorator {
      * and then replaces it with an error throwing placeholder until the
      * invariant decorator can restore it
      *
-     * @param Clazz
-     * @param propertyKey
-     * @param descriptorWrapper
+     * @param {Constructor<any>} Clazz - The class
+     * @param {PropertyKey} propertyKey - The property key
+     * @param {DescriptorWrapper} descriptorWrapper - The DescriptorWrapper
+     * @returns {DecoratorRegistration} - The Decorator Registration
      */
-    static registerFeature(Clazz: Constructor<any>, propertyKey: PropertyKey, descriptorWrapper: DescriptorWrapper): IDecoratorRegistration {
+    static registerFeature(Clazz: Constructor<any>, propertyKey: PropertyKey, descriptorWrapper: DescriptorWrapper): DecoratorRegistration {
         const decoratorRegistry = this.getOrCreateRegistry(Clazz),
             registration = decoratorRegistry.getOrCreate(propertyKey, {...descriptorWrapper.descriptor});
 
@@ -120,7 +147,7 @@ export default abstract class MemberDecorator {
         return registration;
     }
 
-    static getAncestorRegistration(Clazz: Constructor<any>, propertyKey: PropertyKey) {
+    static getAncestorRegistration(Clazz: Constructor<any>, propertyKey: PropertyKey): DecoratorRegistration | undefined {
         const Base = Object.getPrototypeOf(Clazz),
             ancestry = getAncestry(Base),
             AncestorRegistryClazz = ancestry.find(Clazz =>
@@ -160,7 +187,7 @@ export default abstract class MemberDecorator {
      * Decorated class features are replaced with the fnInvariantRequired definition.
      * This method restores the original descriptor.
      *
-     * @param Clazz
+     * @param {Constructor<any>} Clazz - The class
      */
     static restoreFeatures(Clazz: Constructor<any>): void {
         const proto = Clazz.prototype;
@@ -181,57 +208,57 @@ export default abstract class MemberDecorator {
                 newDescriptor = {...originalDescriptor},
                 // TODO: more specific error. Want the specific class name, feature name, and expression
                 demandsError = `Precondition failed on ${Clazz.name}.prototype.${String(propertyKey)}`,
-                ensuresError = `Postcondition failed on ${Clazz.name}.prototype.${String(propertyKey)}`;
+                ensuresError = `Postcondition failed on ${Clazz.name}.prototype.${String(propertyKey)}`,
 
-            const checkedFeature = (feature: Function) => function _checkedFeature(this: typeof Clazz, ...args: any[]) {
-                if(allDemands.length > 0) {
-                    checkedAssert(
-                        allDemands.some(
-                            demands => demands.every(
-                                demand => demand.apply(this, args)
-                            )
-                        ),
-                        demandsError
-                    );
-                }
-
-                let result;
-                try {
-                    result = feature.apply(this, args);
-                    if(allEnsures.length > 0) {
+                checkedFeature = (feature: Function) => function _checkedFeature(this: typeof Clazz, ...args: any[]): any {
+                    if(allDemands.length > 0) {
                         checkedAssert(
-                            allEnsures.every(
-                                ensures => ensures.every(
-                                    ensure => ensure.apply(this, args)
+                            allDemands.some(
+                                demands => demands.every(
+                                    demand => demand.apply(this, args)
                                 )
                             ),
-                            ensuresError
+                            demandsError
                         );
                     }
-                } catch(error) {
-                    if(fnRescue == null) {
-                        throw error;
-                    }
-                    let hasRetried = false;
-                    fnRescue.call(this, error, args, (...retryArgs: any[]) => {
-                        hasRetried = checkedAssert(!hasRetried, MSG_SINGLE_RETRY);
-                        result = _checkedFeature.call(this, ...retryArgs);
-                    });
-                    if(!hasRetried) {
-                        throw error;
-                    }
-                }
 
-                return result;
-            };
+                    let result;
+                    try {
+                        result = feature.apply(this, args);
+                        if(allEnsures.length > 0) {
+                            checkedAssert(
+                                allEnsures.every(
+                                    ensures => ensures.every(
+                                        ensure => ensure.apply(this, args)
+                                    )
+                                ),
+                                ensuresError
+                            );
+                        }
+                    } catch(error) {
+                        if(fnRescue == null) {
+                            throw error;
+                        }
+                        let hasRetried = false;
+                        fnRescue.call(this, error, args, (...retryArgs: any[]) => {
+                            hasRetried = checkedAssert(!hasRetried, MSG_SINGLE_RETRY);
+                            result = _checkedFeature.call(this, ...retryArgs);
+                        });
+                        if(!hasRetried) {
+                            throw error;
+                        }
+                    }
+
+                    return result;
+                };
 
             if(descriptorWrapper.isMethod) {
                 const feature: Function = originalDescriptor.value;
                 newDescriptor.value = checkedFeature(feature);
             } else if(descriptorWrapper.isAccessor) {
                 if(descriptorWrapper.hasGetter) {
-                   const feature: Function = originalDescriptor.get!;
-                   newDescriptor.get = checkedFeature(feature);
+                    const feature: Function = originalDescriptor.get!;
+                    newDescriptor.get = checkedFeature(feature);
                 }
                 if(descriptorWrapper.hasSetter) {
                     const feature: Function = originalDescriptor.set!;
@@ -243,20 +270,5 @@ export default abstract class MemberDecorator {
 
             Object.defineProperty(proto, propertyKey, newDescriptor);
         });
-    }
-
-    protected _assert: typeof Assertion.prototype.assert;
-    protected _checkedAssert = new Assertion(true).assert;
-    protected _uncheckedAssert = new Assertion(false).assert;
-
-    /**
-     * Returns an instance of the decorator in the specified mode.
-     * When checkMode is true the decorator is enabled.
-     * When checkMode is false the decorator has no effect
-     *
-     * @param checkMode - A flag representing mode of the decorator
-     */
-    constructor(protected checkMode: boolean) {
-        this._assert = checkMode ? this._checkedAssert : this._uncheckedAssert;
     }
 }

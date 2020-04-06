@@ -2,12 +2,14 @@
  * @license
  * Copyright (C) #{YEAR}# Michael L Haufe
  * SPDX-License-Identifier: AGPL-1.0-only
- */
+*/
+
 
 import MemberDecorator, { MSG_NO_STATIC, MSG_DECORATE_METHOD_ACCESSOR_ONLY} from './MemberDecorator';
 import DescriptorWrapper from './lib/DescriptorWrapper';
 import isClass from './lib/isClass';
 import type { RescueType } from './typings/RescueType';
+import { Constructor } from './typings/Constructor';
 
 export const MSG_INVALID_DECORATOR = 'Invalid decorator usage. Function expected';
 export const MSG_DUPLICATE_RESCUE = 'Only a single @rescue can be assigned to a feature';
@@ -15,6 +17,8 @@ export const MSG_NO_PROPERTY_RESCUE = 'A property can not be assigned a @rescue'
 
 /**
  * The `rescue` decorator enables a mechanism for providing Robustness.
+ * It intercepts exceptions and provides a means to retry the
+ * execution of the associated feature or to rethrow.
  */
 export default class RescueDecorator extends MemberDecorator {
     /**
@@ -22,7 +26,7 @@ export default class RescueDecorator extends MemberDecorator {
      * When checkMode is true the decorator is enabled.
      * When checkMode is false the decorator has no effect
      *
-     * @param checkMode - A flag representing mode of the decorator
+     * @param {boolean} checkMode - A flag representing mode of the decorator
      */
     constructor(protected checkMode: boolean) {
         super(checkMode);
@@ -31,19 +35,24 @@ export default class RescueDecorator extends MemberDecorator {
 
     /**
      * The `rescue` decorator enables a mechanism for providing Robustness.
+     * It intercepts exceptions and provides a means to retry the
+     * execution of the associated feature or to rethrow.
+     *
+     * @param {RescueType} fnRescue - The rescue function
+     * @returns {MethodDecorator} - The MethodDecorator
      */
-    rescue(fnRescue: RescueType) {
-        const self = this,
+    rescue(fnRescue: RescueType): MethodDecorator {
+        const checkMode = this.checkMode,
             assert = this._assert;
         this._checkedAssert(typeof fnRescue == 'function', MSG_INVALID_DECORATOR);
         this._checkedAssert(!isClass(fnRescue), MSG_INVALID_DECORATOR);
 
-        return function(target: any, propertyKey: PropertyKey, currentDescriptor: PropertyDescriptor): PropertyDescriptor {
-            if(!self.checkMode) {
+        return function(target: object, propertyKey: PropertyKey, currentDescriptor: PropertyDescriptor): PropertyDescriptor {
+            if(!checkMode) {
                 return currentDescriptor;
             }
 
-            const Clazz = (target as any).constructor,
+            const Clazz = target.constructor as Constructor<any>,
                 dw = new DescriptorWrapper(currentDescriptor),
                 registration = MemberDecorator.registerFeature(Clazz, propertyKey, dw),
                 isStatic = typeof target == 'function';

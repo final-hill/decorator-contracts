@@ -2,12 +2,9 @@
  * @license
  * Copyright (C) #{YEAR}# Michael L Haufe
  * SPDX-License-Identifier: AGPL-1.0-only
- */
+*/
 
-/**
- * DescriptorWrapper is a utility class for inspecting
- * the native PropertyDescriptor
- */
+
 class DescriptorWrapper {
     get hasDescriptor(): boolean {
         return this.descriptor != undefined;
@@ -24,17 +21,17 @@ class DescriptorWrapper {
     /**
      * Determines if the descriptor describes a property
      */
-    get isProperty() {
+    get isProperty(): boolean {
         return this.hasDescriptor ?
-                typeof this.descriptor!.value != 'function' &&
+            typeof this.descriptor!.value != 'function' &&
                     typeof this.descriptor!.value != 'undefined' :
-                false;
+            false;
     }
 
     /**
      * Determines if the descriptor describes a method
      */
-    get isMethod() {
+    get isMethod(): boolean {
         return this.hasDescriptor ?
             typeof this.descriptor!.value == 'function' :
             false;
@@ -43,7 +40,7 @@ class DescriptorWrapper {
     /**
      * Determines if the descriptor describes an accessor
      */
-    get isAccessor() {
+    get isAccessor(): boolean {
         return this.hasDescriptor ?
             typeof this.descriptor!.value == 'undefined' :
             false;
@@ -51,15 +48,15 @@ class DescriptorWrapper {
 
     get memberType(): 'method' | 'property' | 'accessor' {
         return this.isMethod ? 'method' :
-               this.isProperty ? 'property' :
-               'accessor';
+            this.isProperty ? 'property' :
+                'accessor';
     }
 
-    get value() {
+    get value(): any {
         return this.hasDescriptor ? this.descriptor!.value : undefined;
     }
 
-    // TODO: why undefined?
+    // TODO: why allow undefined?
     constructor(public descriptor: PropertyDescriptor | undefined) {}
 }
 

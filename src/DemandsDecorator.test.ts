@@ -2,9 +2,9 @@
  * @license
  * Copyright (C) #{YEAR}# Michael L Haufe
  * SPDX-License-Identifier: AGPL-1.0-only
- *
- * Unit testing for the demands decorator
- */
+*/
+
+/* eslint "require-jsdoc": "off" */
 
 import Contracts from '.';
 import { MSG_NO_STATIC, MSG_INVARIANT_REQUIRED } from './MemberDecorator';
@@ -21,10 +21,10 @@ describe('The @demands decorator must be a non-static feature decorator only', (
         expect(() => {
             class Foo {
                 @demands(() => true)
-                method1() {}
+                method1(): void {}
 
                 @demands(() => false)
-                method2() {}
+                method2(): void {}
             }
 
             return Foo;
@@ -67,26 +67,27 @@ describe('The @demands decorator must be a non-static feature decorator only', (
 describe('There can be multiple @demands decorators assigned to a class feature', () => {
     const {invariant, demands} = new Contracts(true);
 
+    function nonNegative(this: Foo): boolean {
+        return this._value >= 0;
+    }
+
+    function isEven(this: Foo): boolean {
+        return this._value % 2 == 0;
+    }
+
     @invariant
     class Foo {
         protected _value = 0;
 
-        get value() { return this._value; }
+        get value(): number { return this._value; }
 
-        protected _nonNegative() {
-            return this._value >= 0;
-        }
-        protected _isEven() {
-            return this._value % 2 == 0;
-        }
+        @demands(nonNegative)
+        @demands(isEven)
+        inc(): void { this._value += 2; }
 
-        @demands(Foo.prototype._nonNegative)
-        @demands(Foo.prototype._isEven)
-        inc() { this._value += 2; }
-
-        @demands(Foo.prototype._nonNegative)
-        @demands(Foo.prototype._isEven)
-        dec() { this._value -= 1; }
+        @demands(nonNegative)
+        @demands(isEven)
+        dec(): void { this._value -= 1; }
     }
 
     const foo = new Foo();
@@ -108,23 +109,23 @@ describe('There can be multiple @demands decorators assigned to a class feature'
 describe('Features that override a @demands decorated feature must be subject to that decorator', () => {
     const {invariant, override, demands} = new Contracts(true);
 
+    function nonNegative(this: Base): boolean {
+        return this._value >= 0;
+    }
+
     @invariant
     class Base {
         protected _value = 0;
 
-        protected _nonNegative() {
-            return this._value >= 0;
-        }
+        inc(): void { this._value++; }
 
-        inc() { this._value++; }
-
-        @demands(Base.prototype._nonNegative)
-        dec() { this._value--; }
+        @demands(nonNegative)
+        dec(): void { this._value--; }
     }
 
     class Sub extends Base {
         @override
-        dec() {
+        dec(): void {
             this._value -= 2;
         }
     }
@@ -156,19 +157,19 @@ describe('Features that override a @demands decorated feature must be subject to
 describe('@demands is evaluated before its associated feature is called', () => {
     const {invariant, demands} = new Contracts(true);
 
+    function nonNegative(this: Foo): boolean {
+        return this._value >= 0;
+    }
+
     @invariant
     class Foo {
         protected _value = 0;
-
-        protected _nonNegative() {
-            return this._value >= 0;
-        }
     }
 
     test('true @demands check does not throw', () => {
         class Bar extends Foo {
-            @demands(Bar.prototype._nonNegative)
-            method() {
+            @demands(nonNegative)
+            method(): number {
                 return this._value = -2;
             }
         }
@@ -181,7 +182,7 @@ describe('@demands is evaluated before its associated feature is called', () => 
     test('false @demands check throws', () => {
         class Bar extends Foo {
             @demands(() => false)
-            method() {
+            method(): number {
                 return this._value = 12;
             }
         }
@@ -203,7 +204,7 @@ describe('@demands has a checked mode and unchecked mode', () => {
         @invariant
         class Foo {
             @demands(() => false)
-            method() {}
+            method(): void {}
         }
 
         expect(() => new Foo().method()).toThrow();
@@ -215,7 +216,7 @@ describe('@demands has a checked mode and unchecked mode', () => {
         @invariant
         class Foo {
             @demands(() => false)
-            method() {}
+            method(): void {}
         }
 
         expect(() => new Foo().method()).not.toThrow();
@@ -232,7 +233,7 @@ describe('Preconditions cannot be strengthened in a subtype', () => {
     @invariant
     class Base {
         @demands((value: number) => 10 <= value && value <= 30)
-        method(value: number) { return value; }
+        method(value: number): number { return value; }
     }
 
     test('Base precondition', () => {
@@ -240,17 +241,17 @@ describe('Preconditions cannot be strengthened in a subtype', () => {
 
         expect(base.method(15)).toBe(15);
         expect(() => base.method(5)).toThrow(
-            `Precondition failed on Base.prototype.method`
+            'Precondition failed on Base.prototype.method'
         );
         expect(() => base.method(35)).toThrow(
-            `Precondition failed on Base.prototype.method`
+            'Precondition failed on Base.prototype.method'
         );
     });
 
     class Weaker extends Base {
         @override
         @demands((value: number) => 1 <= value && value <= 50)
-        method(value: number) { return value; }
+        method(value: number): number { return value; }
     }
 
     test('Weaker precondition', () => {
@@ -260,17 +261,17 @@ describe('Preconditions cannot be strengthened in a subtype', () => {
         expect(weaker.method(5)).toBe(5);
         expect(weaker.method(35)).toBe(35);
         expect(() => weaker.method(0)).toThrow(
-            `Precondition failed on Weaker.prototype.method`
+            'Precondition failed on Weaker.prototype.method'
         );
         expect(() => weaker.method(60)).toThrow(
-            `Precondition failed on Weaker.prototype.method`
+            'Precondition failed on Weaker.prototype.method'
         );
     });
 
     class Stronger extends Base {
         @override
         @demands((value: number) => 15 <= value && value <= 20)
-        method(value: number) { return value; }
+        method(value: number): number { return value; }
     }
 
     test('Stronger precondition', () => {
@@ -278,10 +279,10 @@ describe('Preconditions cannot be strengthened in a subtype', () => {
 
         expect(stronger.method(15)).toBe(15);
         expect(() => stronger.method(5)).toThrow(
-            `Precondition failed on Stronger.prototype.method`
+            'Precondition failed on Stronger.prototype.method'
         );
         expect(() => stronger.method(35)).toThrow(
-            `Precondition failed on Stronger.prototype.method`
+            'Precondition failed on Stronger.prototype.method'
         );
         expect(stronger.method(25)).toBe(25);
     });
@@ -297,7 +298,7 @@ describe('A class feature with a decorator must not be functional until the @inv
     @invariant
     class Okay {
         @demands((value: number) => 10 <= value && value <= 30)
-        method(value: number) { return value; }
+        method(value: number): number { return value; }
     }
 
     test('Valid declaration', () => {
@@ -308,7 +309,7 @@ describe('A class feature with a decorator must not be functional until the @inv
 
     class Fail {
         @demands((value: number) => 10 <= value && value <= 30)
-        method(value: number) { return value; }
+        method(value: number): number { return value; }
     }
 
     test('Invalid declaration', () => {

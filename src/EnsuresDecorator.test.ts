@@ -2,9 +2,9 @@
  * @license
  * Copyright (C) #{YEAR}# Michael L Haufe
  * SPDX-License-Identifier: AGPL-1.0-only
- *
- * Unit tests for the ensures decorator
- */
+*/
+
+/* eslint "require-jsdoc": "off" */
 
 import Contracts from '.';
 import { MSG_NO_STATIC, MSG_INVARIANT_REQUIRED } from './MemberDecorator';
@@ -21,10 +21,10 @@ describe('The @ensures decorator must be a non-static method decorator only', ()
         expect(() => {
             class Foo {
                 @ensures(() => true)
-                method1() {}
+                method1(): void {}
 
                 @ensures(() => false)
-                method2() {}
+                method2(): void {}
             }
 
             return Foo;
@@ -67,26 +67,27 @@ describe('The @ensures decorator must be a non-static method decorator only', ()
 describe('There can be multiple @ensures decorators assigned to a class feature', () => {
     const {invariant, ensures} = new Contracts(true);
 
+    function nonNegative(this: Foo): boolean {
+        return this._value >= 0;
+    }
+
+    function isEven(this: Foo): boolean {
+        return this._value % 2 == 0;
+    }
+
     @invariant
     class Foo {
         protected _value = 0;
 
-        get value() { return this._value; }
+        get value(): number { return this._value; }
 
-        protected _nonNegative() {
-            return this._value >= 0;
-        }
-        protected _isEven() {
-            return this._value % 2 == 0;
-        }
+        @ensures(nonNegative)
+        @ensures(isEven)
+        inc(): void { this._value += 2; }
 
-        @ensures(Foo.prototype._nonNegative)
-        @ensures(Foo.prototype._isEven)
-        inc() { this._value += 2; }
-
-        @ensures(Foo.prototype._nonNegative)
-        @ensures(Foo.prototype._isEven)
-        dec() { this._value -= 1; }
+        @ensures(nonNegative)
+        @ensures(isEven)
+        dec(): void { this._value -= 1; }
     }
 
     const foo = new Foo();
@@ -107,23 +108,23 @@ describe('There can be multiple @ensures decorators assigned to a class feature'
 describe('Features that override a @ensures decorated method must be subject to that decorator', () => {
     const {invariant, override, ensures} = new Contracts(true);
 
+    function nonNegative(this: Base): boolean {
+        return this._value >= 0;
+    }
+
     @invariant
     class Base {
         protected _value = 0;
 
-        protected _nonNegative() {
-            return this._value >= 0;
-        }
+        inc(): void { this._value++; }
 
-        inc() { this._value++; }
-
-        @ensures(Base.prototype._nonNegative)
-        dec() { this._value--; }
+        @ensures(nonNegative)
+        dec(): void { this._value--; }
     }
 
     class Sub extends Base {
         @override
-        dec() {
+        dec(): void {
             this._value -= 2;
         }
     }
@@ -154,19 +155,19 @@ describe('Features that override a @ensures decorated method must be subject to 
 describe('@ensures is evaluated after its associated member is called', () => {
     const {invariant, ensures} = new Contracts(true);
 
+    function nonNegative(this: Foo): boolean {
+        return this._value >= 0;
+    }
+
     @invariant
     class Foo {
         protected _value = 0;
-
-        protected _nonNegative() {
-            return this._value >= 0;
-        }
     }
 
     test('true @ensures check does not throw', () => {
         class Bar extends Foo {
-            @ensures(Bar.prototype._nonNegative)
-            method() {
+            @ensures(nonNegative)
+            method(): number {
                 return this._value = 2;
             }
         }
@@ -179,7 +180,7 @@ describe('@ensures is evaluated after its associated member is called', () => {
     test('false @ensures check throws', () => {
         class Bar extends Foo {
             @ensures(() => false)
-            method() {
+            method(): number {
                 return this._value = 12;
             }
         }
@@ -200,7 +201,7 @@ describe('@ensures has a checked mode and unchecked mode', () => {
         @invariant
         class Foo {
             @ensures(() => false)
-            method() {}
+            method(): void {}
         }
 
         expect(() => new Foo().method()).toThrow();
@@ -212,7 +213,7 @@ describe('@ensures has a checked mode and unchecked mode', () => {
         @invariant
         class Foo {
             @ensures(() => false)
-            method() {}
+            method(): void {}
         }
 
         expect(() => new Foo().method()).not.toThrow();
@@ -229,7 +230,7 @@ describe('Postconditions cannot be weakened in a subtype', () => {
     @invariant
     class Base {
         @ensures((value: number) => 10 <= value && value <= 30)
-        method(value: number) { return value; }
+        method(value: number): number { return value; }
     }
 
     test('Base postcondition', () => {
@@ -237,14 +238,14 @@ describe('Postconditions cannot be weakened in a subtype', () => {
 
         expect(base.method(15)).toBe(15);
         expect(base.method(25)).toBe(25);
-        expect(() => base.method(5)).toThrow(`Postcondition failed on Base.prototype.method`);
-        expect(() => base.method(35)).toThrow(`Postcondition failed on Base.prototype.method`);
+        expect(() => base.method(5)).toThrow('Postcondition failed on Base.prototype.method');
+        expect(() => base.method(35)).toThrow('Postcondition failed on Base.prototype.method');
     });
 
     class Weaker extends Base {
         @override
         @ensures((value: number) => 1 <= value && value <= 50)
-        method(value: number) { return value; }
+        method(value: number): number { return value; }
     }
 
     test('Weaker postcondition', () => {
@@ -252,14 +253,14 @@ describe('Postconditions cannot be weakened in a subtype', () => {
 
         expect(weaker.method(15)).toBe(15);
         expect(weaker.method(25)).toBe(25);
-        expect(() => weaker.method(5)).toThrow(`Postcondition failed on Weaker.prototype.method`);
-        expect(() => weaker.method(35)).toThrow(`Postcondition failed on Weaker.prototype.method`);
+        expect(() => weaker.method(5)).toThrow('Postcondition failed on Weaker.prototype.method');
+        expect(() => weaker.method(35)).toThrow('Postcondition failed on Weaker.prototype.method');
     });
 
     class Stronger extends Base {
         @override
         @ensures((value: number) => 15 <= value && value <= 20)
-        method(value: number) { return value; }
+        method(value: number): number { return value; }
     }
 
     test('Stronger precondition', () => {
@@ -267,9 +268,9 @@ describe('Postconditions cannot be weakened in a subtype', () => {
 
         expect(stronger.method(15)).toBe(15);
         expect(stronger.method(20)).toBe(20);
-        expect(() => stronger.method(25)).toThrow(`Postcondition failed on Stronger.prototype.method`);
-        expect(() => stronger.method(5)).toThrow(`Postcondition failed on Stronger.prototype.method`);
-        expect(() => stronger.method(35)).toThrow(`Postcondition failed on Stronger.prototype.method`);
+        expect(() => stronger.method(25)).toThrow('Postcondition failed on Stronger.prototype.method');
+        expect(() => stronger.method(5)).toThrow('Postcondition failed on Stronger.prototype.method');
+        expect(() => stronger.method(35)).toThrow('Postcondition failed on Stronger.prototype.method');
     });
 });
 
@@ -283,7 +284,7 @@ describe('A class feature with a decorator must not be functional until the @inv
     @invariant
     class Okay {
         @ensures((value: number) => 10 <= value && value <= 30)
-        method(value: number) { return value; }
+        method(value: number): number { return value; }
     }
 
     test('Valid declaration', () => {
@@ -294,7 +295,7 @@ describe('A class feature with a decorator must not be functional until the @inv
 
     class Fail {
         @ensures((value: number) => 10 <= value && value <= 30)
-        method(value: number) { return value; }
+        method(value: number): number { return value; }
     }
 
     test('Invalid declaration', () => {

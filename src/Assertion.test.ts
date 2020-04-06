@@ -2,9 +2,8 @@
  * @license
  * Copyright (C) #{YEAR}# Michael L Haufe
  * SPDX-License-Identifier: AGPL-1.0-only
- *
- * Unit testing for the assertion function
- */
+*/
+
 
 import AssertionError from './AssertionError';
 import Contracts from './';
@@ -43,8 +42,8 @@ describe('Assertions must return a boolean in all modes', () => {
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/71
  */
 describe('Assertions must support throwing custom error types', () => {
-    const {assert} = new Contracts(true);
-    const fn = () => assert(false, 'BOOM!');
+    const {assert} = new Contracts(true),
+        fn = (): boolean => assert(false, 'BOOM!');
     expect(fn).toThrow(AssertionError);
     expect(fn).toThrowError('BOOM!');
 });

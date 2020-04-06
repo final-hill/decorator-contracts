@@ -2,7 +2,8 @@
  * @license
  * Copyright (C) #{YEAR}# Michael L Haufe
  * SPDX-License-Identifier: AGPL-1.0-only
- */
+*/
+
 
 import Assertion from './Assertion';
 import OverrideDecorator from './OverrideDecorator';
@@ -15,8 +16,6 @@ import { DECORATOR_REGISTRY } from './DECORATOR_REGISTRY';
 import innerClass from './lib/innerClass';
 import type {Constructor} from './typings/Constructor';
 import { PredicateType } from './typings/PredicateType';
-
-export type ClassDecorator = <T extends Constructor<any>>(Constructor: T) => T;
 
 export const MSG_INVALID_DECORATOR = 'Invalid decorator usage. Function expected';
 
@@ -34,9 +33,20 @@ export default class InvariantDecorator {
         this.invariant = this.invariant.bind(this);
     }
 
+
     invariant<T extends Constructor<any>>(Base: T): T;
     invariant<Self>(predicate: PredicateType): ClassDecorator;
-    invariant(fn: Function | Constructor<any>) {
+    /**
+     * The `@invariant` decorator describes and enforces the properties of a class
+     * via assertions. These assertions are checked after the associated class
+     * is constructed, before and after every method execution, and before and after
+     * every accessor usage (get/set).
+     *
+     * @param {PredicateType | Constructor<any>} fn - An optional assertion to apply to the class
+     * @returns {ClassDecorator | Constructor<any>} - The decorated class, or the decorator if a predicate was provided
+     * @throws {AssertionError} - Throws an Assertion error if not applied to a class.
+     */
+    invariant(fn: PredicateType | Constructor<any>): ClassDecorator | Constructor<any> {
         const isClazz = isClass(fn),
             predicate = isClazz ? undefined : fn as PredicateType,
             Clazz = isClazz ? innerClass(fn as Constructor<any>) : undefined,
@@ -45,7 +55,13 @@ export default class InvariantDecorator {
 
         assert(typeof fn == 'function', MSG_INVALID_DECORATOR);
 
-        function decorator(Clazz: Constructor<any>) {
+        /**
+         * The class decorator
+         *
+         * @param {Constructor<any>} Clazz - The class being decorated
+         * @returns {Constructor<any>} - The decorated class
+         */
+        function decorator(Clazz: Constructor<any>): Constructor<any> {
             assert(isClass(Clazz), MSG_INVALID_DECORATOR);
 
             if(!checkMode) {
@@ -59,11 +75,11 @@ export default class InvariantDecorator {
 
             // TODO: lift
             const ClazzProxy = new Proxy((Clazz as DecoratedConstructor), {
-                construct(Target: Constructor<any>, args: any[], NewTarget: Constructor<any>) {
+                construct(Target: Constructor<any>, args: any[], NewTarget: Constructor<any>): object {
                     const ancestry = getAncestry(NewTarget).reverse();
                     ancestry.forEach(Cons => {
-                        const InnerClass = innerClass(Cons);
-                        const registration = DECORATOR_REGISTRY.getOrCreate(InnerClass);
+                        const InnerClass = innerClass(Cons),
+                            registration = DECORATOR_REGISTRY.getOrCreate(InnerClass);
 
                         if(!registration.isRestored) {
                             OverrideDecorator.checkOverrides(InnerClass);
@@ -78,11 +94,11 @@ export default class InvariantDecorator {
 
                     return new Proxy(obj, registration.contractHandler);
                 },
-                get(target, name) {
+                get(target, name): any {
                     switch(name) {
-                        case IS_PROXY: return true;
-                        case INNER_CLASS: return target;
-                        default: break;
+                    case IS_PROXY: return true;
+                    case INNER_CLASS: return target;
+                    default: break;
                     }
 
                     const property = Reflect.get(target, name);
@@ -92,7 +108,7 @@ export default class InvariantDecorator {
                         ? property.bind(target)
                         : property;
                 },
-                ownKeys(target) {
+                ownKeys(target): PropertyKey[] {
                     const ownSet = new Set(Reflect.ownKeys(target));
                     ownSet.add(IS_PROXY).add(INNER_CLASS);
 
@@ -103,6 +119,6 @@ export default class InvariantDecorator {
             return ClazzProxy;
         }
 
-        return Clazz != undefined ? decorator(Clazz) : decorator;
+        return Clazz != undefined ? decorator(Clazz) : decorator as ClassDecorator;
     }
 }
