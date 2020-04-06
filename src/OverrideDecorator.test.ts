@@ -2,9 +2,8 @@
  * @license
  * Copyright (C) #{YEAR}# Michael L Haufe
  * SPDX-License-Identifier: AGPL-1.0-only
- *
- * Unit tests for the override decorator
- */
+*/
+
 
 import Contracts from './';
 import { MSG_INVALID_ARG_LENGTH, MSG_DUPLICATE_OVERRIDE, MSG_NO_MATCHING_FEATURE } from './OverrideDecorator';
@@ -31,7 +30,7 @@ describe('The override decorator is a non-static member decorator only', () => {
         expect(() => {
             class Base {
                 @override
-                static method() {}
+                static method(): void {}
             }
 
             return Base;
@@ -41,12 +40,12 @@ describe('The override decorator is a non-static member decorator only', () => {
     test('instance method decorator does not throw', () => {
         expect(() => {
             class Base {
-                method() {}
+                method(): void {}
             }
 
             class Sub extends Base {
                 @override
-                method() {}
+                method(): void {}
             }
 
             return Sub;
@@ -65,7 +64,7 @@ describe('In production mode the @override decorator is a no-op', () => {
         expect(() => {
             class Base {
                 @override
-                method() {}
+                method(): void {}
             }
 
             return Base;
@@ -84,7 +83,7 @@ describe('Using @override on a class member with no ancestor member is an error'
         expect(() => {
             class Base {
                 @override
-                method() {}
+                method(): void {}
             }
 
             return Base;
@@ -97,7 +96,7 @@ describe('Using @override on a class member with no ancestor member is an error'
 
             class Sub extends Base {
                 @override
-                method() {}
+                method(): void {}
             }
 
             return Sub;
@@ -113,7 +112,7 @@ describe('Using @override on a class member with no ancestor member is an error'
             class Sub extends Base {
                 @override
                 // @ts-ignore: Ignoring type error for JS check
-                method() {}
+                method(): void {}
             }
 
             return Sub;
@@ -131,14 +130,14 @@ describe('using @override on a method with an ancestor with a different paramete
     test('bad override', () => {
         expect(() => {
             class Base {
-                method(a: string, b: string) {
+                method(a: string, b: string): string {
                     return `${a}, ${b}`;
                 }
             }
 
             class Sub extends Base {
                 @override
-                method(a: string) {
+                method(a: string): string {
                     return a;
                 }
             }
@@ -150,7 +149,7 @@ describe('using @override on a method with an ancestor with a different paramete
     test('bad override 2', () => {
         expect(() => {
             class Base {
-                method(a: string) {
+                method(a: string): string {
                     return `${a}`;
                 }
             }
@@ -158,7 +157,7 @@ describe('using @override on a method with an ancestor with a different paramete
             class Sub extends Base {
                 @override
                 // @ts-ignore: type error for JS test
-                method(a: string, b: string) {
+                method(a: string, b: string): string {
                     return `${a}, ${b}`;
                 }
             }
@@ -171,14 +170,14 @@ describe('using @override on a method with an ancestor with a different paramete
         expect(() => {
             @invariant
             class Base {
-                method(a: string, b: string) {
+                method(a: string, b: string): string {
                     return `${a}, ${b}`;
                 }
             }
 
             class Sub extends Base {
                 @override
-                method(a: string, b: string) {
+                method(a: string, b: string): string {
                     return super.method(a, b);
                 }
             }
@@ -200,17 +199,17 @@ describe('A subclass with an overriding member missing @override is an error', (
         expect(() => {
             @invariant
             class Base {
-                method() {}
+                method(): void {}
 
-                get foo() { return 3; }
+                get foo(): number { return 3; }
             }
 
             class Sub extends Base {
                 @override
-                method() {}
+                method(): void {}
 
                 @override
-                get foo() { return 4; }
+                get foo(): number { return 4; }
             }
 
             return new Sub();
@@ -221,28 +220,28 @@ describe('A subclass with an overriding member missing @override is an error', (
         expect(() => {
             @invariant
             class Base {
-                method() {}
+                method(): void {}
             }
 
             class Sub extends Base {
-                method() {}
+                method(): void {}
             }
 
             return new Sub();
-        }).toThrow(`@override decorator missing on Sub.method`);
+        }).toThrow('@override decorator missing on Sub.method');
 
         expect(() => {
             @invariant
             class Base {
-                get prop() { return 3; }
+                get prop(): number { return 3; }
             }
 
             class Sub extends Base {
-                get prop() { return 5; }
+                get prop(): number { return 5; }
             }
 
             return new Sub();
-        }).toThrow(`@override decorator missing on Sub.prop`);
+        }).toThrow('@override decorator missing on Sub.prop');
     });
 });
 
@@ -256,7 +255,7 @@ describe('Only a single @override can be assigned to a member per class', () => 
     test('duplicate @override', () => {
         expect(() => {
             class Base {
-                method(a: string, b: string) {
+                method(a: string, b: string): string {
                     return `${a}, ${b}`;
                 }
             }
@@ -264,7 +263,7 @@ describe('Only a single @override can be assigned to a member per class', () => 
             class Sub extends Base {
                 @override
                 @override
-                method(a: string, b: string) {
+                method(a: string, b: string): string {
                     return super.method(a, b);
                 }
             }
@@ -276,21 +275,21 @@ describe('Only a single @override can be assigned to a member per class', () => 
     test('Three level @override', () => {
         expect(() => {
             class Base {
-                method(a: string, b: string) {
+                method(a: string, b: string): string {
                     return `${a}, ${b}`;
                 }
             }
 
             class Sub extends Base {
                 @override
-                method(a: string, b: string) {
+                method(a: string, b: string): string {
                     return super.method(a, b);
                 }
             }
 
             class SubSub extends Sub {
                 @override
-                method(a: string, b: string) {
+                method(a: string, b: string): string {
                     return super.method(a, b);
                 }
             }
@@ -311,8 +310,8 @@ describe('Accessors must support @override', () => {
         expect(() => {
             @invariant
             class Base {
-                #value: number = 0;
-                get value() { return this.#value; }
+                #value = 0;
+                get value(): number { return this.#value; }
                 set value(x: number) { this.#value = x; }
             }
 
@@ -331,8 +330,8 @@ describe('Accessors must support @override', () => {
         expect(() => {
             @invariant
             class Base {
-                #value: number = 0;
-                get value() { return this.#value; }
+                #value = 0;
+                get value(): number { return this.#value; }
                 set value(x: number) { this.#value = x; }
             }
 
@@ -357,12 +356,12 @@ describe('A class feature with a decorator must not be functional until the @inv
 
     @invariant
     class Base {
-        method(value: number) { return value; }
+        method(value: number): number { return value; }
     }
 
     class Okay extends Base {
         @override
-        method(value: number) { return value; }
+        method(value: number): number { return value; }
     }
 
     test('Valid declaration', () => {
@@ -372,12 +371,12 @@ describe('A class feature with a decorator must not be functional until the @inv
     });
 
     class BadBase {
-        method(value: number) { return value; }
+        method(value: number): number { return value; }
     }
 
     class Fail extends BadBase {
         @override
-        method(value: number) { return value; }
+        method(value: number): number { return value; }
     }
 
     test('Invalid declaration', () => {

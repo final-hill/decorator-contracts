@@ -7,7 +7,7 @@
         "ms-azure-devops.azure-pipelines",
         "ms-vsts.team",
         "editorconfig.editorconfig",
-        "ms-vscode.vscode-typescript-tslint-plugin",
+        "dbaeumer.vscode-eslint",
         "davidanson.vscode-markdownlint"
 	],
 	// List of extensions recommended by VS Code that should not be recommended for users of this workspace.

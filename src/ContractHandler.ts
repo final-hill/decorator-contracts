@@ -2,7 +2,8 @@
  * @license
  * Copyright (C) #{YEAR}# Michael L Haufe
  * SPDX-License-Identifier: AGPL-1.0-only
- */
+*/
+
 
 import Assertion from './Assertion';
 import { DECORATOR_REGISTRY } from './DECORATOR_REGISTRY';
@@ -20,32 +21,18 @@ class ContractHandler {
 
     /**
      * Constructs a new instance of the ContractHandler
-     * @param _assert - The assertion implementation associated with the current checkMode
+     * @param {Assertion.prototype.assert} _assert - The assertion implementation associated with the current checkMode
      */
     constructor(
         protected readonly _assert: typeof Assertion.prototype.assert
     ) { }
 
     /**
-     * Wraps a method with invariant assertions
-     *
-     * @param feature
-     * @param target
-     */
-    protected _decorated(feature: Function, target: object) {
-        this.assertInvariants(target);
-        const result = feature.apply(target, arguments);
-        this.assertInvariants(target);
-
-        return result;
-    }
-
-    /**
      * Evaluates all registered invariants
      *
-     * @param self - The context class
+     * @param {object} self - The context class
      */
-    assertInvariants(self: object) {
+    assertInvariants(self: object): void {
         const ancestry = getAncestry(self.constructor as Constructor<any>);
         ancestry.forEach(Cons => {
             const invariants = DECORATOR_REGISTRY.get(innerClass(Cons))?.invariants ?? [];
@@ -59,10 +46,11 @@ class ContractHandler {
     /**
      * The handler trap for getting property values
      *
-     * @param target - The target object
-     * @param propertyKey - The name or Symbol  of the property to get
+     * @param {object} target - The target object
+     * @param {PropertyKey} propertyKey - The name or Symbol  of the property to get
+     * @returns {any} - The result of executing 'get' on the target
      */
-    get(target: object, propertyKey: PropertyKey) {
+    get(target: object, propertyKey: PropertyKey): any {
         this.assertInvariants(target);
         const result = Reflect.get(target, propertyKey);
         this.assertInvariants(target);
@@ -73,11 +61,12 @@ class ContractHandler {
     /**
      * The handler trap for setting property values
      *
-     * @param target - The target object
-     * @param prop - The name or Symbol of the property to set
-     * @param value - The new value of the property to set.
+     * @param {object} target - The target object
+     * @param {PropertyKey} propertyKey - The name or Symbol of the property to set
+     * @param {any} value - The new value of the property to set.
+     * @returns {boolean} - The result of executing 'set' on the target
      */
-    set(target: object, propertyKey: PropertyKey, value: (typeof target)[keyof typeof target]) {
+    set(target: object, propertyKey: PropertyKey, value: any): boolean {
         this.assertInvariants(target);
         const result = Reflect.set(target, propertyKey, value);
         this.assertInvariants(target);

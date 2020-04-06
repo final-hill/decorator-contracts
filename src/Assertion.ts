@@ -2,7 +2,8 @@
  * @license
  * Copyright (C) #{YEAR}# Michael L Haufe
  * SPDX-License-Identifier: AGPL-1.0-only
- */
+*/
+
 
 import AssertionError from './AssertionError';
 import type {Constructor} from './typings/Constructor';
@@ -35,7 +36,7 @@ export default class Assertion {
      * Constructs an instance of the Assertion class in the specified mode.
      * Enabled when checkMode is true, and disabled otherwise
      *
-     * @param checkMode - The flag representing mode of the assertion
+     * @param {boolean} checkMode - The flag representing mode of the assertion
      */
     constructor(protected checkMode: boolean) {}
 
@@ -43,17 +44,19 @@ export default class Assertion {
      * Tests the provided condition. If the condition is false an AssertionError is raised with an optional message.
      * If the provided condition is true, then the function returns without raising an error
      *
-     * @param condition - The condition to test
-     * @param message - A descriptive message to associate with the AssertionError
-     * @param ErrorConstructor - The constructor of the Error to use
+     * @param {boolean} condition - The condition to test
+     * @param {string} message - A descriptive message to associate with the AssertionError
+     * @param {Constructor<Error>} ErrorConstructor - The constructor of the Error to use
      * @throws {Error} - When the condition is false
      * @see AssertionError
+     * @returns {boolean} - returns `true` if it does not throw
+     * @throws {AssertionError} - Throws an AssertionError by default if the condition is false
      */
-    assert = (condition: boolean, message: string = 'Assertion failure', ErrorConstructor: Constructor<Error> = AssertionError): true => {
+    assert = (condition: boolean, message = 'Assertion failure', ErrorConstructor: Constructor<Error> = AssertionError): true => {
         if(this.checkMode && !condition) {
             throw new ErrorConstructor(message);
         }
 
         return true;
-    }
+    };
 }

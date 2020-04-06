@@ -2,7 +2,7 @@
  * @license
  * Copyright (C) #{YEAR}# Michael L Haufe
  * SPDX-License-Identifier: AGPL-1.0-only
- */
+*/
 
 import MemberDecorator, { MSG_INVALID_DECORATOR, MSG_NO_STATIC } from './MemberDecorator';
 import type {PredicateType} from './typings/PredicateType';
@@ -15,9 +15,9 @@ import DescriptorWrapper from './lib/DescriptorWrapper';
 export default class EnsuresDecorator extends MemberDecorator {
     /**
      * Constructs a new instance of the EnsuresDecorator in the specified mode
-     * Enabled when checkMoe is true, and disabled otherwise
+     * Enabled when checkMode is true, and disabled otherwise
      *
-     * @param checkMode - The flag representing the mode of the assertion
+     * @param {boolean} checkMode - The flag representing the mode of the assertion
      */
     constructor(protected checkMode: boolean) {
         super(checkMode);
@@ -26,10 +26,13 @@ export default class EnsuresDecorator extends MemberDecorator {
 
     /**
      * The 'ensures' decorator. This is a feature decorator only
-     * @param predicate
+     *
+     * @param {PredicateType} predicate - The Assertion to test
+     * @returns {MethodDecorator} - The method decorator
+     * @throws {AssertionError} - Throws an AssertionError if the predicate is not a function
      */
-    ensures(predicate: PredicateType) {
-        const self = this,
+    ensures(predicate: PredicateType): MethodDecorator {
+        const checkMode = this.checkMode,
             assert = this._assert;
         this._checkedAssert(typeof predicate == 'function', MSG_INVALID_DECORATOR);
 
@@ -37,7 +40,7 @@ export default class EnsuresDecorator extends MemberDecorator {
             const isStatic = typeof target == 'function';
             assert(!isStatic, MSG_NO_STATIC, TypeError);
 
-            if(!self.checkMode) {
+            if(!checkMode) {
                 return currentDescriptor;
             }
 

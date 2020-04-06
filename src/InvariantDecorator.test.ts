@@ -2,9 +2,8 @@
  * @license
  * Copyright (C) #{YEAR}# Michael L Haufe
  * SPDX-License-Identifier: AGPL-1.0-only
- *
- * Unit tests for the invariant decorator
- */
+*/
+
 
 import Contracts from './';
 import AssertionError from './AssertionError';
@@ -28,7 +27,7 @@ describe('The invariant decorator MUST be class decorator only', () => {
             class Foo {
                 // @ts-ignore : Raises a type error as expected.
                 @invariant(function() { return true; })
-                baz() {}
+                baz(): void {}
             }
 
             return Foo;
@@ -136,11 +135,11 @@ describe('The subclasses of an invariant decorated class must obey the invariant
 
         @invariant(function(this: Foo) { return this.value >= 0; })
         class Foo {
-            private _value: number = 0;
-            get value() { return this._value; }
+            private _value = 0;
+            get value(): number { return this._value; }
             set value(value: number) { this._value = value; }
-            inc() { this.value++; }
-            dec() { this.value--; }
+            inc(): void { this.value++; }
+            dec(): void { this.value--; }
         }
 
         class Bar extends Foo {}
@@ -175,12 +174,13 @@ describe('The subclasses of an invariant decorated class must obey the invariant
         // overriding members
         class Baz extends Foo {
             @override
-            get value() { return super.value; }
+            get value(): number { return super.value; }
             set value(value: number) { super.value = value; }
+
             @override
-            inc() { super.value++; }
+            inc(): void { super.value++; }
             @override
-            dec() { super.value--; }
+            dec(): void { super.value--; }
         }
 
         expect(() => {
@@ -216,11 +216,12 @@ describe('The subclasses of an invariant decorated class must obey the invariant
 
         @invariant(function(this: Foo) { return this.value >= 0; })
         class Foo {
-            #value: number = 0;
-            get value() { return this.#value; }
+            #value = 0;
+            get value(): number { return this.#value; }
             set value(value: number) { this.#value = value; }
-            inc() { this.#value++; }
-            dec() { this.#value--; }
+
+            inc(): void { this.#value++; }
+            dec(): void { this.#value--; }
         }
 
         class Bar extends Foo {}
@@ -278,12 +279,12 @@ describe('A truthy invariant does not throw an exception when evaluated', () => 
             expect(() => {
                 @invariant(function(this: Foo) { return this.value >= 0; })
                 class Foo {
-                    #value: number = 0;
-                    get value() { return this.#value; }
+                    #value = 0;
+                    get value(): number { return this.#value; }
                     set value(v) { this.#value = v; }
 
-                    dec() { this.value--; }
-                    inc() { this.value++; }
+                    dec(): void { this.value--; }
+                    inc(): void { this.value++; }
                 }
 
                 const foo = new Foo();
@@ -330,12 +331,12 @@ describe('A falsy invariant throws an exception when evaluated', () => {
         expect(() => {
             @invariant(function(this: Foo) { return this.value === 37; })
             class Foo {
-                #value: number = 37;
-                get value() { return this.#value; }
+                #value = 37;
+                get value(): number { return this.#value; }
                 set value(v) { this.#value = v; }
 
-                dec() { this.value--; }
-                inc() { this.value++; }
+                dec(): void { this.value--; }
+                inc(): void { this.value++; }
             }
 
             const foo = new Foo();
@@ -352,12 +353,12 @@ describe('A falsy invariant throws an exception when evaluated', () => {
         expect(() => {
             @invariant(function(this: Foo) { return this.value === 37; })
             class Foo {
-                #value: number = 37;
-                get value() { return this.#value; }
+                #value = 37;
+                get value(): number { return this.#value; }
                 set value(v) { this.#value = v; }
 
-                dec() { this.value--; }
-                inc() { this.value++; }
+                dec(): void { this.value--; }
+                inc(): void { this.value++; }
             }
 
             const foo = new Foo();
@@ -424,11 +425,12 @@ describe('An invariant is evaluated before and after every method call on the as
 
         @invariant(function (this: Foo) { return  this.value >= 0; })
         class Foo {
-            #value: number = 0;
-            get value() { return this.#value; }
+            #value = 0;
+            get value(): number { return this.#value; }
             set value(v) { this.#value = v; }
-            inc() { this.value++; }
-            dec() { this.value--; }
+
+            inc(): void { this.value++; }
+            dec(): void { this.value--; }
         }
 
         const foo = new Foo();
@@ -451,11 +453,12 @@ describe('An invariant is evaluated before and after every method call on the as
 
         @invariant<Foo>(function (this: Foo) { return this.value >= 0; })
         class Foo {
-            #value: number = 0;
-            get value() { return this.#value; }
+            #value = 0;
+            get value(): number { return this.#value; }
             set value(v) { this.#value = v; }
-            inc() { this.value++; }
-            dec() { this.value--; }
+
+            inc(): void { this.value++; }
+            dec(): void { this.value--; }
         }
 
         const foo = new Foo();
@@ -510,11 +513,12 @@ describe('In debug mode the invariant decorator evaluates its assertions', () =>
         expect(() => {
             @invariant(function (this: Foo) { return this.value === 37; })
             class Foo {
-                #value: number = 37;
-                get value() { return this.#value; }
+                #value = 37;
+                get value(): number { return this.#value; }
                 set value(v) { this.#value = v; }
-                dec() { this.value--; }
-                inc() { this.value++; }
+
+                dec(): void { this.value--; }
+                inc(): void { this.value++; }
             }
 
             const foo = new Foo();
@@ -530,8 +534,8 @@ describe('In debug mode the invariant decorator evaluates its assertions', () =>
 
         @invariant(function(this: Foo) { return this.value >= 0; })
         class Foo {
-            #value: number = 0;
-            get value() { return this.#value; }
+            #value = 0;
+            get value(): number { return this.#value; }
             set value(value: number) { this.#value = value; }
         }
 
@@ -567,11 +571,12 @@ describe('In production mode the invariant decorator does not evaluate its asser
         expect(() => {
             @invariant(function(this: Foo) { return this.value === 42; })
             class Foo {
-                #value: number = 0;
-                get value() { return this.#value; }
+                #value = 0;
+                get value(): number { return this.#value; }
                 set value(v) { this.#value = v; }
-                dec() { this.value--; }
-                inc() { this.value++; }
+
+                dec(): void { this.value--; }
+                inc(): void { this.value++; }
             }
 
             const foo = new Foo();

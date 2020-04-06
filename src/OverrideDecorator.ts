@@ -2,16 +2,17 @@
  * @license
  * Copyright (C) #{YEAR}# Michael L Haufe
  * SPDX-License-Identifier: AGPL-1.0-only
- */
+*/
+
 
 import DescriptorWrapper from './lib/DescriptorWrapper';
 import MemberDecorator, { MSG_NO_STATIC } from './MemberDecorator';
 import Assertion from './Assertion';
 import type {Constructor} from './typings/Constructor';
 
-export const MSG_INVALID_ARG_LENGTH = `An overridden method must have the same number of parameters as its ancestor method`;
-export const MSG_NO_MATCHING_FEATURE = `This feature does not override an ancestor feature.`;
-export const MSG_DUPLICATE_OVERRIDE = `Only a single @override decorator can be assigned to a class member`;
+export const MSG_INVALID_ARG_LENGTH = 'An overridden method must have the same number of parameters as its ancestor method';
+export const MSG_NO_MATCHING_FEATURE = 'This feature does not override an ancestor feature.';
+export const MSG_DUPLICATE_OVERRIDE = 'Only a single @override decorator can be assigned to a class member';
 
 const checkedAssert = new Assertion(true).assert;
 
@@ -21,9 +22,20 @@ const checkedAssert = new Assertion(true).assert;
  */
 export default class OverrideDecorator extends MemberDecorator {
     /**
+     * Returns an instance of the 'override' decorator in the specified mode.
+     * When checkMode is true the decorator is enabled. When checkMode is false the decorator has no effect
+     *
+     * @param {boolean} checkMode - A flag representing mode of the decorator
+     */
+    constructor(protected checkMode: boolean) {
+        super(checkMode);
+        this.override = this.override.bind(this);
+    }
+
+    /**
      * Checks the features of the class for missing override decorators
      *
-     * @param Clazz - The class constructor
+     * @param {Constructor<any>} Clazz - The class constructor
      */
     static checkOverrides(Clazz: Constructor<any>): void {
         const proto = Clazz.prototype;
@@ -45,28 +57,22 @@ export default class OverrideDecorator extends MemberDecorator {
     }
 
     /**
-     * Returns an instance of the 'override' decorator in the specified mode.
-     * When checkMode is true the decorator is enabled. When checkMode is false the decorator has no effect
-     *
-     * @param checkMode - A flag representing mode of the decorator
-     */
-    constructor(protected checkMode: boolean) {
-        super(checkMode);
-        this.override = this.override.bind(this);
-    }
-
-    /**
      * The 'override' decorator asserts that the current class feautre is a specialization or
      * replacement of an ancestor class's feature of the same name and argument count
+     *
+     * @param {object} target - The class
+     * @param {PropertyKey} propertyKey - The property key
+     * @param {PropertyDescriptor} descriptor - The property descriptor
+     * @returns {PropertyDescriptor} - The PropertyDescriptor
      */
-    override(target: Function | object, propertyKey: PropertyKey, currentDescriptor: PropertyDescriptor): PropertyDescriptor {
+    override(target: object, propertyKey: PropertyKey, descriptor: PropertyDescriptor): PropertyDescriptor {
         if(!this.checkMode) {
-            return currentDescriptor;
+            return descriptor;
         }
 
         const assert = this._assert,
             isStatic = typeof target == 'function',
-            dw = new DescriptorWrapper(currentDescriptor);
+            dw = new DescriptorWrapper(descriptor);
         assert(!isStatic, MSG_NO_STATIC, TypeError);
 
         const am = MemberDecorator.ancestorFeature(target, propertyKey);
@@ -82,6 +88,6 @@ export default class OverrideDecorator extends MemberDecorator {
             checkedAssert(thisMethod.length == ancMethod.length, MSG_INVALID_ARG_LENGTH);
         }
 
-        return currentDescriptor;
+        return descriptor;
     }
 }

@@ -2,6 +2,7 @@
     "env": {
         "browser": true,
         "es6": true,
+        "jest": true,
         "node": true
     },
     "extends": [],
@@ -18,13 +19,12 @@
     },
     "plugins": [
         "@typescript-eslint",
-        // "@typescript-eslint/tslint",
         "header"
     ],
     "rules": {
         "@typescript-eslint/adjacent-overload-signatures": "error",
         "@typescript-eslint/ban-ts-ignore": [
-            "error"
+            "off"
         ],
         "@typescript-eslint/ban-types": [
             "error"
@@ -41,13 +41,9 @@
         ],
         "@typescript-eslint/class-name-casing": "error",
         "@typescript-eslint/consistent-type-assertions": "error",
-        "@typescript-eslint/explicit-function-return-type": [
-            "warn"
-        ],
+        "@typescript-eslint/explicit-function-return-type":  "error",
         "@typescript-eslint/interface-name-prefix": "error",
-        "@typescript-eslint/member-delimiter-style": [
-            "error"
-        ],
+        "@typescript-eslint/member-delimiter-style": "error",
         "no-array-constructor": [
             "off"
         ],
@@ -56,9 +52,6 @@
         ],
         "no-empty-function": [
             "off"
-        ],
-        "@typescript-eslint/no-empty-function": [
-            "error"
         ],
         "@typescript-eslint/no-empty-interface": "off",
         "@typescript-eslint/no-explicit-any": "off",
@@ -70,7 +63,7 @@
             "error"
         ],
         "@typescript-eslint/no-non-null-assertion": [
-            "warn"
+            "off"
         ],
         "@typescript-eslint/no-this-alias": [
             "error"
@@ -78,14 +71,8 @@
         "no-unused-vars": [
             "off"
         ],
-        "@typescript-eslint/no-unused-vars": [
-            "warn"
-        ],
         "no-use-before-define": [
             "off"
-        ],
-        "@typescript-eslint/no-use-before-define": [
-            "error"
         ],
         "@typescript-eslint/no-var-requires": [
             "error"
@@ -141,9 +128,8 @@
         "no-dupe-args": [
             "error"
         ],
-        "no-dupe-class-members": [
-            "error"
-        ],
+        // TypeScript supports signature overloading
+        "no-dupe-class-members": "off",
         "no-dupe-keys": [
             "error"
         ],
@@ -270,21 +256,7 @@
         "@typescript-eslint/explicit-member-accessibility": [
             "error",
             {
-                "accessibility": "explicit"
-            }
-        ],
-        "@typescript-eslint/indent": [
-            "error",
-            4,
-            {
-                "ArrayExpression": "first",
-                "ObjectExpression": "first",
-                "FunctionDeclaration": {
-                    "parameters": "first"
-                },
-                "FunctionExpression": {
-                    "parameters": "first"
-                }
+                "accessibility": "no-public"
             }
         ],
         "@typescript-eslint/member-ordering": "error",
@@ -316,7 +288,6 @@
         "curly": "error",
         "default-case": "error",
         "eol-last": "off",
-        "import/no-deprecated": "error",
         "linebreak-style": [
             "error",
             "windows"
@@ -364,13 +335,16 @@
         "valid-jsdoc": ["error", {
             "requireReturn": false
         }],
-        "header/header": [2, "block",
+        "header/header": [2, "block", [
             "!",
             " * @license",
             " * Copyright (C) #{YEAR}# Michael L Haufe",
             " * SPDX-License-Identifier: AGPL-1.0-only",
             ""
-        ]
+        ]]
     },
-    "settings": {}
+    "settings": {
+        "import/parsers": { "@typescript-eslint/parser": [".ts"] },
+        "import/resolver": { "eslint-import-resolver-typescript": true }
+    }
 }
