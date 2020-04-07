@@ -50,7 +50,7 @@ export default class InvariantDecorator {
         const isClazz = isClass(fn),
             predicate = isClazz ? undefined : fn as PredicateType,
             Clazz = isClazz ? innerClass(fn as Constructor<any>) : undefined,
-            assert = this._assert,
+            assert: Assertion['assert'] = this._assert,
             checkMode = this.checkMode;
 
         assert(typeof fn == 'function', MSG_INVALID_DECORATOR);

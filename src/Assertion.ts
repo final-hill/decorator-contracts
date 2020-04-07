@@ -38,7 +38,9 @@ export default class Assertion {
      *
      * @param {boolean} checkMode - The flag representing mode of the assertion
      */
-    constructor(protected checkMode: boolean) {}
+    constructor(protected checkMode: boolean) {
+        this.assert = this.assert.bind(this);
+    }
 
     /**
      * Tests the provided condition. If the condition is false an AssertionError is raised with an optional message.
@@ -49,14 +51,11 @@ export default class Assertion {
      * @param {Constructor<Error>} ErrorConstructor - The constructor of the Error to use
      * @throws {Error} - When the condition is false
      * @see AssertionError
-     * @returns {boolean} - returns `true` if it does not throw
      * @throws {AssertionError} - Throws an AssertionError by default if the condition is false
      */
-    assert = (condition: boolean, message = 'Assertion failure', ErrorConstructor: Constructor<Error> = AssertionError): true => {
-        if(this.checkMode && !condition) {
+    assert(condition: unknown, message = 'Assertion failure', ErrorConstructor: Constructor<Error> = AssertionError): asserts condition {
+        if(this.checkMode && Boolean(condition) == false) {
             throw new ErrorConstructor(message);
         }
-
-        return true;
-    };
+    }
 }

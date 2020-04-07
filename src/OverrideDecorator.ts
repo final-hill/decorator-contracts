@@ -14,7 +14,7 @@ export const MSG_INVALID_ARG_LENGTH = 'An overridden method must have the same n
 export const MSG_NO_MATCHING_FEATURE = 'This feature does not override an ancestor feature.';
 export const MSG_DUPLICATE_OVERRIDE = 'Only a single @override decorator can be assigned to a class member';
 
-const checkedAssert = new Assertion(true).assert;
+const checkedAssert: Assertion['assert'] = new Assertion(true).assert;
 
 /**
  * The 'override' decorator asserts that the current class feautre is a specialization or
@@ -70,7 +70,7 @@ export default class OverrideDecorator extends MemberDecorator {
             return descriptor;
         }
 
-        const assert = this._assert,
+        const assert: Assertion['assert'] = this._assert,
             isStatic = typeof target == 'function',
             dw = new DescriptorWrapper(descriptor);
         assert(!isStatic, MSG_NO_STATIC, TypeError);
@@ -80,7 +80,8 @@ export default class OverrideDecorator extends MemberDecorator {
 
         const Clazz = (target as any).constructor,
             registration = MemberDecorator.registerFeature(Clazz, propertyKey, dw);
-        registration.overrides = checkedAssert(!registration.overrides, MSG_DUPLICATE_OVERRIDE);
+        checkedAssert(!registration.overrides, MSG_DUPLICATE_OVERRIDE);
+        registration.overrides = true;
 
         if(registration.descriptorWrapper.isMethod) {
             const thisMethod: Function = registration.descriptorWrapper.value,

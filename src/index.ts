@@ -29,7 +29,7 @@ class Contracts {
      * @returns {boolean} - returns `true` if it does not throw
      * @throws {AssertionError} - Throws an AssertionError by default if the condition is false
      */
-    assert: typeof Assertion.prototype.assert;
+    assert: Assertion['assert'];
     /**
      * The `@ensures` decorator is an assertion of a postcondition.
      * It expresses a condition that must be true after the associated class member is executed.
@@ -38,7 +38,7 @@ class Contracts {
      * @returns {MethodDecorator} - The method decorator
      * @throws {AssertionError} - Throws an AssertionError if the predicate is not a function
      */
-    ensures: typeof EnsuresDecorator.prototype.ensures;
+    ensures: EnsuresDecorator['ensures'];
     /**
      * The `@invariant` decorator describes and enforces the properties of a class
      * via assertions. These assertions are checked after the associated class
@@ -49,7 +49,7 @@ class Contracts {
      * @returns {ClassDecorator | Constructor<any>} - The decorated class, or the decorator if a predicate was provided
      * @throws {AssertionError} - Throws an Assertion error if not applied to a class.
      */
-    invariant: typeof InvariantDecorator.prototype.invariant;
+    invariant: InvariantDecorator['invariant'];
     /**
      * The 'override' decorator asserts that the current class feautre is a specialization or
      * replacement of an ancestor class's feature of the same name and argument count
@@ -59,7 +59,7 @@ class Contracts {
      * @param {PropertyDescriptor} descriptor - The property descriptor
      * @returns {PropertyDescriptor} - The PropertyDescriptor
      */
-    override: typeof OverrideDecorator.prototype.override;
+    override: OverrideDecorator['override'];
     /**
      * The `@demands` decorator is an assertion of a precondition.
      * It expresses a condition that must be true before the associated class member is executed.
@@ -67,7 +67,7 @@ class Contracts {
      * @param {PredicateType} predicate - The assertion
      * @returns {MethodDecorator} - The Method Decorator
      */
-    demands: typeof DemandsDecorator.prototype.demands;
+    demands: DemandsDecorator['demands'];
     /**
      * The `rescue` decorator enables a mechanism for providing Robustness.
      * It intercepts exceptions and provides a means to retry the
@@ -76,7 +76,7 @@ class Contracts {
      * @param {RescueType} fnRescue - The rescue function
      * @returns {MethodDecorator} - The MethodDecorator
      */
-    rescue: typeof RescueDecorator.prototype.rescue;
+    rescue: RescueDecorator['rescue'];
 
     /**
      * Constructs a new instance of Contracts in the specified mode

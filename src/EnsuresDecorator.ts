@@ -7,6 +7,7 @@
 import MemberDecorator, { MSG_INVALID_DECORATOR, MSG_NO_STATIC } from './MemberDecorator';
 import type {PredicateType} from './typings/PredicateType';
 import DescriptorWrapper from './lib/DescriptorWrapper';
+import Assertion from './Assertion';
 
 /**
  * The `@ensures` decorator is an assertion of a postcondition.
@@ -33,7 +34,7 @@ export default class EnsuresDecorator extends MemberDecorator {
      */
     ensures(predicate: PredicateType): MethodDecorator {
         const checkMode = this.checkMode,
-            assert = this._assert;
+            assert: Assertion['assert'] = this._assert;
         this._checkedAssert(typeof predicate == 'function', MSG_INVALID_DECORATOR);
 
         return function(target: any, propertyKey: PropertyKey, currentDescriptor: PropertyDescriptor): PropertyDescriptor {
