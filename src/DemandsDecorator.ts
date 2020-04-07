@@ -9,6 +9,7 @@ import MemberDecorator, { MSG_NO_STATIC, MSG_INVALID_DECORATOR } from './MemberD
 import DescriptorWrapper from './lib/DescriptorWrapper';
 import type {PredicateType} from './typings/PredicateType';
 import { Constructor } from './typings/Constructor';
+import Assertion from './Assertion';
 
 /**
  * The `@demands` decorator is an assertion of a precondition.
@@ -35,7 +36,7 @@ export default class DemandsDecorator extends MemberDecorator {
      */
     demands(predicate: PredicateType): MethodDecorator {
         const checkMode = this.checkMode,
-            assert = this._assert;
+            assert: Assertion['assert'] = this._assert;
         this._checkedAssert(typeof predicate == 'function', MSG_INVALID_DECORATOR);
 
         return function(target: object, propertyKey: PropertyKey, descriptor: PropertyDescriptor): PropertyDescriptor {

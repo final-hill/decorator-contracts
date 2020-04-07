@@ -63,7 +63,7 @@ checked mode: `true`
 unchecked mode: `false`
 
 ```typescript
-let {assert, invariant, override, rescue, demands} = new Contracts(true);
+let {assert, invariant, override, rescue, demands, ensures} = new Contracts(true);
 ```
 
 During development and testing you will want to use checked mode. This will
@@ -81,7 +81,7 @@ They are used inline to express a condition that must evaluate to true at a
 particular point of execution.
 
 ```typescript
-let {assert} = new Contracts(true);
+let assert: Contracts['assert'] = new Contracts(true).assert;
 
 function avg(xs: number[]): number {
     assert(xs.length > 0, 'The list can not be empty')
@@ -90,52 +90,23 @@ function avg(xs: number[]): number {
 }
 ```
 
-Assertions can also be used with conditionals as they return a boolean value.
-So if you find yourself writing code like the following:
+In TypeScript `assert` will also assert the type of the condition:
 
 ```typescript
-let {assert} = new Contracts(true);
+let str: any = 'foo';
 
-...
+str.toUpperCase(); // str is any
 
-assert(p,'message')
-if(p) {
-    ...
-} else {
-    ...
-}
+assert(typeof str == 'string');
+
+str.toUpperCase(); // str is now a string
 ```
 
-or:
+Due to a [limitation](https://github.com/microsoft/TypeScript/issues/36931) in the current version of TypeScript (3.9),
+an explicit type must be assigned to the `assert` as shown above.
 
-```typescript
-let s: boolean = ...;
-assert(q(s), 'message')
-do {
-    ...
-    s = ...;
-    assert(q(s), 'message')
-} while(q(s))
-```
-
-Then you can simplify this as:
-
-```typescript
-if(assert(p,'message')) {
-    ...
-} else {
-    ...
-}
-
-let s: boolean = ...;
-while(assert(q(s), 'message')) {
-    ...
-    s = ...;
-}
-```
-
-In checked mode the assertions is evaluated and throws an exception of failure,
-otherwise returns true. In production mode, assertions always return true.
+In checked mode the assertion is evaluated and throws an exception when its condition is false.
+In unchecked mode, assertions always return.
 
 ## Invariants
 

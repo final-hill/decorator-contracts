@@ -27,12 +27,12 @@ function fnInvariantRequired(): void {
     throw new AssertionError(MSG_INVARIANT_REQUIRED);
 }
 
-const checkedAssert = new Assertion(true).assert;
+const checkedAssert: Assertion['assert'] = new Assertion(true).assert;
 
 export default abstract class MemberDecorator {
-    protected _assert: typeof Assertion.prototype.assert;
-    protected _checkedAssert = new Assertion(true).assert;
-    protected _uncheckedAssert = new Assertion(false).assert;
+    protected _assert: Assertion['assert'];
+    protected _checkedAssert: Assertion['assert'] = new Assertion(true).assert;
+    protected _uncheckedAssert: Assertion['assert'] = new Assertion(false).assert;
 
     /**
      * Returns an instance of the decorator in the specified mode.
@@ -241,7 +241,8 @@ export default abstract class MemberDecorator {
                         }
                         let hasRetried = false;
                         fnRescue.call(this, error, args, (...retryArgs: any[]) => {
-                            hasRetried = checkedAssert(!hasRetried, MSG_SINGLE_RETRY);
+                            checkedAssert(!hasRetried, MSG_SINGLE_RETRY);
+                            hasRetried = true;
                             result = _checkedFeature.call(this, ...retryArgs);
                         });
                         if(!hasRetried) {

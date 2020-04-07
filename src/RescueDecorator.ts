@@ -10,6 +10,7 @@ import DescriptorWrapper from './lib/DescriptorWrapper';
 import isClass from './lib/isClass';
 import type { RescueType } from './typings/RescueType';
 import { Constructor } from './typings/Constructor';
+import Assertion from './Assertion';
 
 export const MSG_INVALID_DECORATOR = 'Invalid decorator usage. Function expected';
 export const MSG_DUPLICATE_RESCUE = 'Only a single @rescue can be assigned to a feature';
@@ -43,7 +44,7 @@ export default class RescueDecorator extends MemberDecorator {
      */
     rescue(fnRescue: RescueType): MethodDecorator {
         const checkMode = this.checkMode,
-            assert = this._assert;
+            assert: Assertion['assert'] = this._assert;
         this._checkedAssert(typeof fnRescue == 'function', MSG_INVALID_DECORATOR);
         this._checkedAssert(!isClass(fnRescue), MSG_INVALID_DECORATOR);
 

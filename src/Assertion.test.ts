@@ -23,27 +23,13 @@ describe('Assertions must support a means of enabling/disabling', () => {
 });
 
 /**
- * Requirement 70
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/70
- */
-describe('Assertions must return a boolean in all modes', () => {
-    test('return values', () => {
-        const {assert: assertDebug} = new Contracts(true),
-            {assert: assertProd} = new Contracts(false);
-
-        expect(assertDebug(true)).toBe(true);
-        expect(assertProd(true)).toBe(true);
-        expect(assertProd(false)).toBe(true);
-    });
-});
-
-/**
  * Requirement 71
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/71
  */
 describe('Assertions must support throwing custom error types', () => {
-    const {assert} = new Contracts(true),
-        fn = (): boolean => assert(false, 'BOOM!');
+    const assert: Contracts['assert'] = new Contracts(true).assert,
+        fn = (): void => assert(false, 'BOOM!');
+
     expect(fn).toThrow(AssertionError);
     expect(fn).toThrowError('BOOM!');
 });
