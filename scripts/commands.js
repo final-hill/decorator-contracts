@@ -42,4 +42,39 @@ program
         })
     })
 
+/**
+ * Deletes the provided paths if they exist
+ * 
+ * @param {string[]} paths - Array of file paths
+ */
+function clean(paths) {
+    paths.forEach(path => {
+        console.log(`deleting ${path}`)
+
+        if(fs.existsSync(path)) {
+            if(fs.lstatSync(path).isDirectory()) {
+                fs.rmdirSync(path, {recursive: true});
+            } else {
+                fs.unlink(path, (err) => {
+                    if(err) return console.error(err);
+               });
+            }
+        }
+    })
+}
+
+program
+    .command('clean')
+    .action(() => {
+        let paths = ['./dist', './coverage', './CHANGELOG.md']
+        clean(paths)
+    })
+
+program
+    .command('clean-full')
+    .action(() => {
+        let paths = ['./.cache', './node_modules', './dist', './coverage', './CHANGELOG.md']
+        clean(paths)
+    })
+
 program.parse(process.argv)
