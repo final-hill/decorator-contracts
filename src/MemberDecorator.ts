@@ -12,7 +12,7 @@ import { FeatureRegistration } from './lib/FeatureRegistry';
 import getAncestry from './lib/getAncestry';
 import type { Constructor } from './typings/Constructor';
 import type { PredicateType } from './typings/PredicateType';
-import { CLASS_REGISTRY } from './lib/CLASS_REGISTRY';
+import { CLASS_REGISTRY } from './lib/ClassRegistry';
 
 export const MSG_NO_STATIC = 'Only instance members can be decorated, not static members';
 export const MSG_DECORATE_METHOD_ACCESSOR_ONLY = 'Only methods and accessors can be decorated.';
