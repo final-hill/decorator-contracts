@@ -6,7 +6,7 @@
 
 
 import Assertion from './Assertion';
-import { DECORATOR_REGISTRY } from './DECORATOR_REGISTRY';
+import { CLASS_REGISTRY } from './CLASS_REGISTRY';
 import type {Constructor} from './typings/Constructor';
 import getAncestry from './lib/getAncestry';
 import innerClass from './lib/innerClass';
@@ -35,7 +35,7 @@ class ContractHandler {
     assertInvariants(self: object): void {
         const ancestry = getAncestry(self.constructor as Constructor<any>);
         ancestry.forEach(Cons => {
-            const invariants = DECORATOR_REGISTRY.get(innerClass(Cons))?.invariants ?? [];
+            const invariants = CLASS_REGISTRY.get(innerClass(Cons))?.invariants ?? [];
             invariants.forEach(invariant => {
                 const name = invariant.name;
                 this._assert(invariant.apply(self), `Invariant violated. ${name}: ${invariant.toString()}`);

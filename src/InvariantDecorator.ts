@@ -12,7 +12,7 @@ import MemberDecorator from './MemberDecorator';
 import getAncestry from './lib/getAncestry';
 // FIXME: The symbols don't belong here
 import { DecoratedConstructor, INNER_CLASS, IS_PROXY } from './typings/DecoratedConstructor';
-import { DECORATOR_REGISTRY } from './DECORATOR_REGISTRY';
+import { CLASS_REGISTRY } from './CLASS_REGISTRY';
 import innerClass from './lib/innerClass';
 import type {Constructor} from './typings/Constructor';
 import { PredicateType } from './typings/PredicateType';
@@ -68,7 +68,7 @@ export default class InvariantDecorator {
                 return Clazz;
             }
 
-            const registration = DECORATOR_REGISTRY.getOrCreate(innerClass(Clazz));
+            const registration = CLASS_REGISTRY.getOrCreate(innerClass(Clazz));
             if(predicate != undefined) {
                 registration.invariants.push(predicate);
             }
@@ -79,7 +79,7 @@ export default class InvariantDecorator {
                     const ancestry = getAncestry(NewTarget).reverse();
                     ancestry.forEach(Cons => {
                         const InnerClass = innerClass(Cons),
-                            registration = DECORATOR_REGISTRY.getOrCreate(InnerClass);
+                            registration = CLASS_REGISTRY.getOrCreate(InnerClass);
 
                         if(!registration.isRestored) {
                             OverrideDecorator.checkOverrides(InnerClass);
