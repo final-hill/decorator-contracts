@@ -2,23 +2,18 @@
  * @license
  * Copyright (C) #{YEAR}# Michael L Haufe
  * SPDX-License-Identifier: AGPL-1.0-only
-*/
+ */
 
 
 import Assertion from './Assertion';
-import { DECORATOR_REGISTRY } from './DECORATOR_REGISTRY';
+import { CLASS_REGISTRY } from './lib/ClassRegistry';
 import type {Constructor} from './typings/Constructor';
 import getAncestry from './lib/getAncestry';
-import innerClass from './lib/innerClass';
 
 /**
  * The ContractHandler manages the registration and evaluation of contracts associated with a class
  */
 class ContractHandler {
-    // TODO: demandsRegistry
-    // TODO: rescueRegistry
-    // TODO: ensuresRegistry
-
     /**
      * Constructs a new instance of the ContractHandler
      * @param {Assertion.prototype.assert} _assert - The assertion implementation associated with the current checkMode
@@ -35,7 +30,7 @@ class ContractHandler {
     assertInvariants(self: object): void {
         const ancestry = getAncestry(self.constructor as Constructor<any>);
         ancestry.forEach(Cons => {
-            const invariants = DECORATOR_REGISTRY.get(innerClass(Cons))?.invariants ?? [];
+            const invariants = CLASS_REGISTRY.get(Cons)?.invariants ?? [];
             invariants.forEach(invariant => {
                 const name = invariant.name;
                 this._assert(invariant.apply(self), `Invariant violated. ${name}: ${invariant.toString()}`);

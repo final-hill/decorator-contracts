@@ -2,7 +2,7 @@
  * @license
  * Copyright (C) #{YEAR}# Michael L Haufe
  * SPDX-License-Identifier: AGPL-1.0-only
-*/
+ */
 
 
 import MemberDecorator, { MSG_NO_STATIC, MSG_DECORATE_METHOD_ACCESSOR_ONLY} from './MemberDecorator';

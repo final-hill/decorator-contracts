@@ -2,13 +2,14 @@
  * @license
  * Copyright (C) #{YEAR}# Michael L Haufe
  * SPDX-License-Identifier: AGPL-1.0-only
-*/
+ */
 
 
 import DescriptorWrapper from './lib/DescriptorWrapper';
 import MemberDecorator, { MSG_NO_STATIC } from './MemberDecorator';
 import Assertion from './Assertion';
 import type {Constructor} from './typings/Constructor';
+import { CLASS_REGISTRY } from './lib/ClassRegistry';
 
 export const MSG_INVALID_ARG_LENGTH = 'An overridden method must have the same number of parameters as its ancestor method';
 export const MSG_NO_MATCHING_FEATURE = 'This feature does not override an ancestor feature.';
@@ -35,23 +36,23 @@ export default class OverrideDecorator extends MemberDecorator {
     /**
      * Checks the features of the class for missing override decorators
      *
-     * @param {Constructor<any>} Clazz - The class constructor
+     * @param {Constructor<any>} Class - The class constructor
      */
-    static checkOverrides(Clazz: Constructor<any>): void {
-        const proto = Clazz.prototype;
+    static checkOverrides(Class: Constructor<any>): void {
+        const proto = Class.prototype;
         if(proto == null) {
             return;
         }
 
-        const registry = MemberDecorator.getOrCreateRegistry(Clazz),
+        const {featureRegistry} = CLASS_REGISTRY.getOrCreate(Class),
             featureNames = MemberDecorator.featureNames(proto),
             ancestorFeatureNames = this.ancestorFeatureNames(proto);
 
         featureNames.forEach(featureName => {
-            const registration = registry.get(featureName);
+            const registration = featureRegistry.get(featureName);
             checkedAssert(
                 (registration != null && registration.overrides) || !ancestorFeatureNames.has(featureName),
-                `@override decorator missing on ${Clazz.name}.${String(featureName)}`
+                `@override decorator missing on ${Class.name}.${String(featureName)}`
             );
         });
     }
