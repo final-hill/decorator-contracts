@@ -8,7 +8,7 @@
 import Assertion from './Assertion';
 import DescriptorWrapper from './lib/DescriptorWrapper';
 import AssertionError from './AssertionError';
-import { DECORATOR_REGISTRY, DecoratorRegistry, DecoratorRegistration } from './lib/DecoratorRegistry';
+import { DECORATOR_REGISTRY, FeatureRegistry, FeatureRegistration } from './lib/FeatureRegistry';
 import getAncestry from './lib/getAncestry';
 import type {Constructor} from './typings/Constructor';
 import { DecoratedConstructor } from './typings/DecoratedConstructor';
@@ -106,12 +106,12 @@ export default abstract class MemberDecorator {
      * If the registry is undefined, a new one is created
      *
      * @param {Constructor<any>} Clazz - The class
-     * @returns {DecoratorRegistry} - The DecoratorRegistry
+     * @returns {FeatureRegistry} - The DecoratorRegistry
      */
-    static getOrCreateRegistry(Clazz: Constructor<any>): DecoratorRegistry {
+    static getOrCreateRegistry(Clazz: Constructor<any>): FeatureRegistry {
         return Object.getOwnPropertySymbols(Clazz).includes(DECORATOR_REGISTRY) ?
             (Clazz as DecoratedConstructor)[DECORATOR_REGISTRY]! :
-            (Clazz as DecoratedConstructor)[DECORATOR_REGISTRY] = new DecoratorRegistry();
+            (Clazz as DecoratedConstructor)[DECORATOR_REGISTRY] = new FeatureRegistry();
     }
 
     /**
@@ -122,9 +122,9 @@ export default abstract class MemberDecorator {
      * @param {Constructor<any>} Clazz - The class
      * @param {PropertyKey} propertyKey - The property key
      * @param {DescriptorWrapper} descriptorWrapper - The DescriptorWrapper
-     * @returns {DecoratorRegistration} - The Decorator Registration
+     * @returns {FeatureRegistration} - The Decorator Registration
      */
-    static registerFeature(Clazz: Constructor<any>, propertyKey: PropertyKey, descriptorWrapper: DescriptorWrapper): DecoratorRegistration {
+    static registerFeature(Clazz: Constructor<any>, propertyKey: PropertyKey, descriptorWrapper: DescriptorWrapper): FeatureRegistration {
         const decoratorRegistry = this.getOrCreateRegistry(Clazz),
             registration = decoratorRegistry.getOrCreate(propertyKey, {...descriptorWrapper.descriptor});
 
@@ -148,7 +148,7 @@ export default abstract class MemberDecorator {
         return registration;
     }
 
-    static getAncestorRegistration(Clazz: Constructor<any>, propertyKey: PropertyKey): DecoratorRegistration | undefined {
+    static getAncestorRegistration(Clazz: Constructor<any>, propertyKey: PropertyKey): FeatureRegistration | undefined {
         const Base = Object.getPrototypeOf(Clazz),
             ancestry = getAncestry(Base),
             AncestorRegistryClazz = ancestry.find(Clazz =>

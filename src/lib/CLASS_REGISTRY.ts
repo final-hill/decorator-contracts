@@ -5,7 +5,7 @@
  */
 
 
-import type {Constructor} from '../typings/Constructor';
+import type { Constructor } from '../typings/Constructor';
 import { PredicateType } from '../typings/PredicateType';
 import ContractHandler from '../ContractHandler';
 import Assertion from '../Assertion';
