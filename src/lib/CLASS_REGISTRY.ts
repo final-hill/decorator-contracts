@@ -5,10 +5,10 @@
  */
 
 
-import type {Constructor} from './typings/Constructor';
-import { PredicateType } from './typings/PredicateType';
-import ContractHandler from './ContractHandler';
-import Assertion from './Assertion';
+import type {Constructor} from '../typings/Constructor';
+import { PredicateType } from '../typings/PredicateType';
+import ContractHandler from '../ContractHandler';
+import Assertion from '../Assertion';
 
 export class ClassRegistration {
     readonly contractHandler = new ContractHandler(new Assertion(true).assert);

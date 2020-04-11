@@ -6,7 +6,7 @@
 
 
 import Assertion from './Assertion';
-import { CLASS_REGISTRY } from './CLASS_REGISTRY';
+import { CLASS_REGISTRY } from './lib/CLASS_REGISTRY';
 import type {Constructor} from './typings/Constructor';
 import getAncestry from './lib/getAncestry';
 import innerClass from './lib/innerClass';

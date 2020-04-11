@@ -12,7 +12,7 @@ import MemberDecorator from './MemberDecorator';
 import getAncestry from './lib/getAncestry';
 // FIXME: The symbols don't belong here
 import { DecoratedConstructor, INNER_CLASS, IS_PROXY } from './typings/DecoratedConstructor';
-import { CLASS_REGISTRY } from './CLASS_REGISTRY';
+import { CLASS_REGISTRY } from './lib/CLASS_REGISTRY';
 import innerClass from './lib/innerClass';
 import type {Constructor} from './typings/Constructor';
 import { PredicateType } from './typings/PredicateType';
