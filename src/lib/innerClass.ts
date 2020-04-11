@@ -2,7 +2,7 @@
  * @license
  * Copyright (C) #{YEAR}# Michael L Haufe
  * SPDX-License-Identifier: AGPL-1.0-only
-*/
+ */
 
 
 import { DecoratedConstructor, IS_PROXY, INNER_CLASS } from '../typings/DecoratedConstructor';
