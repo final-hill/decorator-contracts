@@ -10,11 +10,9 @@ import OverrideDecorator from './OverrideDecorator';
 import isClass from './lib/isClass';
 import MemberDecorator from './MemberDecorator';
 import getAncestry from './lib/getAncestry';
-// FIXME: The symbols don't belong here
-import { DecoratedConstructor, INNER_CLASS, IS_PROXY } from './typings/DecoratedConstructor';
+import { INNER_CLASS, IS_PROXY } from './typings/DecoratedConstructor';
 import { CLASS_REGISTRY } from './lib/CLASS_REGISTRY';
-import innerClass from './lib/innerClass';
-import type {Constructor} from './typings/Constructor';
+import type { Constructor } from './typings/Constructor';
 import { PredicateType } from './typings/PredicateType';
 
 export const MSG_INVALID_DECORATOR = 'Invalid decorator usage. Function expected';
@@ -49,7 +47,7 @@ export default class InvariantDecorator {
     invariant(fn: PredicateType | Constructor<any>): ClassDecorator | Constructor<any> {
         const isClazz = isClass(fn),
             predicate = isClazz ? undefined : fn as PredicateType,
-            Clazz = isClazz ? innerClass(fn as Constructor<any>) : undefined,
+            Clazz = isClazz ? fn as Constructor<any> : undefined,
             assert: Assertion['assert'] = this._assert,
             checkMode = this.checkMode;
 
@@ -68,22 +66,21 @@ export default class InvariantDecorator {
                 return Clazz;
             }
 
-            const registration = CLASS_REGISTRY.getOrCreate(innerClass(Clazz));
+            const registration = CLASS_REGISTRY.getOrCreate(Clazz);
             if(predicate != undefined) {
                 registration.invariants.push(predicate);
             }
 
             // TODO: lift
-            const ClazzProxy = new Proxy((Clazz as DecoratedConstructor), {
+            const ClazzProxy = new Proxy(Clazz, {
                 construct(Target: Constructor<any>, args: any[], NewTarget: Constructor<any>): object {
                     const ancestry = getAncestry(NewTarget).reverse();
                     ancestry.forEach(Cons => {
-                        const InnerClass = innerClass(Cons),
-                            registration = CLASS_REGISTRY.getOrCreate(InnerClass);
+                        const registration = CLASS_REGISTRY.getOrCreate(Cons);
 
                         if(!registration.isRestored) {
-                            OverrideDecorator.checkOverrides(InnerClass);
-                            MemberDecorator.restoreFeatures(InnerClass);
+                            OverrideDecorator.checkOverrides(Cons);
+                            MemberDecorator.restoreFeatures(Cons);
                             registration.isRestored = true;
                         }
                     });
@@ -96,9 +93,9 @@ export default class InvariantDecorator {
                 },
                 get(target, name): any {
                     switch(name) {
-                    case IS_PROXY: return true;
-                    case INNER_CLASS: return target;
-                    default: break;
+                        case IS_PROXY: return true;
+                        case INNER_CLASS: return target;
+                        default: break;
                     }
 
                     const property = Reflect.get(target, name);
