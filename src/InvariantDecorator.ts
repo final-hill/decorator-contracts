@@ -100,7 +100,7 @@ export default class InvariantDecorator {
 
                     const property = Reflect.get(target, name);
 
-                    // https://stackoverflow.com/a/42461846/153209
+                    // https://javascript.info/proxy#private-fields
                     return (typeof property === 'function')
                         ? property.bind(target)
                         : property;

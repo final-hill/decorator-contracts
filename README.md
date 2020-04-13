@@ -210,10 +210,8 @@ must first be met or an error will be raised.
 ```typescript
 @invariant
 class Stack<T> {
-    protected _notEmpty(){ return !this.isEmpty(); }
     ...
-
-    @demands(Stack.prototype._notEmpty)
+    @demands(function(){ return !this.isEmpty(); })
     pop(): T {
         return this._implementation.pop();
     }
