@@ -51,10 +51,16 @@ class ContractHandler {
 
         if(typeof result == 'function') {
             return (...args: any[]): any => {
-                const value = result.apply(target, args);
-                this.assertInvariants(target);
+                try {
+                    const value = result.apply(target, args);
+                    this.assertInvariants(target);
 
-                return value;
+                    return value;
+                } catch(error) {
+                    this.assertInvariants(target);
+
+                    throw error;
+                }
             };
         } else {
             this.assertInvariants(target);

@@ -31,7 +31,6 @@ export default class InvariantDecorator {
         this.invariant = this.invariant.bind(this);
     }
 
-
     invariant<T extends Constructor<any>>(Base: T): T;
     invariant<Self>(predicate: PredicateType): ClassDecorator;
     /**
