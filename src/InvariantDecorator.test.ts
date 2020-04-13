@@ -135,9 +135,11 @@ describe('The subclasses of an invariant decorated class must obey the invariant
 
         @invariant(function(this: Foo) { return this.value >= 0; })
         class Foo {
-            private _value = 0;
-            get value(): number { return this._value; }
-            set value(value: number) { this._value = value; }
+            #value = 0;
+
+            get value(): number { return this.#value; }
+            set value(value: number) { this.#value = value; }
+
             inc(): void { this.value++; }
             dec(): void { this.value--; }
         }

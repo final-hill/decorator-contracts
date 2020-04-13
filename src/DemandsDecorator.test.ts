@@ -68,26 +68,27 @@ describe('There can be multiple @demands decorators assigned to a class feature'
     const {invariant, demands} = new Contracts(true);
 
     function nonNegative(this: Foo): boolean {
-        return this._value >= 0;
+        return this.value >= 0;
     }
 
     function isEven(this: Foo): boolean {
-        return this._value % 2 == 0;
+        return this.value % 2 == 0;
     }
 
     @invariant
     class Foo {
-        protected _value = 0;
+        #value = 0;
 
-        get value(): number { return this._value; }
-
-        @demands(nonNegative)
-        @demands(isEven)
-        inc(): void { this._value += 2; }
+        get value(): number { return this.#value; }
+        set value(value: number) { this.#value = value; }
 
         @demands(nonNegative)
         @demands(isEven)
-        dec(): void { this._value -= 1; }
+        inc(): void { this.value += 2; }
+
+        @demands(nonNegative)
+        @demands(isEven)
+        dec(): void { this.value -= 1; }
     }
 
     const foo = new Foo();
@@ -110,23 +111,26 @@ describe('Features that override a @demands decorated feature must be subject to
     const {invariant, override, demands} = new Contracts(true);
 
     function nonNegative(this: Base): boolean {
-        return this._value >= 0;
+        return this.value >= 0;
     }
 
     @invariant
     class Base {
-        protected _value = 0;
+        #value = 0;
 
-        inc(): void { this._value++; }
+        get value(): number { return this.#value; }
+        set value(value: number){ this.#value = value; }
+
+        inc(): void { this.value++; }
 
         @demands(nonNegative)
-        dec(): void { this._value--; }
+        dec(): void { this.value--; }
     }
 
     class Sub extends Base {
         @override
         dec(): void {
-            this._value -= 2;
+            this.value -= 2;
         }
     }
 
@@ -158,19 +162,22 @@ describe('@demands is evaluated before its associated feature is called', () => 
     const {invariant, demands} = new Contracts(true);
 
     function nonNegative(this: Foo): boolean {
-        return this._value >= 0;
+        return this.value >= 0;
     }
 
     @invariant
     class Foo {
-        protected _value = 0;
+        #value = 0;
+
+        get value(): number { return this.#value; }
+        set value(value: number){ this.#value = value; }
     }
 
     test('true @demands check does not throw', () => {
         class Bar extends Foo {
             @demands(nonNegative)
             method(): number {
-                return this._value = -2;
+                return this.value = -2;
             }
         }
 
@@ -183,7 +190,7 @@ describe('@demands is evaluated before its associated feature is called', () => 
         class Bar extends Foo {
             @demands(() => false)
             method(): number {
-                return this._value = 12;
+                return this.value = 12;
             }
         }
         const bar = new Bar();

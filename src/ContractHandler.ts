@@ -48,9 +48,25 @@ class ContractHandler {
     get(target: object, propertyKey: PropertyKey): any {
         this.assertInvariants(target);
         const result = Reflect.get(target, propertyKey);
-        this.assertInvariants(target);
 
-        return result;
+        if(typeof result == 'function') {
+            return (...args: any[]): any => {
+                try {
+                    const value = result.apply(target, args);
+                    this.assertInvariants(target);
+
+                    return value;
+                } catch(error) {
+                    this.assertInvariants(target);
+
+                    throw error;
+                }
+            };
+        } else {
+            this.assertInvariants(target);
+
+            return result;
+        }
     }
 
     /**
