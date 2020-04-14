@@ -314,6 +314,37 @@ describe('The @rescue function must preserve the invariant after execution', () 
 });
 
 /**
+ * Requirement 539
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/539
+ */
+describe('A class feature with a decorator must not be functional until the @invariant is defined', () => {
+    const {invariant, rescue} = new Contracts(true);
+
+    @invariant
+    class Okay {
+        @rescue(() => {})
+        method(value: number): number { return value; }
+    }
+
+    test('Valid declaration', () => {
+        const okay = new Okay();
+
+        expect(okay.method(15)).toBe(15);
+    });
+
+    class Fail {
+        @rescue(() => {})
+        method(value: number): number { return value; }
+    }
+
+    test('Invalid declaration', () => {
+        const fail = new Fail();
+
+        expect(() => fail.method(15)).toThrow(MSG_INVARIANT_REQUIRED);
+    });
+});
+
+/**
  * Requirement 558
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/558
  */
@@ -349,32 +380,43 @@ describe('If a @rescue is executed and the retry argument is not called, then an
 });
 
 /**
- * Requirement 539
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/539
+ * Requirement 559
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/559
  */
-describe('A class feature with a decorator must not be functional until the @invariant is defined', () => {
-    const {invariant, rescue} = new Contracts(true);
+describe('If an exception is thrown in a class feature without a @rescue defined, then the exception is raised to its caller after the @invariant is checked', () => {
+    const {invariant} = new Contracts(true);
 
     @invariant
-    class Okay {
-        @rescue(() => {})
-        method(value: number): number { return value; }
+    class A {
+        method(): void {
+            throw new Error('I am error');
+        }
     }
 
-    test('Valid declaration', () => {
-        const okay = new Okay();
-
-        expect(okay.method(15)).toBe(15);
+    test('Throwing error without @invariant is raised to caller', () => {
+        expect(() => new A().method()).toThrow('I am error');
     });
 
-    class Fail {
-        @rescue(() => {})
-        method(value: number): number { return value; }
+    @invariant(function(this: B): boolean { return this.value > 0; })
+    class B {
+        #value = 1;
+
+        get value(): number { return this.#value; }
+        set value(v: number) { this.#value = v; }
+
+        method1(): void {
+            this.#value = 3;
+            throw new Error('I am error');
+        }
+
+        method2(): void {
+            this.#value = -2;
+            throw new Error('I am error');
+        }
     }
 
-    test('Invalid declaration', () => {
-        const fail = new Fail();
-
-        expect(() => fail.method(15)).toThrow(MSG_INVARIANT_REQUIRED);
+    test('Throwing error with @invariant', () => {
+        expect(() => new B().method1()).toThrow('I am error');
+        expect(() => new B().method2()).toThrow(/^Invariant violated/);
     });
 });

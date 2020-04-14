@@ -13,6 +13,7 @@
 - [Ensures](#ensures)
 - [Overrides](#overrides)
 - [Rescue](#rescue)
+- [The order of assertions](#the-order-of-assertions)
 - [Contributing](#contributing)
 - [Building and Editing](#building-and-editing)
 - [Getting Started](#getting-started)
@@ -506,10 +507,45 @@ will raise an error.
 An `@invariant` decorator must also be defined either on the current class
 or on an ancestor.
 
-Note that the class `@invariant` will be checked after the `@rescue`
-function executes even if an error is thrown in the `@rescue` body.
-When `retry` is called contracts defined on the class feature are checked
-as if it was called normally.
+## The order of assertions
+
+```ts
+        (error) <-----------------+
+                    ^ (throws)    | (throws)
+                    |             |
+obj.feature(...) -> @invariant -> @demands -> { feature body } --+
+                    ^                         |                  |
+                    |                         | (throws)         |
+                    | (retry)                 |                  | (return)
+                    +------------ @rescue <---+------+           |
+                                  |                  |           |
+                                  | (throws|return)  |           |
+        (error) <--- @invariant <-+                  |           |
+                                                     | (throws)  |
+                                                     |           |
+       (return) <-- @invariant <---------------- @ensures <------+
+```
+
+When `obj.feature` is called the happy path is:
+
+```ts
+@invariant -> @demands -> { feature body } -> @ensures -> @invariant
+```
+
+If an error is thrown and there is no `@rescue` defined then the `@invariant`
+is checked before the error is raised to the caller.
+
+If an error is thrown in the `@invariant` then it is raised to the caller.
+
+If an error is thrown in the `@demands` then the `@invariant` is checked
+before the error is raised to the caller
+
+If an error is thrown by the feature body or the `@ensures` then
+the `@rescue` is executed. If `retry` is called then the process
+starts from the beginning.
+
+If `@rescue` throws an error or does not call `retry` then the
+`@invariant` is checked before the error is raised to the caller.
 
 ## Contributing
 
