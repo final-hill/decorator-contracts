@@ -314,6 +314,37 @@ describe('The @rescue function must preserve the invariant after execution', () 
 });
 
 /**
+ * Requirement 539
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/539
+ */
+describe('A class feature with a decorator must not be functional until the @invariant is defined', () => {
+    const {invariant, rescue} = new Contracts(true);
+
+    @invariant
+    class Okay {
+        @rescue(() => {})
+        method(value: number): number { return value; }
+    }
+
+    test('Valid declaration', () => {
+        const okay = new Okay();
+
+        expect(okay.method(15)).toBe(15);
+    });
+
+    class Fail {
+        @rescue(() => {})
+        method(value: number): number { return value; }
+    }
+
+    test('Invalid declaration', () => {
+        const fail = new Fail();
+
+        expect(() => fail.method(15)).toThrow(MSG_INVARIANT_REQUIRED);
+    });
+});
+
+/**
  * Requirement 558
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/558
  */
@@ -349,32 +380,31 @@ describe('If a @rescue is executed and the retry argument is not called, then an
 });
 
 /**
- * Requirement 539
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/539
+ * Requirement 559
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/559
  */
-describe('A class feature with a decorator must not be functional until the @invariant is defined', () => {
-    const {invariant, rescue} = new Contracts(true);
+describe('If an exception is thrown in a class feature without a @rescue defined, then the exception is raised in its caller', () => {
+    const {invariant} = new Contracts(true);
 
     @invariant
-    class Okay {
-        @rescue(() => {})
-        method(value: number): number { return value; }
+    class Base {
+        get accessor(): any {
+            throw new Error('I am error');
+        }
+        set accessor(_: any){
+            throw new Error('I am error');
+        }
+
+        method(): void {
+            throw new Error('I am error');
+        }
     }
 
-    test('Valid declaration', () => {
-        const okay = new Okay();
+    const base = new Base();
 
-        expect(okay.method(15)).toBe(15);
-    });
-
-    class Fail {
-        @rescue(() => {})
-        method(value: number): number { return value; }
-    }
-
-    test('Invalid declaration', () => {
-        const fail = new Fail();
-
-        expect(() => fail.method(15)).toThrow(MSG_INVARIANT_REQUIRED);
+    test('Throwing error from features', () => {
+        expect(() => base.method()).toThrow('I am error');
+        expect(() => base.accessor).toThrow('I am error');
+        expect(() => base.accessor = 7).toThrow('I am error');
     });
 });
