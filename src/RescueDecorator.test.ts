@@ -383,28 +383,40 @@ describe('If a @rescue is executed and the retry argument is not called, then an
  * Requirement 559
  * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/559
  */
-describe('If an exception is thrown in a class feature without a @rescue defined, then the exception is raised in its caller', () => {
+describe('If an exception is thrown in a class feature without a @rescue defined, then the exception is raised to its caller after the @invariant is checked', () => {
     const {invariant} = new Contracts(true);
 
     @invariant
-    class Base {
-        get accessor(): any {
-            throw new Error('I am error');
-        }
-        set accessor(_: any){
-            throw new Error('I am error');
-        }
-
+    class A {
         method(): void {
             throw new Error('I am error');
         }
     }
 
-    const base = new Base();
+    test('Throwing error without @invariant is raised to caller', () => {
+        expect(() => new A().method()).toThrow('I am error');
+    });
 
-    test('Throwing error from features', () => {
-        expect(() => base.method()).toThrow('I am error');
-        expect(() => base.accessor).toThrow('I am error');
-        expect(() => base.accessor = 7).toThrow('I am error');
+    @invariant(function(this: B): boolean { return this.value > 0; })
+    class B {
+        #value = 1;
+
+        get value(): number { return this.#value; }
+        set value(v: number) { this.#value = v; }
+
+        method1(): void {
+            this.#value = 3;
+            throw new Error('I am error');
+        }
+
+        method2(): void {
+            this.#value = -2;
+            throw new Error('I am error');
+        }
+    }
+
+    test('Throwing error with @invariant', () => {
+        expect(() => new B().method1()).toThrow('I am error');
+        expect(() => new B().method2()).toThrow(/^Invariant violated/);
     });
 });
