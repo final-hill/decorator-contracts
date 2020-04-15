@@ -420,3 +420,48 @@ describe('If an exception is thrown in a class feature without a @rescue defined
         expect(() => new B().method2()).toThrow(/^Invariant violated/);
     });
 });
+
+/**
+ * Requirement 560
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/560
+ */
+describe('If an error is thrown in @demands, the error is raised to the caller', () => {
+    const {invariant, demands, rescue} = new Contracts(true);
+
+    function isPositive(this: A): boolean { return this.value > 0; }
+    function isNonNegative(value: number): boolean { return value >= 0; }
+
+    @invariant(isPositive)
+    class A {
+        #value = 1;
+
+        get value(): number { return this.#value; }
+        set value(v: number) { this.#value = v; }
+
+        @rescue((_error, args: any[], _retry) => {
+            if(args[0] === -2) { throw new Error('Rescue Error'); }
+        })
+        @demands(isNonNegative)
+        method(value: number): void {
+            this.#value = value;
+        }
+
+        @rescue(() => { throw new Error('Rescue Error'); })
+        @demands(() => false)
+        methodEmpty(): void { }
+
+        @rescue(() => { throw new Error('Rescue Error'); })
+        @demands(() => true)
+        methodError(): void { throw new Error('Feature Error'); }
+    }
+
+    test('Error pathways', () => {
+        expect(() => new A().method(1)).not.toThrow();
+        expect(() => new A().method(0)).toThrow(/^Invariant violated/);
+        expect(() => new A().method(-1)).toThrow(/^Precondition failed/);
+        expect(() => new A().method(-2)).not.toThrow(/^Rescue Error/);
+
+        expect(() => new A().methodEmpty()).toThrow(/^Precondition failed/);
+        expect(() => new A().methodError()).toThrow(/^Rescue Error/);
+    });
+});
