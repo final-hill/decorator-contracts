@@ -206,7 +206,7 @@ anyway on one of the base classes.
 The `@demands` decorator describes and enforces an assertion that must be true
 before its associated feature can execute. In other words before a client
 of your class can execute a method or accessor the defined precondition
-must first be met or an error will be raised.
+must first be met or an error will be raised [to the client](#the-order-of-assertions).
 
 ```typescript
 @invariant
@@ -299,7 +299,7 @@ The precondition of `Sub.prototype.method` is:
 
 ## Ensures
 
-The @ensures decorator describes and enforces an assertion that must be true after its associated feature has executed. In other words after a client of your class has executed a method or accessor the defined postcondition must be met or an error will be raised.
+The @ensures decorator describes and enforces an assertion that must be true after its associated feature has executed. In other words after a client of your class has executed a method or accessor the defined postcondition must be met or an error [will be raised](#the-order-of-assertions).
 
 ```typescript
 @invariant
@@ -537,8 +537,10 @@ is checked before the error is raised to the caller.
 
 If an error is thrown in the `@invariant` then it is raised to the caller.
 
-If an error is thrown in the `@demands` then the `@invariant` is checked
-before the error is raised to the caller
+If an error is thrown in the `@demands` then the error is raised to the caller.
+In this case the `@invariant` is not checked because the feature body has not
+been entered and the decorator can not modify the state of the class without
+calling another method which is governed by its own contracts.
 
 If an error is thrown by the feature body or the `@ensures` then
 the `@rescue` is executed. If `retry` is called then the process
