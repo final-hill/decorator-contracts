@@ -209,12 +209,15 @@ of your class can execute a method or accessor the defined precondition
 must first be met or an error will be raised [to the client](#the-order-of-assertions).
 
 ```typescript
+
+function notEmpty(this: Stack<T>){ return !this.isEmpty(); }
+
 @invariant
 class Stack<T> {
     ...
-    @demands(function(){ return !this.isEmpty(); })
+    @demands(notEmpty)
     pop(): T {
-        return this._implementation.pop();
+        return this.#implementation.pop();
     }
 }
 ```
@@ -254,8 +257,7 @@ considered fulfilled by the user of the feature.
 @invariant
 class Base {
     @demands((x: number) => 0 <= x && x <= 10)
-    method(x: number) {
-        ... }
+    method(x: number) { ... }
 }
 
 class Sub extends Base {
@@ -277,8 +279,7 @@ all of these are true before the associated feature will execute:
 class Base {
     @demands((x: number) => 0 <= x && x <= 10)
     @demands((x: number) => x % 2 == 0)
-    method(x: number) {
-        ... }
+    method(x: number) { ... }
 }
 
 class Sub extends Base {
@@ -302,14 +303,14 @@ The precondition of `Sub.prototype.method` is:
 The @ensures decorator describes and enforces an assertion that must be true after its associated feature has executed. In other words after a client of your class has executed a method or accessor the defined postcondition must be met or an error [will be raised](#the-order-of-assertions).
 
 ```typescript
+function notEmpty(this: Stack<T>){ return !this.isEmpty(); }
+
 @invariant
 class Stack<T> {
-    protected _notEmpty(){ return !this.isEmpty(); }
     ...
-
-    @ensures(Stack.prototype._notEmpty)
+    @ensures(notEmpty)
     push(value: T) {
-         this._implementation.push(value);
+         this.#implementation.push(value);
     }
 }
 ```
@@ -341,8 +342,7 @@ If a class feature with an associated @ensures is overridden, then the new featu
 @invariant
 class Base {
     @ensures((x: number) => 0 <= x && x <= 10)
-    method(x: number) {
-        ... }
+    method(x: number) { ... }
 }
 
 class Sub extends Base {
@@ -354,7 +354,7 @@ class Sub extends Base {
 
 In the above example the postcondition of Sub.prototype.method is:
 
-(-10 <= x && x <= 20) && (0 <= x && x <= 10)
+`(-10 <= x && x <= 20) && (0 <= x && x <= 10)`
 
 Multiple @ensures can be declared for a feature. Doing so will require that all of these are true after the associated feature has executed:
 
@@ -483,7 +483,7 @@ class Stack<T> {
     pop(): T {
         assert(!this.isEmpty(), 'You can not pop from an empty stack')
 
-        return this._implementation.pop()!
+        return this.#implementation.pop()!
     }
     ...
 }
