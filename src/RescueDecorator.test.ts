@@ -465,3 +465,46 @@ describe('If an error is thrown in @demands, the error is raised to the caller',
         expect(() => new A().methodError()).toThrow(/^Rescue Error/);
     });
 });
+
+/**
+ * Requirement 562
+ * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/562
+ */
+describe('If an error is raised in a @ensures then the associated @rescue is executed', () => {
+    const {invariant, ensures, rescue} = new Contracts(true);
+
+    function isPositive(this: A): boolean { return this.value > 0; }
+    function isNonNegative(this: A): boolean { return this.value >= 0; }
+
+    @invariant(isNonNegative)
+    class A {
+        #value = 1;
+
+        get value(): number { return this.#value; }
+        set value(v: number) { this.#value = v; }
+
+        @rescue((_error, args: any[], _retry) => {
+            if(args[0] === -2) { throw new Error('Rescue Error'); }
+        })
+        @ensures(isPositive)
+        method(value: number): void {
+            this.#value = value;
+        }
+
+        @ensures(() => false)
+        methodEmpty(): void { }
+
+        @rescue(() => { throw new Error('Rescue Error'); })
+        @ensures(() => true)
+        methodError(): void { throw new Error('Feature Error'); }
+    }
+
+    test('Error pathways', () => {
+        expect(() => new A().method(1)).not.toThrow();
+        expect(() => new A().method(0)).toThrow(/^Postcondition failed/);
+        expect(() => new A().method(-1)).toThrow(/^Invariant violated/);
+        expect(() => new A().method(-2)).not.toThrow(/^Rescue Error/);
+        expect(() => new A().methodEmpty()).toThrow(/^Postcondition failed/);
+        expect(() => new A().methodError()).toThrow(/^Rescue Error/);
+    });
+});
