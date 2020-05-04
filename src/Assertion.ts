@@ -7,6 +7,7 @@
 
 import AssertionError from './AssertionError';
 import type {Constructor} from './typings/Constructor';
+import { ASSERTION_FAILED } from './Messages';
 
 /**
  * An assertion is an expression of a property that must be true at a particular
@@ -53,7 +54,7 @@ export default class Assertion {
      * @see AssertionError
      * @throws {AssertionError} - Throws an AssertionError by default if the condition is false
      */
-    assert(condition: unknown, message = 'Assertion failure', ErrorConstructor: Constructor<Error> = AssertionError): asserts condition {
+    assert(condition: unknown, message = ASSERTION_FAILED, ErrorConstructor: Constructor<Error> = AssertionError): asserts condition {
         if(this.checkMode && Boolean(condition) == false) {
             throw new ErrorConstructor(message);
         }

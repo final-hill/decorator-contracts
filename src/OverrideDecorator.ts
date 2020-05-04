@@ -6,14 +6,11 @@
 
 
 import DescriptorWrapper from './lib/DescriptorWrapper';
-import MemberDecorator, { MSG_NO_STATIC } from './MemberDecorator';
+import MemberDecorator from './MemberDecorator';
 import Assertion from './Assertion';
-import type {Constructor} from './typings/Constructor';
+import type { Constructor } from './typings/Constructor';
 import { CLASS_REGISTRY } from './lib/ClassRegistry';
-
-export const MSG_INVALID_ARG_LENGTH = 'An overridden method must have the same number of parameters as its ancestor method';
-export const MSG_NO_MATCHING_FEATURE = 'This feature does not override an ancestor feature.';
-export const MSG_DUPLICATE_OVERRIDE = 'Only a single @override decorator can be assigned to a class member';
+import { MSG_NO_STATIC, MSG_NO_MATCHING_FEATURE, MSG_DUPLICATE_OVERRIDE, MSG_INVALID_ARG_LENGTH } from './Messages';
 
 const checkedAssert: Assertion['assert'] = new Assertion(true).assert;
 

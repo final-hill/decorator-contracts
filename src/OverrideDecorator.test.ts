@@ -4,10 +4,8 @@
  * SPDX-License-Identifier: AGPL-1.0-only
  */
 
-
 import Contracts from './';
-import { MSG_INVALID_ARG_LENGTH, MSG_DUPLICATE_OVERRIDE, MSG_NO_MATCHING_FEATURE } from './OverrideDecorator';
-import { MSG_INVARIANT_REQUIRED } from './MemberDecorator';
+import { MSG_NO_MATCHING_FEATURE, MSG_INVALID_ARG_LENGTH, MSG_DUPLICATE_OVERRIDE, MSG_INVARIANT_REQUIRED } from './Messages';
 
 /**
  * Requirement 210
