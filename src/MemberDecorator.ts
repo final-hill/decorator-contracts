@@ -12,12 +12,7 @@ import { FeatureRegistration } from './lib/FeatureRegistry';
 import getAncestry from './lib/getAncestry';
 import type { Constructor } from './typings/Constructor';
 import { CLASS_REGISTRY } from './lib/ClassRegistry';
-
-export const MSG_NO_STATIC = 'Only instance members can be decorated, not static members';
-export const MSG_DECORATE_METHOD_ACCESSOR_ONLY = 'Only methods and accessors can be decorated.';
-export const MSG_INVARIANT_REQUIRED = 'An @invariant must be defined on the current class or one of its ancestors';
-export const MSG_INVALID_DECORATOR = 'Invalid decorator declaration';
-export const MSG_SINGLE_RETRY = 'retry can only be called once';
+import { MSG_INVARIANT_REQUIRED, MSG_DECORATE_METHOD_ACCESSOR_ONLY, MSG_SINGLE_RETRY } from './Messages';
 
 /**
  * The default feature implementation until an invariant is

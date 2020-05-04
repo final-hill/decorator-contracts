@@ -4,17 +4,13 @@
  * SPDX-License-Identifier: AGPL-1.0-only
  */
 
-
-import MemberDecorator, { MSG_NO_STATIC, MSG_DECORATE_METHOD_ACCESSOR_ONLY} from './MemberDecorator';
+import MemberDecorator from './MemberDecorator';
 import DescriptorWrapper from './lib/DescriptorWrapper';
 import isClass from './lib/isClass';
 import type { RescueType } from './typings/RescueType';
 import { Constructor } from './typings/Constructor';
 import Assertion from './Assertion';
-
-export const MSG_INVALID_DECORATOR = 'Invalid decorator usage. Function expected';
-export const MSG_DUPLICATE_RESCUE = 'Only a single @rescue can be assigned to a feature';
-export const MSG_NO_PROPERTY_RESCUE = 'A property can not be assigned a @rescue';
+import { MSG_INVALID_DECORATOR, MSG_DECORATE_METHOD_ACCESSOR_ONLY, MSG_NO_STATIC, MSG_DUPLICATE_RESCUE } from './Messages';
 
 /**
  * The `rescue` decorator enables a mechanism for providing Robustness.

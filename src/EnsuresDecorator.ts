@@ -5,10 +5,11 @@
  */
 
 
-import MemberDecorator, { MSG_INVALID_DECORATOR, MSG_NO_STATIC } from './MemberDecorator';
+import MemberDecorator from './MemberDecorator';
 import type {PredicateType} from './typings/PredicateType';
 import DescriptorWrapper from './lib/DescriptorWrapper';
 import Assertion from './Assertion';
+import { MSG_INVALID_DECORATOR, MSG_NO_STATIC } from './Messages';
 
 /**
  * The `@ensures` decorator is an assertion of a postcondition.

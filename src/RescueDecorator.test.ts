@@ -7,8 +7,7 @@
 /* eslint "require-jsdoc": "off" */
 
 import Contracts from './';
-import { MSG_DUPLICATE_RESCUE } from './RescueDecorator';
-import { MSG_INVARIANT_REQUIRED, MSG_SINGLE_RETRY } from './MemberDecorator';
+import { MSG_DUPLICATE_RESCUE, MSG_SINGLE_RETRY, MSG_INVARIANT_REQUIRED } from './Messages';
 
 /**
  * Requirement 400
