@@ -4,8 +4,6 @@
 
 	// List of extensions which should be recommended for users of this workspace.
 	"recommendations": [
-        "ms-azure-devops.azure-pipelines",
-        "ms-vsts.team",
         "editorconfig.editorconfig",
         "dbaeumer.vscode-eslint",
         "davidanson.vscode-markdownlint"
