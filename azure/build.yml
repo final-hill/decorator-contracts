@@ -36,14 +36,6 @@ steps:
   displayName: 'npm run test'
 
 - powershell: |
-    ls *.* | % {
-        (Get-Content $_ | ForEach  { $_ -replace '#{YEAR}#', (get-date –f yyyy) }) |
-        Set-Content $_
-    }
-  workingDirectory: ./dist
-  displayName: "Populate YEAR token"
-
-- powershell: |
     $command = "git describe --abbrev=0 --tags";
     $tag = Invoke-Expression -Command:$command;
     $package = Get-Content './package.json' -raw | ConvertFrom-Json
