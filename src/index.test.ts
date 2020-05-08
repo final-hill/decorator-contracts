@@ -1,6 +1,6 @@
 /*!
  * @license
- * Copyright (C) #{YEAR}# Michael L Haufe
+ * Copyright (C) 2020 Michael L Haufe
  * SPDX-License-Identifier: AGPL-1.0-only
  */
 
