@@ -13,7 +13,7 @@ jobs:
   # This workflow contains a single job called "build"
   build:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
 
     strategy:
       matrix:
@@ -32,7 +32,7 @@ jobs:
     - name: Cache Node.js modules
       uses: actions/cache@v1
       with:
-        path: ~/.npm # npm cache files are stored in `~/.npm` on Linux/macOS
+        path: "%AppData%\npm-cache" # npm cache files are stored under the AppData folder on Windows
         key: ${{ runner.OS }}-node-${{ hashFiles('**/package-lock.json') }}
         restore-keys: |
           ${{ runner.OS }}-node-
