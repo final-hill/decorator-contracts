@@ -10,6 +10,7 @@
 * Changed license to AGPL-3.0-only
 * Updated repository url to point to GitHub url
 * Changed library namespace: `@thenewobjective` -> `@final-hill`
+* Updated README Dependencies table
 
 ## v0.16.0
 
