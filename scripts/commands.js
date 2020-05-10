@@ -19,29 +19,6 @@ function run(cmd, args = [], options = {encoding : 'utf8'}) {
     return prog
 }
 
-program
-    .command('build-changelog')
-    .action(() => {
-        console.log('Build CHANGELOG.md')
-        let prog = run('git', ['tag', '-n99', '-l', 'v*.*.*', '--sort=-v:refname']),
-            stdout = (prog.stdout && prog.stdout.toString() || '') + '\n',
-            tags = stdout.matchAll(/(v\d+\.\d+\.\d+)((?:\s+[^\n]*[\n])+)/g),
-            reTrimLines = /^\s*([\S\s]*?)\s*$/gm;
-
-        let txtChangelog = `# Changelog\r\n\r\n${
-            [...tags].map(([, tag, description]) =>
-                `## ${tag}\r\n\r\n${description.replace(reTrimLines,'$1')}\r\n`
-            ).join('\r\n')
-        }`
-
-        fs.writeFile('./CHANGELOG.md',txtChangelog, function(err){
-            if(err)
-                console.error(err)
-            else
-                console.log('CHANGELOG.md created')
-        })
-    })
-
 /**
  * Deletes the provided paths if they exist
  * 
@@ -66,14 +43,14 @@ function clean(paths) {
 program
     .command('clean')
     .action(() => {
-        let paths = ['./dist', './coverage', './CHANGELOG.md']
+        let paths = ['./dist', './coverage']
         clean(paths)
     })
 
 program
     .command('clean-full')
     .action(() => {
-        let paths = ['./.cache', './node_modules', './dist', './coverage', './CHANGELOG.md']
+        let paths = ['./.cache', './node_modules', './dist', './coverage']
         clean(paths)
     })
 
