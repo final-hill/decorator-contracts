@@ -21,7 +21,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://thenewobjective@dev.azure.com/thenewobjective/decorator-contracts/_git/decorator-contracts"
+    "url": "https://github.com/final-hill/decorator-contracts"
   },
   "keywords": [
     "assertion",
