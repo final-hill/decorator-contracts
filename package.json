@@ -6,7 +6,6 @@
   "scripts": {
     "prebuild": "npm run clean && npm run lint",
     "build": "webpack",
-    "build-changelog": "node ./scripts/commands.js build-changelog",
     "prebuild-nofix": "npm run clean && npm run lint-nofix",
     "build-nofix": "webpack",
     "clean": "node ./scripts/commands.js clean",
