@@ -42,7 +42,7 @@
     "SOLID"
   ],
   "author": "Michael L Haufe <tno@thenewobjective.com> (https://thenewobjective.com)",
-  "license": "AGPL-1.0-only",
+  "license": "AGPL-3.0-only",
   "devDependencies": {
     "@types/jest": "^24.9.1",
     "@types/node": "^13.11.1",
