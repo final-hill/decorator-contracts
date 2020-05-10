@@ -626,15 +626,24 @@ To build and test this library locally you will need the following:
 Dependencies are managed through `package.json`. There are no runtime dependencies.
 The development dependencies are as follows:
 
-| Package          | Description                                           |
-|:-----------------|:------------------------------------------------------|
-| `@types/jest`    | Type Definitions for `ts-jest` support                |
-| `jest`           | JavaScript Unit testing library                       |
-| `parcel-bundler` | Web Application bundler                               |
-| `rimraf`         | OS-Agnostic remove command for deleting files/folders |
-| `ts-jest`        | TypeScript support for `jest`                         |
-| `tslint`         | TypeScript linting library                            |
-| `typescript`     | TypeScript compiler                                   |
+| Package                                   | Description                                 | License      |
+|:------------------------------------------|:--------------------------------------------|--------------|
+| `@types/jest`                             | Type definitions for `ts-jest` support      | MIT          |
+| `@types/node`                             | Type definitions for node. (used for build) | MIT          |
+| `@typescript-eslint/eslint-plugin`        | Type definitions for ESLint                 | MIT          |
+| `@typescript-eslint/eslint-plugin-tslint` | Type definitions for ESLint extension       | MIT          |
+| `@typescript-eslint/parser`               | Type definitions for ESLint parser          | BSD-2-Clause |
+| `commander`                               | Command line library                        | MIT          |
+| `eslint`                                  | ECMAScript linting library                  | MIT          |
+| `eslint-plugin-header`                    | ESLint extension for linting file headers   | MIT          |
+| `eslint-plugin-import`                    | ESLint extension for linting imports        | MIT          |
+| `jest`                                    | JavaScript Unit testing library             | MIT          |
+| `jest-junit`                              | Jest extension for JUnit reporting          | Apache-2.0   |
+| `ts-jest`                                 | TypeScript support for `jest`               | MIT          |
+| `ts-loader`                               | TypeScript loader for Webpack               | MIT          |
+| `typescript`                              | TypeScript compiler                         | Apache-2.0   |
+| `webpack`                                 | Module bundler                              | MIT          |
+| `webpack-cli`                             | Command line library for WebPack            | MIT          |
 
 If you're using Windows and a newer version of NodeJS then you may additionally
 need to run the following command due to a transitive dependency on [node-gyp](https://github.com/nodejs/node-gyp):
