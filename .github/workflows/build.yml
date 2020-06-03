@@ -45,25 +45,8 @@ jobs:
         npm test
       env:
         CI: true
-
-    - name: Populate VERSION
-      run: |
-        $command = "git describe --abbrev=0 --tags";
-        $tag = Invoke-Expression -Command:$command;
-        $package = Get-Content './package.json' -raw | ConvertFrom-Json
-        $package.version = $tag.substring(1)
-        $package | ConvertTo-Json -depth 32 | Set-Content './package.json'
-      shell: pwsh
   
     - name: npm pack
       run: |
         npm pack
       working-directory: ./
-      
-    - name: Revert VERSION to default
-      run: |
-        $package = Get-Content './package.json' -raw | ConvertFrom-Json
-        $package.version = "0.0.0"
-        $package | ConvertTo-Json -depth 32 | Set-Content './package.json'
-      working-directory: ./
-    
