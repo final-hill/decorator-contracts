@@ -9,10 +9,9 @@ import AssertionError from './AssertionError';
 import Contracts from './';
 
 /**
- * Requirement 69
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/69
+ * https://github.com/final-hill/decorator-contracts/issues/8
  */
-describe('Assertions must support a means of enabling/disabling', () => {
+describe('Assertions must be toggleable', () => {
     test('false assertions', () => {
         const {assert: assertDebug} = new Contracts(true),
             {assert: assertProd} = new Contracts(false);
@@ -23,8 +22,7 @@ describe('Assertions must support a means of enabling/disabling', () => {
 });
 
 /**
- * Requirement 71
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/71
+ * https://github.com/final-hill/decorator-contracts/issues/22
  */
 describe('Assertions must support throwing custom error types', () => {
     const assert: Contracts['assert'] = new Contracts(true).assert,

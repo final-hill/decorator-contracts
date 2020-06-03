@@ -8,8 +8,7 @@
 import Contracts from './';
 
 /**
- * Requirement 194
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/194
+ * https://github.com/final-hill/decorator-contracts/issues/24
  */
 describe('The contracts constructor accepts a single boolean parameter called "checkMode"', () => {
     test('Construction', () => {

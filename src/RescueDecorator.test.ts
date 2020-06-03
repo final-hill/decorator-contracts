@@ -11,8 +11,7 @@ import Contracts from './';
 import { MSG_DUPLICATE_RESCUE, MSG_SINGLE_RETRY, MSG_INVARIANT_REQUIRED } from './Messages';
 
 /**
- * Requirement 400
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/400
+ * https://github.com/final-hill/decorator-contracts/issues/59
  */
 describe('Any error thrown by a class feature must be captured by its @rescue', () => {
     const {invariant, rescue} = new Contracts(true);
@@ -155,8 +154,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
 });
 
 /**
- * Requirement 434
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/434
+ * https://github.com/final-hill/decorator-contracts/issues/60
  */
 describe('The @rescue constructor has a checked mode that enables its execution', () => {
     test('enabled', () => {
@@ -204,8 +202,7 @@ describe('The @rescue constructor has a checked mode that enables its execution'
 });
 
 /**
- * Requirement 455
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/455
+ * https://github.com/final-hill/decorator-contracts/issues/61
  */
 describe('Only a single @rescue can be assigned to a method or accessor', () => {
     const {invariant, rescue} = new Contracts(true);
@@ -237,8 +234,7 @@ describe('Only a single @rescue can be assigned to a method or accessor', () => 
 });
 
 /**
- * Requirement 456
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/456
+ * https://github.com/final-hill/decorator-contracts/issues/62
  */
 describe('The \'retry\' argument of the @rescue function can only be called once during rescue execution', () => {
     const {invariant, rescue} = new Contracts(true);
@@ -285,8 +281,7 @@ describe('The \'retry\' argument of the @rescue function can only be called once
 });
 
 /**
- * Requirement 465
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/465
+ * https://github.com/final-hill/decorator-contracts/issues/58
  */
 describe('The @rescue function must preserve the invariant after execution', () => {
     const {invariant, rescue} = new Contracts(true);
@@ -314,8 +309,7 @@ describe('The @rescue function must preserve the invariant after execution', () 
 });
 
 /**
- * Requirement 539
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/539
+ * https://github.com/final-hill/decorator-contracts/issues/36
  */
 describe('A class feature with a decorator must not be functional until the @invariant is defined', () => {
     const {invariant, rescue} = new Contracts(true);
@@ -345,8 +339,7 @@ describe('A class feature with a decorator must not be functional until the @inv
 });
 
 /**
- * Requirement 558
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/558
+ * https://github.com/final-hill/decorator-contracts/issues/63
  */
 describe('If a @rescue is executed and the retry argument is not called, then an error is thrown', () => {
     const {invariant, rescue} = new Contracts(true);
@@ -380,8 +373,7 @@ describe('If a @rescue is executed and the retry argument is not called, then an
 });
 
 /**
- * Requirement 559
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/559
+ * https://github.com/final-hill/decorator-contracts/issues/64
  */
 describe('If an exception is thrown in a class feature without a @rescue defined, then the exception is raised to its caller after the @invariant is checked', () => {
     const {invariant} = new Contracts(true);
@@ -422,8 +414,7 @@ describe('If an exception is thrown in a class feature without a @rescue defined
 });
 
 /**
- * Requirement 560
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/560
+ * https://github.com/final-hill/decorator-contracts/issues/65
  */
 describe('If an error is thrown in @demands, the error is raised to the caller', () => {
     const {invariant, demands, rescue} = new Contracts(true);
@@ -467,8 +458,7 @@ describe('If an error is thrown in @demands, the error is raised to the caller',
 });
 
 /**
- * Requirement 562
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/562
+ * https://github.com/final-hill/decorator-contracts/issues/66
  */
 describe('If an error is raised in a @ensures then the associated @rescue is executed', () => {
     const {invariant, ensures, rescue} = new Contracts(true);

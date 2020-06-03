@@ -9,8 +9,7 @@ import Contracts from './';
 import { MSG_NO_MATCHING_FEATURE, MSG_INVALID_ARG_LENGTH, MSG_DUPLICATE_OVERRIDE, MSG_INVARIANT_REQUIRED } from './Messages';
 
 /**
- * Requirement 210
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/210
+ * https://github.com/final-hill/decorator-contracts/issues/44
  */
 describe('The override decorator is a non-static member decorator only', () => {
     const {override} = new Contracts(true);
@@ -53,8 +52,7 @@ describe('The override decorator is a non-static member decorator only', () => {
 });
 
 /**
- * Requirement 211
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/211
+ * https://github.com/final-hill/decorator-contracts/issues/45
  */
 describe('In production mode the @override decorator is a no-op', () => {
     const {override} = new Contracts(false);
@@ -72,8 +70,7 @@ describe('In production mode the @override decorator is a no-op', () => {
 });
 
 /**
- * Requirement 212
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/212
+ * https://github.com/final-hill/decorator-contracts/issues/46
  */
 describe('Using @override on a class member with no ancestor member is an error', () => {
     const {override} = new Contracts(true);
@@ -120,8 +117,7 @@ describe('Using @override on a class member with no ancestor member is an error'
 });
 
 /**
- * Requirement 214
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/214
+ * https://github.com/final-hill/decorator-contracts/issues/47
  */
 describe('using @override on a method with an ancestor with a different parameter count is an error', () => {
     const {invariant, override} = new Contracts(true);
@@ -188,8 +184,7 @@ describe('using @override on a method with an ancestor with a different paramete
 });
 
 /**
- * Requirement 215
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/215
+ * https://github.com/final-hill/decorator-contracts/issues/48
  */
 describe('A subclass with an overriding member missing @override is an error', () => {
     const {invariant, override} = new Contracts(true);
@@ -245,8 +240,7 @@ describe('A subclass with an overriding member missing @override is an error', (
 });
 
 /**
- * Requirement 337
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/337
+ * https://github.com/final-hill/decorator-contracts/issues/54
  */
 describe('Only a single @override can be assigned to a member per class', () => {
     const {override} = new Contracts(true);
@@ -299,8 +293,7 @@ describe('Only a single @override can be assigned to a member per class', () => 
 });
 
 /**
- * Requirement 341
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/341
+ * https://github.com/final-hill/decorator-contracts/issues/50
  */
 describe('Accessors must support @override', () => {
     const {invariant, override} = new Contracts(true);
@@ -347,8 +340,7 @@ describe('Accessors must support @override', () => {
 });
 
 /**
- * Requirement 539
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/539
+ * https://github.com/final-hill/decorator-contracts/issues/36
  */
 describe('A class feature with a decorator must not be functional until the @invariant is defined', () => {
     const {invariant, override} = new Contracts(true);
