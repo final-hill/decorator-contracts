@@ -12,8 +12,7 @@ import { MSG_NO_STATIC, MSG_INVARIANT_REQUIRED } from './Messages';
 import AssertionError from './AssertionError';
 
 /**
- * Requirement 242
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/277
+ * https://github.com/final-hill/decorator-contracts/issues/77
  */
 describe('The @ensures decorator must be a non-static method decorator only', () => {
     test('Test declaration', () => {
@@ -62,8 +61,7 @@ describe('The @ensures decorator must be a non-static method decorator only', ()
 });
 
 /**
- * Requirement 278
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/278
+ * https://github.com/final-hill/decorator-contracts/issues/78
  */
 describe('There can be multiple @ensures decorators assigned to a class feature', () => {
     const {invariant, ensures} = new Contracts(true);
@@ -104,8 +102,7 @@ describe('There can be multiple @ensures decorators assigned to a class feature'
 });
 
 /**
- * Requirement 280
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/280
+ * https://github.com/final-hill/decorator-contracts/issues/79
  */
 describe('Features that override a @ensures decorated method must be subject to that decorator', () => {
     const {invariant, override, ensures} = new Contracts(true);
@@ -154,8 +151,7 @@ describe('Features that override a @ensures decorated method must be subject to 
 });
 
 /**
- * Requirement 284
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/284
+ * https://github.com/final-hill/decorator-contracts/issues/80
  */
 describe('@ensures is evaluated after its associated member is called', () => {
     const {invariant, ensures} = new Contracts(true);
@@ -199,8 +195,7 @@ describe('@ensures is evaluated after its associated member is called', () => {
 });
 
 /**
- * Requirement 286
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/286
+ * https://github.com/final-hill/decorator-contracts/issues/81
  */
 describe('@ensures has a checked mode and unchecked mode', () => {
     test('The associated assertion is evaluated when checkMode = true', () => {
@@ -229,8 +224,7 @@ describe('@ensures has a checked mode and unchecked mode', () => {
 });
 
 /**
- * Requirement 397
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/397
+ * https://github.com/final-hill/decorator-contracts/issues/82
  */
 describe('Postconditions cannot be weakened in a subtype', () => {
     const {invariant, ensures, override} = new Contracts(true);
@@ -283,8 +277,7 @@ describe('Postconditions cannot be weakened in a subtype', () => {
 });
 
 /**
- * Requirement 539
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/539
+ * https://github.com/final-hill/decorator-contracts/issues/36
  */
 describe('A class feature with a decorator must not be functional until the @invariant is defined', () => {
     const {invariant, ensures} = new Contracts(true);

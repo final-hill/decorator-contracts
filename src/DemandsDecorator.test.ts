@@ -12,8 +12,7 @@ import { MSG_NO_STATIC, MSG_INVARIANT_REQUIRED } from './Messages';
 import AssertionError from './AssertionError';
 
 /**
- * Requirement 241
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/241
+ * https://github.com/final-hill/decorator-contracts/issues/69
  */
 describe('The @demands decorator must be a non-static feature decorator only', () => {
     test('Test declaration', () => {
@@ -62,8 +61,7 @@ describe('The @demands decorator must be a non-static feature decorator only', (
 });
 
 /**
- * Requirement 242
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/242
+ * https://github.com/final-hill/decorator-contracts/issues/70
  */
 describe('There can be multiple @demands decorators assigned to a class feature', () => {
     const {invariant, demands} = new Contracts(true);
@@ -105,8 +103,7 @@ describe('There can be multiple @demands decorators assigned to a class feature'
 });
 
 /**
- * Requirement 244
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/244
+ * https://github.com/final-hill/decorator-contracts/issues/71
  */
 describe('Features that override a @demands decorated feature must be subject to that decorator', () => {
     const {invariant, override, demands} = new Contracts(true);
@@ -156,8 +153,7 @@ describe('Features that override a @demands decorated feature must be subject to
 });
 
 /**
- * Requirement 246
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/246
+ * https://github.com/final-hill/decorator-contracts/issues/73
  */
 describe('@demands is evaluated before its associated feature is called', () => {
     const {invariant, demands} = new Contracts(true);
@@ -201,8 +197,7 @@ describe('@demands is evaluated before its associated feature is called', () => 
 });
 
 /**
- * Requirement 248
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/248
+ * https://github.com/final-hill/decorator-contracts/issues/74
  */
 describe('@demands has a checked mode and unchecked mode', () => {
 
@@ -232,8 +227,7 @@ describe('@demands has a checked mode and unchecked mode', () => {
 });
 
 /**
- * Requirement 396
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/396
+ * https://github.com/final-hill/decorator-contracts/issues/75
  */
 describe('Preconditions cannot be strengthened in a subtype', () => {
     const {invariant, demands, override} = new Contracts(true);
@@ -297,8 +291,7 @@ describe('Preconditions cannot be strengthened in a subtype', () => {
 });
 
 /**
- * Requirement 539
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/539
+ * https://github.com/final-hill/decorator-contracts/issues/36
  */
 describe('A class feature with a decorator must not be functional until the @invariant is defined', () => {
     const {invariant, demands} = new Contracts(true);

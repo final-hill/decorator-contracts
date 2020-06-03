@@ -9,8 +9,7 @@ import Contracts from './';
 import AssertionError from './AssertionError';
 
 /**
- * Requirement 132
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/132
+ * https://github.com/final-hill/decorator-contracts/issues/28
  */
 describe('The invariant decorator MUST be class decorator only', () => {
     const {invariant} = new Contracts(true);
@@ -36,8 +35,7 @@ describe('The invariant decorator MUST be class decorator only', () => {
 });
 
 /**
- * Requirement 133
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/133
+ * https://github.com/final-hill/decorator-contracts/issues/29
  */
 describe('There can be multiple invariant decorators assigned to a class', () => {
     const invariants = [
@@ -126,8 +124,7 @@ describe('There can be multiple invariant decorators assigned to a class', () =>
 });
 
 /**
- * Requirement 134
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/134
+ * https://github.com/final-hill/decorator-contracts/issues/30
  */
 describe('The subclasses of an invariant decorated class must obey the invariant', () => {
     test('Test subclassing in debug mode', () => {
@@ -258,8 +255,7 @@ describe('The subclasses of an invariant decorated class must obey the invariant
 });
 
 /**
- * Requirement 135
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/135
+ * https://github.com/final-hill/decorator-contracts/issues/31
  */
 describe('A truthy invariant does not throw an exception when evaluated', () => {
     const invariants = [
@@ -300,8 +296,7 @@ describe('A truthy invariant does not throw an exception when evaluated', () => 
 });
 
 /**
- * Requirement 136
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/136
+ * https://github.com/final-hill/decorator-contracts/issues/32
  */
 describe('A falsy invariant throws an exception when evaluated', () => {
 
@@ -373,8 +368,7 @@ describe('A falsy invariant throws an exception when evaluated', () => {
 });
 
 /**
- * Requirement 137
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/137
+ * https://github.com/final-hill/decorator-contracts/issues/33
  */
 describe('An invariant is evaluated after it\'s associated class is constructed', () => {
     test('truthy construction does not throw in debug and prod mode', () => {
@@ -418,8 +412,7 @@ describe('An invariant is evaluated after it\'s associated class is constructed'
 });
 
 /**
- * Requirement 138
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/138
+ * https://github.com/final-hill/decorator-contracts/issues/34
  */
 describe('An invariant is evaluated before and after every method call on the associated class', () => {
     test('Test method call in checkMode', () => {
@@ -480,10 +473,9 @@ describe('An invariant is evaluated before and after every method call on the as
 });
 
 /**
- * Requirement 146
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/146
+ * https://github.com/final-hill/decorator-contracts/issues/37
  */
-describe('The invariant decorator has a debug mode and production mode', () => {
+describe('The invariant decorator has a checked mode and unchecked mode', () => {
     test('init debug mode', () => {
         expect(new Contracts(true).invariant).toBeDefined();
     });
@@ -494,10 +486,9 @@ describe('The invariant decorator has a debug mode and production mode', () => {
 });
 
 /**
- * Requirement 147
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/147
+ * https://github.com/final-hill/decorator-contracts/issues/38
  */
-describe('In debug mode the invariant decorator evaluates its assertions', () => {
+describe('In checked mode the invariant decorator evaluates its assertions', () => {
     test('Construction throws in checkMode', () => {
         const {invariant} = new Contracts(true);
 
@@ -554,10 +545,9 @@ describe('In debug mode the invariant decorator evaluates its assertions', () =>
 });
 
 /**
- * Requirement 148
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/148
+ * https://github.com/final-hill/decorator-contracts/issues/39
  */
-describe('In production mode the invariant decorator does not evaluate its assertions', () => {
+describe('In checked mode the invariant decorator does not evaluate its assertions', () => {
     const {invariant} = new Contracts(false);
 
     test('Construction does not throw', () => {
@@ -591,8 +581,7 @@ describe('In production mode the invariant decorator does not evaluate its asser
 });
 
 /**
- * Requirement 187
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/187
+ * https://github.com/final-hill/decorator-contracts/issues/40
  */
 describe('A subclass with its own invariants must enforce all ancestor invariants', () => {
     test('Debug Mode', () => {
@@ -633,8 +622,7 @@ describe('A subclass with its own invariants must enforce all ancestor invariant
 });
 
 /**
- * Requirement 199
- * https://dev.azure.com/thenewobjective/decorator-contracts/_workitems/edit/199
+ * https://github.com/final-hill/decorator-contracts/issues/41
  */
 describe('The invariant decorator supports use with no arguments', () => {
     const invariants = [
