@@ -12,7 +12,7 @@ import { FeatureRegistration } from './lib/FeatureRegistry';
 import getAncestry from './lib/getAncestry';
 import type { Constructor } from './typings/Constructor';
 import { CLASS_REGISTRY } from './lib/ClassRegistry';
-import { MSG_INVARIANT_REQUIRED, MSG_DECORATE_METHOD_ACCESSOR_ONLY, MSG_SINGLE_RETRY } from './Messages';
+import { MSG_INVARIANT_REQUIRED, MSG_DECORATE_METHOD_ACCESSOR_ONLY } from './Messages';
 
 /**
  * The default feature implementation until an invariant is
@@ -206,7 +206,6 @@ export default abstract class MemberDecorator {
                         }
                         let hasRetried = false;
                         fnRescue.call(this, error, args, (...retryArgs: any[]) => {
-                            checkedAssert(!hasRetried, MSG_SINGLE_RETRY);
                             hasRetried = true;
                             result = _checkedFeature.call(this, ...retryArgs);
                         });
