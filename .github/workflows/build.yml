@@ -1,26 +1,21 @@
 # Reference: <https://help.github.com/en/actions/language-and-framework-guides/using-nodejs-with-github-actions>
 name: Build
 
-# Controls when the action will run. Triggers the workflow on push or pull request
-# events but only for the master branch
 on:
+  pull_request:
+    branches: [ master ]
   push:
     branches: [ master ]
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  build:
-    # The type of runner that the job will run on
+  validate:
     runs-on: windows-latest
 
     strategy:
       matrix:
         node-version: [14.x]
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
     - uses: actions/checkout@v2
       
     - name: Use Node.js ${{ matrix.node-version }}
@@ -44,16 +39,3 @@ jobs:
         npm test
       env:
         CI: true
-  
-    - name: npm pack
-      run: npm pack
-      working-directory: ./
-
-    - name: Rename package
-      run: mv *.tgz final-hill-decorator-contracts.tgz
-
-    - name: Upload package
-      uses: actions/upload-artifact@v1
-      with:
-        name: package
-        path: final-hill-decorator-contracts.tgz

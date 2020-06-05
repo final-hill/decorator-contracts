@@ -1,0 +1,79 @@
+# Reference: <https://help.github.com/en/actions/language-and-framework-guides/using-nodejs-with-github-actions>
+name: Build/Release
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    strategy:
+      matrix:
+        node-version: [14.x]
+
+    steps:
+    - uses: actions/checkout@v2
+      
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v1
+      with:
+        node-version: ${{ matrix.node-version }}
+
+    - name: Cache Node.js modules
+      uses: actions/cache@v1
+      with:
+        path: "%AppData%\npm-cache" # npm cache files are stored under the AppData folder on Windows
+        key: ${{ runner.OS }}-node-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.OS }}-node-
+          ${{ runner.OS }}-    
+    
+    - name: npm install, build, and test
+      run: |
+        npm install
+        npm run build-nofix
+        npm test
+      env:
+        CI: true
+  
+    - name: npm pack
+      run: npm pack
+      working-directory: ./
+
+    - name: Rename package
+      run: mv *.tgz final-hill-decorator-contracts.tgz
+
+    - name: Upload package
+      uses: actions/upload-artifact@v1
+      with:
+        name: package
+        path: final-hill-decorator-contracts.tgz
+  release:
+    runs-on: windows-latest
+
+    strategy:
+      matrix:
+        node-version: [14.x]
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v1
+      with:
+        node-version: ${{ matrix.node-version }}
+        registry-url: 'https://registry.npmjs.org'
+    
+    - name: Download package
+      uses: actions/download-artifact@v1
+      with:
+        name: package
+
+    - name: configure npmrc
+      run: npm config set '//registry.npmjs.org/:_authToken' "${NODE_AUTH_TOKEN}"
+
+    - run: npm publish ./package/final-hill-decorator-contracts.tgz
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
