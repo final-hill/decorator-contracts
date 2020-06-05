@@ -11,6 +11,9 @@
 * Updated repository url to point to GitHub url
 * Changed library namespace: `@thenewobjective` -> `@final-hill`
 * Updated README Dependencies table
+* Updated @rescue documentation
+* Replaced build versioning with explicit versioning
+* Enabled @rescue inheritance
 
 ## v0.16.0
 

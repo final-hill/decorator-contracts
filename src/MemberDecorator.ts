@@ -168,7 +168,7 @@ export default abstract class MemberDecorator {
                 ancRegistries = this.getAncestorRegistrations(Clazz, propertyKey),
                 allDemands = [registration.demands, ...ancRegistries.map(r => r.demands)].filter(r => r.length > 0),
                 allEnsures = [registration.ensures, ...ancRegistries.map(r => r.ensures)].filter(r => r.length > 0),
-                fnRescue = registration.rescue,
+                fnRescue = registration.rescue ?? ancRegistries.find(registration => registration.rescue != undefined)?.rescue,
                 originalDescriptor = descriptorWrapper.descriptor!,
                 newDescriptor = {...originalDescriptor},
                 // TODO: more specific error. Want the specific class name, feature name, and expression
