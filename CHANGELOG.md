@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.17.1
+
+* Updated CI/CD configuration
+
 ## v0.17.0
 
 * Migrated repository from Azure Devops to GitHub
