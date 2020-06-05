@@ -14,6 +14,7 @@
 * Updated @rescue documentation
 * Replaced build versioning with explicit versioning
 * Enabled @rescue inheritance
+* Created CONTRIBUTING.md
 
 ## v0.16.0
 
