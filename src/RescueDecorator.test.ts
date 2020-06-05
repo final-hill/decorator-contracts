@@ -8,7 +8,7 @@
 /* eslint "require-jsdoc": "off" */
 
 import Contracts from './';
-import { MSG_DUPLICATE_RESCUE, MSG_SINGLE_RETRY, MSG_INVARIANT_REQUIRED } from './Messages';
+import { MSG_DUPLICATE_RESCUE, MSG_INVARIANT_REQUIRED } from './Messages';
 
 /**
  * https://github.com/final-hill/decorator-contracts/issues/59
@@ -230,53 +230,6 @@ describe('Only a single @rescue can be assigned to a method or accessor', () => 
 
             return Base;
         }).toThrow(MSG_DUPLICATE_RESCUE);
-    });
-});
-
-/**
- * https://github.com/final-hill/decorator-contracts/issues/62
- */
-describe('The \'retry\' argument of the @rescue function can only be called once during rescue execution', () => {
-    const {invariant, rescue} = new Contracts(true);
-
-    test('Call retry once succeeds', () => {
-        function methodRescue(_error: any, _args: any[], retry: any): void {
-            retry(3);
-        }
-
-        @invariant
-        class Base {
-            @rescue(methodRescue)
-            method(value: number): number {
-                if(value <= 0) {
-                    throw new Error('value must be greater than 0');
-                } else {
-                    return value;
-                }
-            }
-        }
-        const base = new Base();
-        expect(base.method(0)).toBe(3);
-    });
-
-    test('Call retry twice throws error', () => {
-        function methodRescue(_error: any, _args: any[], retry: any): void {
-            retry(retry(3));
-        }
-
-        @invariant
-        class Base {
-            @rescue(methodRescue)
-            method(value: number): number {
-                if(value <= 0) {
-                    throw new Error('value must be greater than 0');
-                } else {
-                    return value;
-                }
-            }
-        }
-        const base = new Base();
-        expect(() => { base.method(0); }).toThrow(MSG_SINGLE_RETRY);
     });
 });
 

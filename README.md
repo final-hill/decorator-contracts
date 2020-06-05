@@ -1,7 +1,5 @@
 # Decorator Contracts
 
-[![Build Status](https://dev.azure.com/thenewobjective/decorator-contracts/_apis/build/status/Build?branchName=master)](https://dev.azure.com/thenewobjective/decorator-contracts/_build/latest?definitionId=11&branchName=master)
-
 ## Table of Contents
 
 - [Introduction](#introduction)
@@ -495,14 +493,65 @@ exception and handles it by simply logging the error. The exception is
 then raised to the caller.
 
 You also have the ability to retry the execution of the decorated
-feature again from the beginning by calling the `retry` function.
-This provides a mechanism for
-[fault tolerance](https://en.wikipedia.org/wiki/Fault_tolerance).
+feature from the beginning by calling the `retry` function. This provides
+a mechanism for [fault tolerance](https://en.wikipedia.org/wiki/Fault_tolerance).
 When retry is called the exception will no longer be raised to the caller.
-`retry` can only be called once per exception rescue.
+`retry` can only be called once per exception rescue in order to prevent unbounded
+recursion. An example of `retry` usage:
+
+```ts
+@invariant
+class StudentRepository {
+    ...
+    @rescue((error, [id], retry) => {
+        console.error(error)
+        console.log('Retrying...')
+        retry(id)
+    })
+    getStudent(id: number): Student {
+        const data = fetch(`/repos/students/${id}`).then(response => response.json())
+
+        return new Student(data)
+    }
+}
+```
 
 Only a single `@rescue` can be assigned to a feature. Adding more than one
 will raise an error.
+
+The `@rescue` can be defined on an ancestor feature and it will be used if none
+is defined on the current class:
+
+```ts
+@invariant
+class Base {
+    ...
+    @rescue((error, args, retry) => ...)
+    myMethod(){ ... }
+}
+
+class Sub extends Base {
+    @override
+    myMethod(){ ... throw new Error('BOOM!') ... }
+}
+```
+
+Another capability that the `@rescue` decorator provides is
+[N-Version programming](https://en.wikipedia.org/wiki/N-version_programming)
+to enable [Fault-Tolerance](https://en.wikipedia.org/wiki/Fault_tolerance)
+and [Redundancy](https://en.wikipedia.org/wiki/Redundancy_(engineering)).
+
+A dated example of this is performing ajax requests in mult-browser environments:
+
+```ts
+class AjaxRequest {
+    constructor(options){ ... }
+
+    getLegacy(url)
+
+    get(url){}
+}
+```
 
 An `@invariant` decorator must also be defined either on the current class
 or on an ancestor.

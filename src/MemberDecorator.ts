@@ -12,7 +12,7 @@ import { FeatureRegistration } from './lib/FeatureRegistry';
 import getAncestry from './lib/getAncestry';
 import type { Constructor } from './typings/Constructor';
 import { CLASS_REGISTRY } from './lib/ClassRegistry';
-import { MSG_INVARIANT_REQUIRED, MSG_DECORATE_METHOD_ACCESSOR_ONLY, MSG_SINGLE_RETRY } from './Messages';
+import { MSG_INVARIANT_REQUIRED, MSG_DECORATE_METHOD_ACCESSOR_ONLY } from './Messages';
 
 /**
  * The default feature implementation until an invariant is
@@ -168,7 +168,7 @@ export default abstract class MemberDecorator {
                 ancRegistries = this.getAncestorRegistrations(Clazz, propertyKey),
                 allDemands = [registration.demands, ...ancRegistries.map(r => r.demands)].filter(r => r.length > 0),
                 allEnsures = [registration.ensures, ...ancRegistries.map(r => r.ensures)].filter(r => r.length > 0),
-                fnRescue = registration.rescue,
+                fnRescue = registration.rescue ?? ancRegistries.find(registration => registration.rescue != undefined)?.rescue,
                 originalDescriptor = descriptorWrapper.descriptor!,
                 newDescriptor = {...originalDescriptor},
                 // TODO: more specific error. Want the specific class name, feature name, and expression
@@ -206,7 +206,6 @@ export default abstract class MemberDecorator {
                         }
                         let hasRetried = false;
                         fnRescue.call(this, error, args, (...retryArgs: any[]) => {
-                            checkedAssert(!hasRetried, MSG_SINGLE_RETRY);
                             hasRetried = true;
                             result = _checkedFeature.call(this, ...retryArgs);
                         });
