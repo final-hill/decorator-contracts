@@ -33,24 +33,16 @@ of [SOLID](https://en.wikipedia.org/wiki/SOLID) to support
 
 ## Library Installation
 
-This library is not published to the [npm registry](https://www.npmjs.com/).
-To install this library add the following to your `.npmrc` file:
+Run the command:
 
-```text
-@thenewobjective:registry=https://pkgs.dev.azure.com/thenewobjective/decorator-contracts/_packaging/public/npm/registry/
-always-auth=true
-```
-
-Then run the command:
-
-`npm install @thenewobjective/decorator-contracts`
+`npm install @final-hill/decorator-contracts`
 
 ## Usage
 
 After installation the library can be imported as such:
 
 ```typescript
-import Contracts from '@thenewobjective/decorator-contracts';
+import Contracts from '@final-hill/decorator-contracts';
 ```
 
 It is not enough to import the library though, there are two modes of usage:
