@@ -1,5 +1,7 @@
 # Decorator Contracts
 
+![Build](https://github.com/final-hill/decorator-contracts/workflows/Build/badge.svg?branch=master)
+
 ## Table of Contents
 
 - [Introduction](#introduction)
