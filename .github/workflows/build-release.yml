@@ -6,7 +6,7 @@ on:
     types: [created]
 
 jobs:
-  build:
+  build-release:
     runs-on: windows-latest
 
     strategy:
@@ -50,30 +50,11 @@ jobs:
       with:
         name: package
         path: final-hill-decorator-contracts.tgz
-  release:
-    runs-on: windows-latest
-
-    strategy:
-      matrix:
-        node-version: [14.x]
-
-    steps:
-    - uses: actions/checkout@v2
-
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v1
-      with:
-        node-version: ${{ matrix.node-version }}
-        registry-url: 'https://registry.npmjs.org'
-    
-    - name: Download package
-      uses: actions/download-artifact@v1
-      with:
-        name: package
 
     - name: configure npmrc
       run: npm config set '//registry.npmjs.org/:_authToken' "${NODE_AUTH_TOKEN}"
 
-    - run: npm publish ./package/final-hill-decorator-contracts.tgz
+    - run: npm publish final-hill-decorator-contracts.tgz
+
       env:
         NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

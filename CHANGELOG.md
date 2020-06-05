@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.17.2
+
+* Bugfixed Release Configuration
+
 ## v0.17.1
 
 * Updated CI/CD configuration
