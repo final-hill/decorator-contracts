@@ -541,39 +541,64 @@ Another capability that the `@rescue` decorator provides is
 to enable [Fault-Tolerance](https://en.wikipedia.org/wiki/Fault_tolerance)
 and [Redundancy](https://en.wikipedia.org/wiki/Redundancy_(engineering)).
 
-A dated example of this is performing ajax requests in mult-browser environments:
+A dated example of this is performing ajax requests in mult-browser environments where `fetch` may not exist:
 
 ```ts
+@invariant
 class AjaxRequest {
-    constructor(options){ ... }
+    attempts = 0
 
-    getLegacy(url)
+    @rescue(function(error, [url], retry) => {
+        this.attempts++
+        if(this.attempts < 2)
+            retry(url)
+    })
+    get(url){
+        if(this.attempts == 0)
+            return this.getFetch(url)
+        else if(this.attempts == 1)
+            return this.getXhr(url)
+    }
 
-    get(url){}
+    getFetch(url) {
+        return await fetch(url)
+    }
+
+    getXhr(url) {
+        return await new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', url);
+            xhr.onload = function() {
+                if (this.status >= 200 && this.status < 300) {
+                    resolve(xhr.response);
+                } else {
+                    reject({
+                        status: this.status,
+                        statusText: xhr.statusText
+                    });
+                }
+            };
+            xhr.onerror = function() {
+                reject({
+                    status: this.status,
+                    statusText: xhr.statusText
+                });
+            };
+            xhr.send();
+        })
+    }
 }
 ```
 
+Unlike `try/catch` where exceptions are non-resumable and handled at a dynamic location,
+you can see from the above examples that the `@rescue` mechanism enables resumable exceptions and
+"[Organized Panic](https://en.wikipedia.org/wiki/Exception_handling#Exception_handling_based_on_design_by_contract)"
+where you can lexically determine where the handling occurs and optionally perform changes and retry the feature call.
+
 An `@invariant` decorator must also be defined either on the current class
-or on an ancestor.
+or on an ancestor for the `@rescue` to be functional.
 
 ## The order of assertions
-
-```ts
-        (error) <-----------------+
-                    ^ (throws)    | (throws)
-                    |             |
-obj.feature(...) -> @invariant -> @demands -> { feature body } --+
-                    ^                         |                  |
-                    |                         | (throws)         |
-                    | (retry)                 |                  | (return)
-                    +------------ @rescue <---+------+           |
-                                  |                  |           |
-                                  | (throws|return)  |           |
-        (error) <--- @invariant <-+                  |           |
-                                                     | (throws)  |
-                                                     |           |
-       (return) <-- @invariant <---------------- @ensures <------+
-```
 
 When `obj.feature` is called the happy path is:
 
@@ -597,6 +622,23 @@ starts from the beginning.
 
 If `@rescue` throws an error or does not call `retry` then the
 `@invariant` is checked before the error is raised to the caller.
+
+```ts
+        (error) <-----------------+
+                    ^ (throws)    | (throws)
+                    |             |
+obj.feature(...) -> @invariant -> @demands -> { feature body } --+
+                    ^                         |                  |
+                    |                         | (throws)         |
+                    | (retry)                 |                  | (return)
+                    +------------ @rescue <---+------+           |
+                                  |                  |           |
+                                  | (throws|return)  |           |
+        (error) <--- @invariant <-+                  |           |
+                                                     | (throws)  |
+                                                     |           |
+       (return) <-- @invariant <---------------- @ensures <------+
+```
 
 ## Contributing
 
