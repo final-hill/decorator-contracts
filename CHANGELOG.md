@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.17.4
+
+* Additional fixes for Release configuration
+
 ## v0.17.3
 
 * Additional fixes for Release configuration
