@@ -6,54 +6,74 @@ on:
     types: [created]
 
 jobs:
-  build-release:
+  build:
+    name: Build
     runs-on: windows-latest
 
     strategy:
       matrix:
         node-version: [14.x]
-
-    steps:
-    - uses: actions/checkout@v2
-      
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v1
-      with:
-        node-version: ${{ matrix.node-version }}
-
-    - name: Cache Node.js modules
-      uses: actions/cache@v1
-      with:
-        path: "%AppData%\npm-cache" # npm cache files are stored under the AppData folder on Windows
-        key: ${{ runner.OS }}-node-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.OS }}-node-
-          ${{ runner.OS }}-    
     
-    - name: npm install, build, and test
-      run: |
-        npm install
-        npm run build-nofix
-        npm test
-      env:
-        CI: true
-  
-    - name: npm pack
-      run: npm pack
-      working-directory: ./
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Cache Node.js modules
+        uses: actions/cache@v1
+        with:
+          path: "%AppData%\npm-cache" # npm cache files are stored under the AppData folder on Windows
+          key: ${{ runner.OS }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.OS }}-node-
+            ${{ runner.OS }}-
+      - name: Install dependencies
+        run: npm install
+      - name: Build
+        run: npm run build-nofix
+      - name: Run unit tests
+        run: npm test
+      - name: Create package
+        run: npm pack
+      - name: Rename package to generic name
+        run: mv *.tgz final-hill-decorator-contracts.tgz
+      - name: Upload package
+        uses: actions/upload-artifact@v1
+        with:
+          name: artifact
+          path: final-hill-decorator-contracts.tgz
 
-    - name: Rename package
-      run: mv *.tgz final-hill-decorator-contracts.tgz
+  release:
+    name: Publish to npm
+    needs: build
+    runs-on: windows-latest
 
-    - name: Upload package
-      uses: actions/upload-artifact@v1
-      with:
-        name: package
-        path: final-hill-decorator-contracts.tgz
-
-    - name: configure npmrc
-      run: npm config set '//registry.npmjs.org/:_authToken' "${NODE_AUTH_TOKEN}"
-
-    - run: npm publish final-hill-decorator-contracts.tgz
-      env:
-        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+    strategy:
+      matrix:
+        node-version: [14.x]
+    
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v1
+        with:
+          name: artifact
+      - name: Extract package from artifact
+        run: tar -xf artifact.zip
+      - name: Cleanup artifact
+        run: del artifact.zip
+      - name: Extract package
+        run: tar -xf final-hill-decorator-contracts.tgz --strip 1
+      - name: Cleanup package
+        run: del final-hill-decorator-contracts.tgz
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+          registry-url: https://registry.npmjs.org
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+      - name: Publish
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
