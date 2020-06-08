@@ -10,7 +10,7 @@ import DescriptorWrapper from './lib/DescriptorWrapper';
 import AssertionError from './AssertionError';
 import { FeatureRegistration } from './lib/FeatureRegistry';
 import getAncestry from './lib/getAncestry';
-import type { Constructor } from './typings/Constructor';
+import { Constructor } from './typings/Constructor';
 import { CLASS_REGISTRY } from './lib/ClassRegistry';
 import { MSG_INVARIANT_REQUIRED, MSG_DECORATE_METHOD_ACCESSOR_ONLY } from './Messages';
 

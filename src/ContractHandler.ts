@@ -7,7 +7,7 @@
 
 import Assertion from './Assertion';
 import { CLASS_REGISTRY } from './lib/ClassRegistry';
-import type {Constructor} from './typings/Constructor';
+import { Constructor } from './typings/Constructor';
 import getAncestry from './lib/getAncestry';
 
 /**

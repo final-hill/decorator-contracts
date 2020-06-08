@@ -5,7 +5,7 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import type {Constructor} from '../typings/Constructor';
+import {Constructor} from '../typings/Constructor';
 
 /**
  * Returns the inheritance chain of the provided class including the class

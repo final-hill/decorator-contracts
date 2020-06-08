@@ -12,7 +12,7 @@ import MemberDecorator from './MemberDecorator';
 import getAncestry from './lib/getAncestry';
 import { INNER_CLASS, IS_PROXY } from './typings/DecoratedConstructor';
 import { CLASS_REGISTRY } from './lib/ClassRegistry';
-import type { Constructor } from './typings/Constructor';
+import { Constructor } from './typings/Constructor';
 import { PredicateType } from './typings/PredicateType';
 import { MSG_INVALID_DECORATOR } from './Messages';
 

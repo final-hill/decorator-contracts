@@ -8,7 +8,7 @@
 import MemberDecorator from './MemberDecorator';
 import DescriptorWrapper from './lib/DescriptorWrapper';
 import isClass from './lib/isClass';
-import type { RescueType } from './typings/RescueType';
+import { RescueType } from './typings/RescueType';
 import { Constructor } from './typings/Constructor';
 import Assertion from './Assertion';
 import { MSG_INVALID_DECORATOR, MSG_DECORATE_METHOD_ACCESSOR_ONLY, MSG_NO_STATIC, MSG_DUPLICATE_RESCUE } from './Messages';

@@ -7,7 +7,7 @@
 
 import MemberDecorator from './MemberDecorator';
 import DescriptorWrapper from './lib/DescriptorWrapper';
-import type {PredicateType} from './typings/PredicateType';
+import { PredicateType } from './typings/PredicateType';
 import { Constructor } from './typings/Constructor';
 import Assertion from './Assertion';
 import { MSG_INVALID_DECORATOR, MSG_NO_STATIC } from './Messages';
