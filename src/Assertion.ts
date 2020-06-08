@@ -6,7 +6,7 @@
  */
 
 import AssertionError from './AssertionError';
-import type {Constructor} from './typings/Constructor';
+import { Constructor } from './typings/Constructor';
 import { ASSERTION_FAILED } from './Messages';
 
 /**

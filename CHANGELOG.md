@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.18.0
+
+* Fixed missing PredicateType issue
+
 ## v0.17.4
 
 * Additional fixes for Release configuration

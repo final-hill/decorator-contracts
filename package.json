@@ -1,6 +1,6 @@
 {
   "name": "@final-hill/decorator-contracts",
-  "version": "0.17.4",
+  "version": "0.18.0",
   "description": "Code Contracts for TypeScript and ECMAScript classes",
   "main": "dist/index.js",
   "scripts": {
@@ -8,7 +8,7 @@
     "build": "webpack",
     "prebuild-nofix": "npm run clean && npm run lint-nofix",
     "build-nofix": "webpack",
-    "clean": "rimraf ./dist, ./coverage",
+    "clean": "rimraf ./dist ./coverage",
     "clean-full": "rimraf ./dist, ./coverage, ./.cache, ./node_modules",
     "debug": "node --debug-brk --inspect ./node_modules/jest/bin/jest -i",
     "prelint": "npm run type-check",

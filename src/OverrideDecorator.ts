@@ -8,7 +8,7 @@
 import DescriptorWrapper from './lib/DescriptorWrapper';
 import MemberDecorator from './MemberDecorator';
 import Assertion from './Assertion';
-import type { Constructor } from './typings/Constructor';
+import { Constructor } from './typings/Constructor';
 import { CLASS_REGISTRY } from './lib/ClassRegistry';
 import { MSG_NO_STATIC, MSG_NO_MATCHING_FEATURE, MSG_DUPLICATE_OVERRIDE, MSG_INVALID_ARG_LENGTH } from './Messages';
 

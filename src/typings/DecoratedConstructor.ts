@@ -5,7 +5,7 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import type {Constructor} from './Constructor';
+import {Constructor} from './Constructor';
 // TODO: move symbols
 export const IS_PROXY = Symbol('Is Proxy');
 export const INNER_CLASS = Symbol('Inner Class');
