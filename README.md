@@ -29,6 +29,11 @@ and the
 of [SOLID](https://en.wikipedia.org/wiki/SOLID) to support
 [Design By Contract™](https://en.wikipedia.org/wiki/Design_by_contract).
 
+Note that the license for this library is [AGPL-3.0-only](https://www.gnu.org/licenses/agpl-3.0.en.html).
+You should [know what that means](https://choosealicense.com/licenses/agpl-3.0/) before
+using this library. If you would like an exception to this license per section 7
+[contact the author](https://twitter.com/mlhaufe).
+
 ## Library Installation
 
 Run the command:
