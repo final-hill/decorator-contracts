@@ -6,6 +6,8 @@
 * Reorganized README
 * Added NPM badges to README
 * Added package.json reference to github issues
+* Added licensing info to README
+* Removed extraneous build dependency
 
 ## v0.17.4
 
