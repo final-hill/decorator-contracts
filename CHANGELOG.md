@@ -3,6 +3,7 @@
 ## v0.18.0
 
 * Fixed missing PredicateType issue
+* Reorganized README
 
 ## v0.17.4
 
