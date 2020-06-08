@@ -23,7 +23,7 @@
     "url": "https://github.com/final-hill/decorator-contracts"
   },
   "bugs": {
-      "url": "https://github.com/final-hill/decorator-contracts/issues"
+    "url": "https://github.com/final-hill/decorator-contracts/issues"
   },
   "keywords": [
     "assertion",
@@ -49,7 +49,6 @@
     "@types/jest": "^24.9.1",
     "@types/node": "^13.11.1",
     "@typescript-eslint/eslint-plugin": "^2.27.0",
-    "@typescript-eslint/eslint-plugin-tslint": "^2.27.0",
     "@typescript-eslint/parser": "^2.27.0",
     "eslint": "^6.8.0",
     "eslint-plugin-header": "^3.0.0",
