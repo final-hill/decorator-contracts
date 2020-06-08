@@ -5,7 +5,7 @@ Contributions are not currently being accepted.
 The license for this library is AGPL-3.0-only and [exceptions may be sold](https://www.fsf.org/blogs/rms/selling-exceptions)
 for commercial and other private use. A CLA is also not currently defined.
 
-When these issues are resolved and more formalized contributions will then be accepted with the 
+When these issues are resolved and more formalized contributions will then be accepted with the
 appropriate caveats.
 
 ## Building and Editing
@@ -86,7 +86,6 @@ The development dependencies are as follows:
 | `@types/jest`                             | Type definitions for `ts-jest` support        | MIT          |
 | `@types/node`                             | Type definitions for node. (used for build)   | MIT          |
 | `@typescript-eslint/eslint-plugin`        | Type definitions for ESLint                   | MIT          |
-| `@typescript-eslint/eslint-plugin-tslint` | Type definitions for ESLint extension         | MIT          |
 | `@typescript-eslint/parser`               | Type definitions for ESLint parser            | BSD-2-Clause |
 | `eslint`                                  | ECMAScript linting library                    | MIT          |
 | `eslint-plugin-header`                    | ESLint extension for linting file headers     | MIT          |
