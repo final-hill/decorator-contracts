@@ -4,6 +4,7 @@
 
 * Fixed missing PredicateType issue
 * Reorganized README
+* Added NPM badges to README
 
 ## v0.17.4
 
