@@ -9,9 +9,9 @@
 - [Usage](#usage)
 - [Assertions](#assertions)
 - [Invariants](#invariants)
+- [Overrides](#overrides)
 - [Demands](#demands)
 - [Ensures](#ensures)
-- [Overrides](#overrides)
 - [Rescue](#rescue)
 - [The order of assertions](#the-order-of-assertions)
 - [Further Reading](#further-reading)
@@ -186,6 +186,81 @@ relationship.
 
 Whether you have invariants for a class or not it is necessary to declare one
 anyway on one of the base classes.
+
+## Overrides
+
+Class features implemented in a superclass can be overridden in a subclass. The
+subclass implementation can augment or entirely replace the one belonging
+to the superclass. This can be done for a variety of reasons, such as
+providing a more efficient implementation in the context of the subclass.
+Regardless of the reason, the overridden member should be semantically
+consistent with the superclass member. In other
+words, it should follow [Liskov's Substitution Principle](https://en.wikipedia.org/wiki/Liskov_substitution_principle).
+To aid in the enforcement and documentation of this principle the library
+provides an `@override` decorator for class methods and accessors.
+
+A simple example is calculating the area of Convex Polygons. While a general
+formula exists to accomplish this, more efficient and direct formulas exist
+for specific polygons such as a Right Triangle:
+
+```typescript
+type Side = number
+type Vertex = [number, number]
+
+let _triArea = (v1: Vertex, v2: Vertex, v3: Vertex): number => {
+    let a = Math.hypot((v1[0] - v2[0]), (v1[1] - v2[1])),
+        b = Math.hypot((v2[0] - v3[0]), (v2[1] - v3[1])),
+        c = Math.hypot((v3[0] - v1[0]), (v3[1] - v1[1])),
+        s = 0.5 * (a + b + c)
+
+    return Math.sqrt(s*(s-a)*(s-b)*(s-c))
+}
+
+@invariant
+class ConvexShape {
+    readonly vertices: Vertex[]
+
+    constructor(...vertices: Vertex[]) {
+        this.vertices = vertices
+    }
+
+    area(): number {
+        let [v1, v2, v3, ...vs] = this.vertices
+        return this.vertices.length >= 3 ?
+            _triArea(v1, v2, v3) + new ConvexShape(v1, v3, ...vs).area() :
+            0
+    }
+}
+
+class RightTriangle extends ConvexShape {
+    constructor(
+        readonly base: Side,
+        readonly height: Side
+    ) {
+        super([0,0], [base,0], [base,height])
+    }
+
+    @override
+    area(): number {
+        return this.base * this.height / 2
+    }
+}
+```
+
+Above you can see the `area()` method being overridden with the more
+efficient implementation. The `@override` decorator makes explicit
+that the method is replacing another implementation.
+
+This decorator does not only document and verify that the method is
+overridden; it will also verify that the parameter count matches.
+
+An `@invariant` decorator must also be defined either on the current class
+or on an ancestor. When defined, candidate overrides are identified and an
+error is raised if an associated `@override` is missing on that feature.
+
+Static methods, including the constructor, can not be assigned an `@override`
+decorator. In the future this may be enabled for non-constructor static methods
+but the implications are not clear at present.
 
 ## Demands
 
@@ -368,81 +443,6 @@ In the above example the postcondition of Base.prototype.method is:
 The postcondition of Sub.prototype.method is:
 
 `(-10 <= x && x <= 20) && Number.isInteger(x) && (0 <= x && x <= 10) && (x % 2 == 0)`
-
-## Overrides
-
-Class features implemented in a superclass can be overridden in a subclass. The
-subclass implementation can augment or entirely replace the one belonging
-to the superclass. This can be done for a variety of reasons, such as
-providing a more efficient implementation in the context of the subclass.
-Regardless of the reason, the overridden member should be semantically
-consistent with the superclass member. In other
-words, it should follow [Liskov's Substitution Principle](https://en.wikipedia.org/wiki/Liskov_substitution_principle).
-To aid in the enforcement and documentation of this principle the library
-provides an `@override` decorator for class methods and accessors.
-
-A simple example is calculating the area of Convex Polygons. While a general
-formula exists to accomplish this, more efficient and direct formulas exist
-for specific polygons such as a Right Triangle:
-
-```typescript
-type Side = number
-type Vertex = [number, number]
-
-let _triArea = (v1: Vertex, v2: Vertex, v3: Vertex): number => {
-    let a = Math.hypot((v1[0] - v2[0]), (v1[1] - v2[1])),
-        b = Math.hypot((v2[0] - v3[0]), (v2[1] - v3[1])),
-        c = Math.hypot((v3[0] - v1[0]), (v3[1] - v1[1])),
-        s = 0.5 * (a + b + c)
-
-    return Math.sqrt(s*(s-a)*(s-b)*(s-c))
-}
-
-@invariant
-class ConvexShape {
-    readonly vertices: Vertex[]
-
-    constructor(...vertices: Vertex[]) {
-        this.vertices = vertices
-    }
-
-    area(): number {
-        let [v1, v2, v3, ...vs] = this.vertices
-        return this.vertices.length >= 3 ?
-            _triArea(v1, v2, v3) + new ConvexShape(v1, v3, ...vs).area() :
-            0
-    }
-}
-
-class RightTriangle extends ConvexShape {
-    constructor(
-        readonly base: Side,
-        readonly height: Side
-    ) {
-        super([0,0], [base,0], [base,height])
-    }
-
-    @override
-    area(): number {
-        return this.base * this.height / 2
-    }
-}
-```
-
-Above you can see the `area()` method being overridden with the more
-efficient implementation. The `@override` decorator makes explicit
-that the method is replacing another implementation.
-
-This decorator does not only document and verify that the method is
-overridden; it will also verify that the parameter count matches.
-
-An `@invariant` decorator must also be defined either on the current class
-or on an ancestor. When defined, candidate overrides are identified and an
-error is raised if an associated `@override` is missing on that feature.
-
-Static methods, including the constructor, can not be assigned an `@override`
-decorator. In the future this may be enabled for non-constructor static methods
-but the implications are not clear at present.
 
 ## Rescue
 
