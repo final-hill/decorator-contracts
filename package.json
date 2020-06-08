@@ -22,6 +22,9 @@
     "type": "git",
     "url": "https://github.com/final-hill/decorator-contracts"
   },
+  "bugs": {
+      "url": "https://github.com/final-hill/decorator-contracts/issues"
+  },
   "keywords": [
     "assertion",
     "code-contracts",
