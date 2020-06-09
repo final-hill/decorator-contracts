@@ -3,6 +3,7 @@
 ## v0.19.0
 
 * Updated README to include unpkg reference
+* Enabled sourcemaps
 
 ## v0.18.1
 
