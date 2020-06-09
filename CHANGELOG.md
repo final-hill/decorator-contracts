@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.18.1
+
+* Fixed webpack configuration issue
+
 ## v0.18.0
 
 * Fixed missing PredicateType issue
