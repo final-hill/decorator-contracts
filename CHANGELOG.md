@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.19.0
+
+* Updated README to include unpkg reference
+
 ## v0.18.1
 
 * Fixed webpack configuration issue
