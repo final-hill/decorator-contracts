@@ -13,7 +13,7 @@ module.exports = {
   module: {
     rules: [
       {
-        test: /\.ts?$/,
+        test: /\.ts$/,
         use: 'ts-loader',
         exclude: /node_modules/,
       },
@@ -24,6 +24,10 @@ module.exports = {
   },
   output: {
     filename: 'index.js',
+    library: 'Contracts',
+    libraryExport: 'default',
+    libraryTarget: 'umd',
+    globalObject: 'this',
     path: path.resolve(__dirname, 'dist'),
   },
 };
