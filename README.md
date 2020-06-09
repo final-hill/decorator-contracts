@@ -36,9 +36,21 @@ using this library. If you would like an exception to this license per section 7
 
 ## Library Installation
 
-Run the command:
+As a dependency run the command:
 
 `npm install @final-hill/decorator-contracts`
+
+You can also use a specific [version](https://www.npmjs.com/package/@final-hill/decorator-contracts):
+
+`npm install @final-hill/decorator-contracts@0.18.1`
+
+For use in a webpage:
+
+`<script src="https://unpkg.com/@final-hill/decorator-contracts"></script>`
+
+With a specific [version](https://www.npmjs.com/package/@final-hill/decorator-contracts):
+
+`<script src="https://unpkg.com/@final-hill/decorator-contracts@0.18.1></script>`
 
 ## Usage
 
