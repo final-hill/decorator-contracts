@@ -4,6 +4,7 @@
 
 * Updated README to include unpkg reference
 * Enabled sourcemaps
+* npm audit fix
 
 ## v0.18.1
 
