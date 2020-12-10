@@ -11,6 +11,57 @@ import Contracts from './';
 import { MSG_DUPLICATE_RESCUE, MSG_INVARIANT_REQUIRED } from './Messages';
 
 /**
+ * https://github.com/final-hill/decorator-contracts/issues/57
+ */
+describe('The @rescue decorator is non-static member decorator excluding properties', () => {
+    const {rescue} = new Contracts(true);
+
+    test('class decorator throws', () => {
+        expect(() => {
+            // @ts-ignore: Ignoring type error for JS test
+            @rescue(() => {})
+            class Base {}
+
+            return Base;
+        }).toThrow();
+    });
+
+    test('static method decorator throws', () => {
+        expect(() => {
+            class Base {
+                @rescue(() => {})
+                static method(): void {}
+            }
+
+            return Base;
+        }).toThrow();
+    });
+
+    test('instance method decorator does not throw', () => {
+        expect(() => {
+            class Base {
+                @rescue(() => {})
+                method(): void {}
+            }
+
+            return Base;
+        }).not.toThrow();
+    });
+
+    test('instance property decorator throws', () => {
+        expect(() => {
+            class Base {
+                // @ts-ignore: Ignoring type error for JS test
+                @rescue(() => {})
+                foo = 3;
+            }
+
+            return Base;
+        }).toThrow();
+    });
+});
+
+/**
  * https://github.com/final-hill/decorator-contracts/issues/59
  */
 describe('Any error thrown by a class feature must be captured by its @rescue', () => {
