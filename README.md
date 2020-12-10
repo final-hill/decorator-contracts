@@ -367,7 +367,9 @@ The precondition of `Sub.prototype.method` is:
 
 ## Ensures
 
-The @ensures decorator describes and enforces an assertion that must be true after its associated feature has executed. In other words after a client of your class has executed a method or accessor the defined postcondition must be met or an error [will be raised](#the-order-of-assertions).
+The `@ensures` decorator describes and enforces an assertion that must be true after its associated feature has executed.
+In other words after a client of your class has executed a method or accessor the defined postcondition must be met or an
+error [will be raised](#the-order-of-assertions).
 
 ```typescript
 @invariant
@@ -380,13 +382,34 @@ class Stack<T> {
 }
 ```
 
-In the above example the postcondition of executing push on a stack is that it is not empty. If this assertion fails an AssertionError is raised.
+In the above example the postcondition of executing push on a stack is that it is not empty. If this assertion fails an `AssertionError` is raised.
 
-An @invariant decorator must also be defined either on the current class or on an ancestor as shown in the example.
+An `@invariant` decorator must also be defined either on the current class or on an ancestor as shown in the example.
 
-Static features, including the constructor, can not be assigned an @ensures decorator. In the future this may be enabled for non-constructor static methods but the implications are not clear at present.
+Static features, including the constructor, can not be assigned an `@ensures` decorator. In the future this may be enabled for non-constructor static methods but the implications are not clear at present.
 
-If a class feature is overridden then the @ensures assertion still applies:
+In addition to the `self` argument there is also an `old` argument which provides access to the properties of the instance before its associated member was executed.
+
+```typescript
+@invariant
+class Stack<T> {
+    ...
+    @ensures<Stack<T>>((self,old) => self.size == old.size + 1)
+    push(value: T) {
+         this.#implementation.push(value);
+    }
+
+    @ensures<Stack<T>>((self,old) => self.size == old.size - 1)
+    pop(): T {
+        return this.#implementation.pop();
+    }
+}
+```
+
+Only public properties can be accessed via `old`. This restriction is to prevent infinite recursion through existing assertions.
+Also due to a limitation in the current version of JavaScript, decorators are not able to access private properties directly (`#foo`).
+
+If a class feature is overridden then the `@ensures` assertion still applies:
 
 ```typescript
 class MyStack<T> extends Stack<T> {
@@ -401,18 +424,24 @@ myStack.push()
 myStack.isEmpty() == false;
 ```
 
-If a class feature with an associated @ensures is overridden, then the new feature can have an @ensures declaration of its own. This postcondition can not weaken the postcondition of the original feature. The new postcondition will be and-ed with it's ancestors. If all are true, then the obligation is considered fulfilled by the user of the feature, otherwise an AssertionError is raised.
+The remaining arguments of `@ensures` reflect the arguments of the associated feature.
 
 ```typescript
 @invariant
 class Base {
-    @ensures((_,x: number) => 0 <= x && x <= 10)
+    @ensures((_self,_old,x: number) => 0 <= x && x <= 10)
     method(x: number) { ... }
 }
+```
 
+If the class feature with an associated `@ensures` is overridden, then the new feature can have an `@ensures` declaration of its own.
+This postcondition can not weaken the postcondition of the original feature. The new postcondition will be and-ed with it's ancestors.
+If all are true, then the obligation is considered fulfilled by the user of the feature, otherwise an `AssertionError` is raised.
+
+```typescript
 class Sub extends Base {
     @override
-    @ensures((_,x: number) => -10 <= x && x <= 20)
+    @ensures((_self,_old,x: number) => -10 <= x && x <= 20)
     method(x: number) { ... }
 }
 ```
@@ -421,23 +450,20 @@ In the above example the postcondition of Sub.prototype.method is:
 
 `(-10 <= x && x <= 20) && (0 <= x && x <= 10)`
 
-The `_` parameter is a placeholder for the unused self reference.
-
-Multiple @ensures can be declared for a feature. Doing so will require that all of these are true after the associated feature has executed:
+Multiple `@ensures` can be declared for a feature. Doing so will require that all of these are true after the associated feature has executed:
 
 ```typescript
 @invariant
 class Base {
-    @ensures((_,x: number) => 0 <= x && x <= 10)
-    @ensures((_,x: number) => x % 2 == 0)
-    method(x: number) {
-        ... }
+    @ensures((_self,_old,x: number) => 0 <= x && x <= 10)
+    @ensures((_self,_old,x: number) => x % 2 == 0)
+    method(x: number) { ... }
 }
 
 class Sub extends Base {
     @override
-    @ensures((_,x: number) => -10 <= x && x <= 20)
-    @ensures((_,x: number) => Number.isInteger(x))
+    @ensures((_self,_old,x: number) => -10 <= x && x <= 20)
+    @ensures((_self,_old,x: number) => Number.isInteger(x))
     method(x: number) { ... }
 }
 ```

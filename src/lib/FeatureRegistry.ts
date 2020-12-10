@@ -8,13 +8,14 @@
 import DescriptorWrapper from './DescriptorWrapper';
 import { PredicateType } from '../typings/PredicateType';
 import { RescueType } from '../typings/RescueType';
+import { EnsuresType } from 'typings/EnsuresType';
 
 export const DECORATOR_REGISTRY = Symbol('Decorator Registry');
 
 export class FeatureRegistration {
     readonly demands: PredicateType<any>[] = [];
     descriptorWrapper: DescriptorWrapper;
-    readonly ensures: PredicateType<any>[] = [];
+    readonly ensures: EnsuresType<any>[] = [];
     overrides = false;
     rescue: RescueType<any> | undefined;
 

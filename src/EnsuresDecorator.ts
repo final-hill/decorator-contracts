@@ -6,10 +6,10 @@
  */
 
 import MemberDecorator from './MemberDecorator';
-import { PredicateType } from './typings/PredicateType';
 import DescriptorWrapper from './lib/DescriptorWrapper';
 import Assertion from './Assertion';
 import { MSG_INVALID_DECORATOR, MSG_NO_STATIC } from './Messages';
+import { EnsuresType } from './typings/EnsuresType';
 
 /**
  * The `@ensures` decorator is an assertion of a postcondition.
@@ -34,7 +34,7 @@ export default class EnsuresDecorator extends MemberDecorator {
      * @returns {MethodDecorator} - The method decorator
      * @throws {AssertionError} - Throws an AssertionError if the predicate is not a function
      */
-    ensures<S extends object>(predicate: PredicateType<S>): MethodDecorator {
+    ensures<S extends object>(predicate: EnsuresType<S>): MethodDecorator {
         const checkMode = this.checkMode,
             assert: Assertion['assert'] = this._assert;
         this._checkedAssert(typeof predicate == 'function', MSG_INVALID_DECORATOR);

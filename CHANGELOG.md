@@ -9,6 +9,7 @@
 * Linting fixes
 * Updated contact info in README and package.json
 * BREAKING CHANGE: Decorators now accept arrow functions instead of traditional functions. The first parameter is `self`.
+* BREAKING CHANGE: @ensures now provides `old` as a parameter to access instance property values before feature execution
 
 ## v0.18.1
 

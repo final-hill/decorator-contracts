@@ -187,14 +187,23 @@ export default abstract class MemberDecorator {
                         );
                     }
 
+                    const old = Object.entries(this).reduce((acc,[key,value]) => {
+                        if(typeof value != 'function') {
+                            Object.defineProperty(acc,key,{value});
+                        }
+
+                        return acc;
+                    }, Object.create(null));
+
                     let result;
+
                     try {
                         result = feature.apply(this, args);
                         if(allEnsures.length > 0) {
                             checkedAssert(
                                 allEnsures.every(
                                     ensures => ensures.every(
-                                        ensure => ensure.call(this, this, ...args)
+                                        ensure => ensure.call(this, this, old, ...args)
                                     )
                                 ),
                                 ensuresError
