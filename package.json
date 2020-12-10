@@ -43,7 +43,7 @@
     "requires",
     "SOLID"
   ],
-  "author": "Michael L Haufe <tno@thenewobjective.com> (https://thenewobjective.com)",
+  "author": "Michael L Haufe <michael.haufe@final-hill.com> (https://final-hill.com)",
   "license": "AGPL-3.0-only",
   "devDependencies": {
     "@types/jest": "^24.9.1",
