@@ -119,10 +119,11 @@ describe('Features that override a @demands decorated feature must be subject to
         get value(): number { return this.#value; }
         set value(value: number){ this.#value = value; }
 
-        inc(): void { this.value++; }
-
         @demands(nonNegative)
         dec(): void { this.value--; }
+
+        inc(): void { this.value++; }
+
     }
 
     class Sub extends Base {
