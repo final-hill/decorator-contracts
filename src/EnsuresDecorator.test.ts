@@ -118,10 +118,10 @@ describe('Features that override a @ensures decorated method must be subject to 
         get value(): number { return this.#value; }
         set value(value: number){ this.#value = value; }
 
-        inc(): void { this.value++; }
-
         @ensures(nonNegative)
         dec(): void { this.value--; }
+
+        inc(): void { this.value++; }
     }
 
     class Sub extends Base {
