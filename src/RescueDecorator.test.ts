@@ -420,7 +420,7 @@ describe('If an error is thrown in @demands, the error is raised to the caller',
         @rescue((_, _error, args: any[], _retry) => {
             if(args[0] === -2) { throw new Error('Rescue Error'); }
         })
-        @demands((_,value: number) => value >= 0)
+        @demands((_, value: number) => value >= 0)
         method(value: number): void {
             this.#value = value;
         }

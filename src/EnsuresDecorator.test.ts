@@ -217,7 +217,7 @@ describe('Preconditions cannot be weakened in a subtype', () => {
 
     @invariant
     class Base {
-        @ensures((_, value: number) => 10 <= value && value <= 30)
+        @ensures((_self, _old, value: number) => 10 <= value && value <= 30)
         method(value: number): number { return value; }
     }
 
@@ -232,7 +232,7 @@ describe('Preconditions cannot be weakened in a subtype', () => {
 
     class Weaker extends Base {
         @override
-        @ensures((_, value: number) => 1 <= value && value <= 50)
+        @ensures((_self, _old, value: number) => 1 <= value && value <= 50)
         method(value: number): number { return value; }
     }
 
@@ -247,7 +247,7 @@ describe('Preconditions cannot be weakened in a subtype', () => {
 
     class Stronger extends Base {
         @override
-        @ensures((_, value: number) => 15 <= value && value <= 20)
+        @ensures((_self, _old, value: number) => 15 <= value && value <= 20)
         method(value: number): number { return value; }
     }
 
@@ -270,7 +270,7 @@ describe('A class feature with a decorator must not be functional until the @inv
 
     @invariant
     class Okay {
-        @ensures((_, value: number) => 10 <= value && value <= 30)
+        @ensures((_self, _old, value: number) => 10 <= value && value <= 30)
         method(value: number): number { return value; }
     }
 
@@ -281,7 +281,7 @@ describe('A class feature with a decorator must not be functional until the @inv
     });
 
     class Fail {
-        @ensures((_, value: number) => 10 <= value && value <= 30)
+        @ensures((_self, _old, value: number) => 10 <= value && value <= 30)
         method(value: number): number { return value; }
     }
 
@@ -290,4 +290,44 @@ describe('A class feature with a decorator must not be functional until the @inv
 
         expect(() => fail.method(15)).toThrow(MSG_INVARIANT_REQUIRED);
     });
+});
+
+/**
+ * https://github.com/final-hill/decorator-contracts/issues/98
+ */
+describe('The @ensures decorator has access to the properties of the instance class before its associated member was executed', () => {
+        const {invariant, ensures} = new Contracts(true);
+
+        test('Stack Size', () => {
+            @invariant
+            class Stack<T> {
+                #implementation: T[] = [];
+                _size = 0;
+
+                @ensures<Stack<T>>((self,old) => self._size == old._size - 1)
+                pop(): T {
+                    const result = this.#implementation.pop()!;
+                    this._size = this.#implementation.length;
+
+                    return result;
+                }
+
+                @ensures<Stack<T>>((self,old) => self._size == old._size + 1)
+                push(item: T): void {
+                    this.#implementation.push(item);
+                    this._size = this.#implementation.length;
+                }
+            }
+
+            const stack = new Stack<string>();
+
+            expect(stack._size).toEqual(0);
+            expect(() => {
+                stack.push('a');
+                stack.push('b');
+                stack.push('c');
+            }).not.toThrow();
+            expect(() => stack.pop()).not.toThrow();
+            expect(stack._size).toEqual(2);
+        });
 });
