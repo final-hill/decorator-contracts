@@ -8,6 +8,7 @@
 * Updated dependencies
 * Linting fixes
 * Updated contact info in README and package.json
+* BREAKING CHANGE: Decorators now accept arrow functions instead of traditional functions. The first parameter is `self`.
 
 ## v0.18.1
 

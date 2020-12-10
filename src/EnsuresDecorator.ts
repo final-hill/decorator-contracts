@@ -34,7 +34,7 @@ export default class EnsuresDecorator extends MemberDecorator {
      * @returns {MethodDecorator} - The method decorator
      * @throws {AssertionError} - Throws an AssertionError if the predicate is not a function
      */
-    ensures(predicate: PredicateType): MethodDecorator {
+    ensures<S extends object>(predicate: PredicateType<S>): MethodDecorator {
         const checkMode = this.checkMode,
             assert: Assertion['assert'] = this._assert;
         this._checkedAssert(typeof predicate == 'function', MSG_INVALID_DECORATOR);
@@ -47,9 +47,9 @@ export default class EnsuresDecorator extends MemberDecorator {
                 return currentDescriptor;
             }
 
-            const Clazz = (target as any).constructor,
+            const Class = (target as any).constructor,
                 dw = new DescriptorWrapper(currentDescriptor),
-                registration = MemberDecorator.registerFeature(Clazz, propertyKey, dw);
+                registration = MemberDecorator.registerFeature(Class, propertyKey, dw);
 
             registration.ensures.push(predicate);
 

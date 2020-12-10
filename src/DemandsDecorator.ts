@@ -35,7 +35,7 @@ export default class DemandsDecorator extends MemberDecorator {
      * @param {PredicateType} predicate - The assertion
      * @returns {MethodDecorator} - The Method Decorator
      */
-    demands(predicate: PredicateType): MethodDecorator {
+    demands<S extends object>(predicate: PredicateType<S>): MethodDecorator {
         const checkMode = this.checkMode,
             assert: Assertion['assert'] = this._assert;
         this._checkedAssert(typeof predicate == 'function', MSG_INVALID_DECORATOR);
@@ -48,9 +48,9 @@ export default class DemandsDecorator extends MemberDecorator {
                 return descriptor;
             }
 
-            const Clazz = target.constructor as Constructor<any>,
+            const Class = target.constructor as Constructor<any>,
                 dw = new DescriptorWrapper(descriptor),
-                registration = MemberDecorator.registerFeature(Clazz, propertyKey, dw);
+                registration = MemberDecorator.registerFeature(Class, propertyKey, dw);
 
             registration.demands.push(predicate);
 

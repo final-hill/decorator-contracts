@@ -15,7 +15,7 @@ import { MSG_NO_STATIC, MSG_NO_MATCHING_FEATURE, MSG_DUPLICATE_OVERRIDE, MSG_INV
 const checkedAssert: Assertion['assert'] = new Assertion(true).assert;
 
 /**
- * The 'override' decorator asserts that the current class feautre is a specialization or
+ * The 'override' decorator asserts that the current class feature is a specialization or
  * replacement of an ancestor class's feature of the same name and argument count
  */
 export default class OverrideDecorator extends MemberDecorator {
@@ -55,7 +55,7 @@ export default class OverrideDecorator extends MemberDecorator {
     }
 
     /**
-     * The 'override' decorator asserts that the current class feautre is a specialization or
+     * The 'override' decorator asserts that the current class feature is a specialization or
      * replacement of an ancestor class's feature of the same name and argument count
      *
      * @param {object} target - The class

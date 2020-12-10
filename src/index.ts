@@ -52,7 +52,7 @@ class Contracts {
      */
     invariant: InvariantDecorator['invariant'];
     /**
-     * The 'override' decorator asserts that the current class feautre is a specialization or
+     * The 'override' decorator asserts that the current class feature is a specialization or
      * replacement of an ancestor class's feature of the same name and argument count
      *
      * @param {object} target - The class

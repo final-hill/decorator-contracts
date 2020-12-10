@@ -42,7 +42,7 @@ As a dependency run the command:
 
 You can also use a specific [version](https://www.npmjs.com/package/@final-hill/decorator-contracts):
 
-`npm install @final-hill/decorator-contracts@0.18.1`
+`npm install @final-hill/decorator-contracts@0.19.0`
 
 For use in a webpage:
 
@@ -50,7 +50,7 @@ For use in a webpage:
 
 With a specific [version](https://www.npmjs.com/package/@final-hill/decorator-contracts):
 
-`<script src="https://unpkg.com/@final-hill/decorator-contracts@0.18.1></script>`
+`<script src="https://unpkg.com/@final-hill/decorator-contracts@0.19.0></script>`
 
 ## Usage
 
@@ -124,21 +124,9 @@ usage, an `AssertionError` will be thrown. Truthy assertions do not throw an
 error. An example of this is given below using a Stack:
 
 ```typescript
-function sizeClamped(this: Stack<any>) {
-    return this.size >= 0 && this.size <= this.limit;
-}
-
-function emptyHasNoSize(this: Stack<any>) {
-    return this.isEmpty() == (this.size == 0);
-}
-
-function fullIsLimited(this: Stack<any>) {
-    return this.isFull() == (this.size == this.limit);
-}
-
-@invariant(sizeClamped)
-@invariant(emptyHasNoSize)
-@invariant(fullIsLimited)
+@invariant<Stack<any>>(self => self.size >= 0 && self.size <= self.limit)
+@invariant<Stack<any>>(self => self.isEmpty() == (self.size == 0))
+@invariant<Stack<any>>(self => self.isFull() == (self.size == self.limit))
 class Stack<T> {
     #implementation: T[] = [];
 
@@ -289,13 +277,10 @@ of your class can execute a method or accessor the defined precondition
 must first be met or an error will be raised [to the client](#the-order-of-assertions).
 
 ```typescript
-
-function notEmpty(this: Stack<T>){ return !this.isEmpty(); }
-
 @invariant
 class Stack<T> {
     ...
-    @demands(notEmpty)
+    @demands<Stack<T>>(self => !self.isEmpty())
     pop(): T {
         return this.#implementation.pop();
     }
@@ -336,13 +321,13 @@ considered fulfilled by the user of the feature.
 ```typescript
 @invariant
 class Base {
-    @demands((x: number) => 0 <= x && x <= 10)
+    @demands((_,x: number) => 0 <= x && x <= 10)
     method(x: number) { ... }
 }
 
 class Sub extends Base {
     @override
-    @demands((x: number) => -10 <= x && x <= 20)
+    @demands((_,x: number) => -10 <= x && x <= 20)
     method(x: number) { ... }
 }
 ```
@@ -351,21 +336,23 @@ In the above example the precondition of `Sub.prototype.method` is:
 
 `(-10 <= x && x <= 20) || (0 <= x && x <= 10)`
 
+The `_` parameter is a placeholder for the unused self reference.
+
 Multiple `@demands` can be declared for a feature. Doing so will require that
 all of these are true before the associated feature will execute:
 
 ```typescript
 @invariant
 class Base {
-    @demands((x: number) => 0 <= x && x <= 10)
-    @demands((x: number) => x % 2 == 0)
+    @demands((_,x: number) => 0 <= x && x <= 10)
+    @demands((_,x: number) => x % 2 == 0)
     method(x: number) { ... }
 }
 
 class Sub extends Base {
     @override
-    @demands((x: number) => -10 <= x && x <= 20)
-    @demands((x: number) => Number.isInteger(x))
+    @demands((_,x: number) => -10 <= x && x <= 20)
+    @demands((_,x: number) => Number.isInteger(x))
     method(x: number) { ... }
 }
 ```
@@ -383,12 +370,10 @@ The precondition of `Sub.prototype.method` is:
 The @ensures decorator describes and enforces an assertion that must be true after its associated feature has executed. In other words after a client of your class has executed a method or accessor the defined postcondition must be met or an error [will be raised](#the-order-of-assertions).
 
 ```typescript
-function notEmpty(this: Stack<T>){ return !this.isEmpty(); }
-
 @invariant
 class Stack<T> {
     ...
-    @ensures(notEmpty)
+    @ensures<Stack<T>>(self => !self.isEmpty())
     push(value: T) {
          this.#implementation.push(value);
     }
@@ -421,13 +406,13 @@ If a class feature with an associated @ensures is overridden, then the new featu
 ```typescript
 @invariant
 class Base {
-    @ensures((x: number) => 0 <= x && x <= 10)
+    @ensures((_,x: number) => 0 <= x && x <= 10)
     method(x: number) { ... }
 }
 
 class Sub extends Base {
     @override
-    @ensures((x: number) => -10 <= x && x <= 20)
+    @ensures((_,x: number) => -10 <= x && x <= 20)
     method(x: number) { ... }
 }
 ```
@@ -436,21 +421,23 @@ In the above example the postcondition of Sub.prototype.method is:
 
 `(-10 <= x && x <= 20) && (0 <= x && x <= 10)`
 
+The `_` parameter is a placeholder for the unused self reference.
+
 Multiple @ensures can be declared for a feature. Doing so will require that all of these are true after the associated feature has executed:
 
 ```typescript
 @invariant
 class Base {
-    @ensures((x: number) => 0 <= x && x <= 10)
-    @ensures((x: number) => x % 2 == 0)
+    @ensures((_,x: number) => 0 <= x && x <= 10)
+    @ensures((_,x: number) => x % 2 == 0)
     method(x: number) {
         ... }
 }
 
 class Sub extends Base {
     @override
-    @ensures((x: number) => -10 <= x && x <= 20)
-    @ensures((x: number) => Number.isInteger(x))
+    @ensures((_,x: number) => -10 <= x && x <= 20)
+    @ensures((_,x: number) => Number.isInteger(x))
     method(x: number) { ... }
 }
 ```
@@ -474,6 +461,7 @@ execution.
 
 ```typescript
 function popRescue(
+    self: Stack<T>,
     error: any,
     args: Parameters<typeof Stack.prototype.pop>,
     retry: (...retryArgs: typeof args) => void
@@ -510,7 +498,7 @@ recursion. An example of `retry` usage:
 @invariant
 class StudentRepository {
     ...
-    @rescue((error, [id], retry) => {
+    @rescue((self, error, [id], retry) => {
         console.error(error)
         console.log('Retrying...')
         retry(id)
@@ -533,7 +521,7 @@ is defined on the current class:
 @invariant
 class Base {
     ...
-    @rescue((error, args, retry) => ...)
+    @rescue((self, error, args, retry) => ...)
     myMethod(){ ... }
 }
 
@@ -555,9 +543,9 @@ A dated example of this is performing ajax requests in mult-browser environments
 class AjaxRequest {
     attempts = 0
 
-    @rescue(function(error, [url], retry) => {
-        this.attempts++
-        if(this.attempts < 2)
+    @rescue<AjaxRequest>((self, error, [url], retry) => {
+        self.attempts++
+        if(self.attempts < 2)
             retry(url)
     })
     get(url){

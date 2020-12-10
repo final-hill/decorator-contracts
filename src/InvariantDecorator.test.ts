@@ -16,7 +16,7 @@ describe('The invariant decorator MUST be class decorator only', () => {
 
     test('Define invariant', () => {
         expect(() => {
-            @invariant(function() { return true; })
+            @invariant(() => true)
             class Foo {}
 
             return Foo;
@@ -25,7 +25,7 @@ describe('The invariant decorator MUST be class decorator only', () => {
         expect(() => {
             class Foo {
                 // @ts-ignore : Raises a type error as expected.
-                @invariant(function() { return true; })
+                @invariant(() => true)
                 baz(): void {}
             }
 
@@ -46,17 +46,17 @@ describe('There can be multiple invariant decorators assigned to a class', () =>
     invariants.forEach(invariant => {
         test('Define multiple invariants', () => {
             expect(() => {
-                @invariant(function(this: Foo) { return this instanceof Foo; })
-                @invariant(function(this: Foo) { return this instanceof Object; })
+                @invariant<Foo>(self => self instanceof Foo)
+                @invariant<Foo>(self => self instanceof Object)
                 class Foo extends Object {}
 
                 return Foo;
             }).not.toThrow();
 
             expect(() => {
-                // including falsey invariant but not evaluated
-                @invariant(function(this: Foo) { return this instanceof Foo; })
-                @invariant(function(this: Foo) { return this instanceof Array; })
+                // including falsy invariant but not evaluated
+                @invariant<Foo>(self => self instanceof Foo)
+                @invariant<Foo>(self => self instanceof Array)
                 class Foo extends Object {}
 
                 return Foo;
@@ -68,16 +68,16 @@ describe('There can be multiple invariant decorators assigned to a class', () =>
         const {invariant} = new Contracts(true);
 
         expect(() => {
-            @invariant(function(this: Foo) { return this instanceof Foo; })
-            @invariant(function(this: Foo) { return this instanceof Object; })
+            @invariant<Foo>(self => self instanceof Foo)
+            @invariant<Foo>(self => self instanceof Object)
             class Foo extends Object {}
 
             return new Foo();
         }).not.toThrow();
 
         expect(() => {
-            @invariant(function(this: Foo) { return this instanceof Foo; })
-            @invariant(function(this: Foo) { return this instanceof Array; })
+            @invariant<Foo>(self => self instanceof Foo)
+            @invariant<Foo>(self => self instanceof Array)
             class Foo extends Object {}
 
             return new Foo();
@@ -85,8 +85,8 @@ describe('There can be multiple invariant decorators assigned to a class', () =>
 
         // Changing order of invariants
         expect(() => {
-            @invariant(function(this: Foo) { return this instanceof Array; })
-            @invariant(function(this: Foo) { return this instanceof Foo; })
+            @invariant<Foo>(self => self instanceof Array)
+            @invariant<Foo>(self => self instanceof Foo)
             class Foo extends Object {}
 
             return new Foo();
@@ -97,16 +97,16 @@ describe('There can be multiple invariant decorators assigned to a class', () =>
         const {invariant} = new Contracts(false);
 
         expect(() => {
-            @invariant(function(this: Foo) { return this instanceof Foo; })
-            @invariant(function(this: Foo) { return this instanceof Object; })
+            @invariant<Foo>(self => self instanceof Foo)
+            @invariant<Foo>(self => self instanceof Object)
             class Foo extends Object {}
 
             return new Foo();
         }).not.toThrow();
 
         expect(() => {
-            @invariant(function(this: Foo) { return this instanceof Foo; })
-            @invariant(function(this: Foo) { return this instanceof Array; })
+            @invariant<Foo>(self => self instanceof Foo)
+            @invariant<Foo>(self => self instanceof Array)
             class Foo extends Object {}
 
             return new Foo();
@@ -114,8 +114,8 @@ describe('There can be multiple invariant decorators assigned to a class', () =>
 
         // Changing order of invariants
         expect(() => {
-            @invariant(function(this: Foo) { return this instanceof Array; })
-            @invariant(function(this: Foo) { return this instanceof Foo; })
+            @invariant<Foo>(self => self instanceof Array)
+            @invariant<Foo>(self => self instanceof Foo)
             class Foo extends Object {}
 
             return new Foo();
@@ -130,7 +130,7 @@ describe('The subclasses of an invariant decorated class must obey the invariant
     test('Test subclassing in debug mode', () => {
         const {invariant, override} = new Contracts(true);
 
-        @invariant(function(this: Foo) { return this.value >= 0; })
+        @invariant<Foo>(self => self.value >= 0)
         class Foo {
             #value = 0;
 
@@ -213,7 +213,7 @@ describe('The subclasses of an invariant decorated class must obey the invariant
     test('Test subclassing in prod mode', () => {
         const {invariant} = new Contracts(false);
 
-        @invariant(function(this: Foo) { return this.value >= 0; })
+        @invariant<Foo>(self => self.value >= 0)
         class Foo {
             #value = 0;
             get value(): number { return this.#value; }
@@ -266,7 +266,7 @@ describe('A truthy invariant does not throw an exception when evaluated', () => 
     invariants.forEach(invariant => {
         test('Construction does not throw', () => {
             expect(() => {
-                @invariant(function(this: Foo) { return this instanceof Foo; })
+                @invariant<Foo>(self => self instanceof Foo)
                 class Foo {}
 
                 return new Foo();
@@ -275,7 +275,7 @@ describe('A truthy invariant does not throw an exception when evaluated', () => 
 
         test('Method does not throw', () => {
             expect(() => {
-                @invariant(function(this: Foo) { return this.value >= 0; })
+                @invariant<Foo>(self => self.value >= 0)
                 class Foo {
                     #value = 0;
                     get value(): number { return this.#value; }
@@ -304,7 +304,7 @@ describe('A falsy invariant throws an exception when evaluated', () => {
         const {invariant} = new Contracts(true);
 
         expect(() => {
-            @invariant(function(this: Foo) { return this instanceof Array; })
+            @invariant<Foo>(self => self instanceof Array)
             class Foo {}
 
             return new Foo();
@@ -315,7 +315,7 @@ describe('A falsy invariant throws an exception when evaluated', () => {
         const {invariant} = new Contracts(false);
 
         expect(() => {
-            @invariant(function (this: Foo) { return this instanceof Array; })
+            @invariant<Foo>(self => self instanceof Array)
             class Foo {}
 
             return new Foo();
@@ -326,7 +326,7 @@ describe('A falsy invariant throws an exception when evaluated', () => {
         const {invariant} = new Contracts(true);
 
         expect(() => {
-            @invariant(function(this: Foo) { return this.value === 37; })
+            @invariant<Foo>(self => self.value === 37)
             class Foo {
                 #value = 37;
                 get value(): number { return this.#value; }
@@ -348,7 +348,7 @@ describe('A falsy invariant throws an exception when evaluated', () => {
         const {invariant} = new Contracts(false);
 
         expect(() => {
-            @invariant(function(this: Foo) { return this.value === 37; })
+            @invariant<Foo>(self => self.value === 37)
             class Foo {
                 #value = 37;
                 get value(): number { return this.#value; }
@@ -379,7 +379,7 @@ describe('An invariant is evaluated after it\'s associated class is constructed'
 
         invariants.forEach(invariant => {
             expect(() => {
-                @invariant(function(this: Foo) {  return this instanceof Foo; })
+                @invariant<Foo>(self => self instanceof Foo)
                 class Foo {}
 
                 return new Foo();
@@ -391,7 +391,7 @@ describe('An invariant is evaluated after it\'s associated class is constructed'
         const {invariant} = new Contracts(true);
 
         expect(() => {
-            @invariant(function(this: Foo) { return this instanceof Array; })
+            @invariant<Foo>(self => self instanceof Array)
             class Foo {}
 
             return new Foo();
@@ -402,7 +402,7 @@ describe('An invariant is evaluated after it\'s associated class is constructed'
         const {invariant} = new Contracts(false);
 
         expect(() => {
-            @invariant(function (this: Foo) { return this instanceof Array; })
+            @invariant<Foo>(self => self instanceof Array)
             class Foo {}
 
             return new Foo();
@@ -418,7 +418,7 @@ describe('An invariant is evaluated before and after every method call on the as
     test('Test method call in checkMode', () => {
         const {invariant} = new Contracts(true);
 
-        @invariant(function (this: Foo) { return  this.value >= 0; })
+        @invariant<Foo>(self => self.value >= 0)
         class Foo {
             #value = 0;
             get value(): number { return this.#value; }
@@ -446,7 +446,7 @@ describe('An invariant is evaluated before and after every method call on the as
     test('Test method call in prodMode', () => {
         const {invariant} = new Contracts(false);
 
-        @invariant<Foo>(function (this: Foo) { return this.value >= 0; })
+        @invariant<Foo>(self => self.value >= 0)
         class Foo {
             #value = 0;
             get value(): number { return this.#value; }
@@ -493,7 +493,7 @@ describe('In checked mode the invariant decorator evaluates its assertions', () 
         const {invariant} = new Contracts(true);
 
         expect(() => {
-            @invariant(function(this: Foo) { return this instanceof Array; })
+            @invariant<Foo>(self => self instanceof Array)
             class Foo {}
 
             return new Foo();
@@ -504,7 +504,7 @@ describe('In checked mode the invariant decorator evaluates its assertions', () 
         const {invariant} = new Contracts(true);
 
         expect(() => {
-            @invariant(function (this: Foo) { return this.value === 37; })
+            @invariant<Foo>(self => self.value === 37)
             class Foo {
                 #value = 37;
                 get value(): number { return this.#value; }
@@ -525,7 +525,7 @@ describe('In checked mode the invariant decorator evaluates its assertions', () 
     test('Test getter/setter', () => {
         const {invariant} = new Contracts(true);
 
-        @invariant(function(this: Foo) { return this.value >= 0; })
+        @invariant<Foo>(self => self.value >= 0)
         class Foo {
             #value = 0;
             get value(): number { return this.#value; }
@@ -552,7 +552,7 @@ describe('In checked mode the invariant decorator does not evaluate its assertio
 
     test('Construction does not throw', () => {
         expect(() => {
-            @invariant(function(this: Foo) { return this instanceof Array; })
+            @invariant<Foo>(self => self instanceof Array)
             class Foo {}
 
             return new Foo();
@@ -561,7 +561,7 @@ describe('In checked mode the invariant decorator does not evaluate its assertio
 
     test('Method does not throw', () => {
         expect(() => {
-            @invariant(function(this: Foo) { return this.value === 42; })
+            @invariant<Foo>(self => self.value === 42)
             class Foo {
                 #value = 0;
                 get value(): number { return this.#value; }
@@ -588,31 +588,31 @@ describe('A subclass with its own invariants must enforce all ancestor invariant
         const {invariant} = new Contracts(true);
 
         expect(() => {
-            @invariant(function(this: Base) { return this instanceof Base; })
-            @invariant(function(this: Base) { return this != null; })
+            @invariant<Base>(self => self instanceof Base)
+            @invariant<Base>(self => self != null)
             class Base {}
 
-            @invariant(function(this: Sub) { return this instanceof Sub; })
+            @invariant<Sub>(self => self instanceof Sub)
             class Sub extends Base {}
 
             return new Sub();
         }).not.toThrow();
 
         expect(() => {
-            @invariant(function(this: Base) { return this instanceof Array; })
+            @invariant<Base>(self => self instanceof Array)
             class Base {}
 
-            @invariant(function(this: Sub) { return this instanceof Sub; })
+            @invariant<Sub>(self => self instanceof Sub)
             class Sub extends Base {}
 
             return new Sub();
         }).toThrow(AssertionError);
 
         expect(() => {
-            @invariant(function(this: Base) { return this instanceof Base; })
+            @invariant<Base>(self => self instanceof Base)
             class Base {}
 
-            @invariant(function(this: Base) { return this instanceof Array; })
+            @invariant<Base>(self => self instanceof Array)
             // @ts-ignore : Ignore unused error
             class Sub extends Base {}
 

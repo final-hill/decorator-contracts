@@ -64,15 +64,9 @@ describe('The @ensures decorator must be a non-static method decorator only', ()
  * https://github.com/final-hill/decorator-contracts/issues/78
  */
 describe('There can be multiple @ensures decorators assigned to a class feature', () => {
-    const {invariant, ensures} = new Contracts(true);
-
-    function nonNegative(this: Foo): boolean {
-        return this.value >= 0;
-    }
-
-    function isEven(this: Foo): boolean {
-        return this.value % 2 == 0;
-    }
+    const {invariant, ensures} = new Contracts(true),
+        nonNegative = (self: Foo): boolean => self.value >= 0,
+        isEven = (self: Foo): boolean => self.value % 2 == 0;
 
     @invariant
     class Foo {
@@ -107,10 +101,6 @@ describe('There can be multiple @ensures decorators assigned to a class feature'
 describe('Features that override a @ensures decorated method must be subject to that decorator', () => {
     const {invariant, override, ensures} = new Contracts(true);
 
-    function nonNegative(this: Base): boolean {
-        return this.value >= 0;
-    }
-
     @invariant
     class Base {
         #value = 0;
@@ -118,7 +108,7 @@ describe('Features that override a @ensures decorated method must be subject to 
         get value(): number { return this.#value; }
         set value(value: number){ this.#value = value; }
 
-        @ensures(nonNegative)
+        @ensures<Base>(self => self.value >= 0)
         dec(): void { this.value--; }
 
         inc(): void { this.value++; }
@@ -156,10 +146,6 @@ describe('Features that override a @ensures decorated method must be subject to 
 describe('@ensures is evaluated after its associated member is called', () => {
     const {invariant, ensures} = new Contracts(true);
 
-    function nonNegative(this: Foo): boolean {
-        return this.value >= 0;
-    }
-
     @invariant
     class Foo {
         #value = 0;
@@ -170,7 +156,7 @@ describe('@ensures is evaluated after its associated member is called', () => {
 
     test('true @ensures check does not throw', () => {
         class Bar extends Foo {
-            @ensures(nonNegative)
+            @ensures<Foo>(self => self.value >= 0)
             method(): number {
                 return this.value = 2;
             }
@@ -226,12 +212,12 @@ describe('@ensures has a checked mode and unchecked mode', () => {
 /**
  * https://github.com/final-hill/decorator-contracts/issues/82
  */
-describe('Postconditions cannot be weakened in a subtype', () => {
+describe('Preconditions cannot be weakened in a subtype', () => {
     const {invariant, ensures, override} = new Contracts(true);
 
     @invariant
     class Base {
-        @ensures((value: number) => 10 <= value && value <= 30)
+        @ensures((_, value: number) => 10 <= value && value <= 30)
         method(value: number): number { return value; }
     }
 
@@ -246,7 +232,7 @@ describe('Postconditions cannot be weakened in a subtype', () => {
 
     class Weaker extends Base {
         @override
-        @ensures((value: number) => 1 <= value && value <= 50)
+        @ensures((_, value: number) => 1 <= value && value <= 50)
         method(value: number): number { return value; }
     }
 
@@ -261,7 +247,7 @@ describe('Postconditions cannot be weakened in a subtype', () => {
 
     class Stronger extends Base {
         @override
-        @ensures((value: number) => 15 <= value && value <= 20)
+        @ensures((_, value: number) => 15 <= value && value <= 20)
         method(value: number): number { return value; }
     }
 
@@ -284,7 +270,7 @@ describe('A class feature with a decorator must not be functional until the @inv
 
     @invariant
     class Okay {
-        @ensures((value: number) => 10 <= value && value <= 30)
+        @ensures((_, value: number) => 10 <= value && value <= 30)
         method(value: number): number { return value; }
     }
 
@@ -295,7 +281,7 @@ describe('A class feature with a decorator must not be functional until the @inv
     });
 
     class Fail {
-        @ensures((value: number) => 10 <= value && value <= 30)
+        @ensures((_, value: number) => 10 <= value && value <= 30)
         method(value: number): number { return value; }
     }
 

@@ -12,11 +12,11 @@ import { RescueType } from '../typings/RescueType';
 export const DECORATOR_REGISTRY = Symbol('Decorator Registry');
 
 export class FeatureRegistration {
-    readonly demands: PredicateType[] = [];
+    readonly demands: PredicateType<any>[] = [];
     descriptorWrapper: DescriptorWrapper;
-    readonly ensures: PredicateType[] = [];
+    readonly ensures: PredicateType<any>[] = [];
     overrides = false;
-    rescue: RescueType | undefined;
+    rescue: RescueType<any> | undefined;
 
     constructor(descriptor: PropertyDescriptor){
         this.descriptorWrapper = new DescriptorWrapper(descriptor);

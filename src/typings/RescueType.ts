@@ -5,4 +5,4 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-export type RescueType = (error: any, args: any[], retry: Function) => void;
+export type RescueType<S extends object> = (self: S, error: any, args: any[], retry: Function) => void;
