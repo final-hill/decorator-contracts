@@ -39,7 +39,7 @@ export default class RescueDecorator extends MemberDecorator {
      * @param {RescueType} fnRescue - The rescue function
      * @returns {MethodDecorator} - The MethodDecorator
      */
-    rescue(fnRescue: RescueType): MethodDecorator {
+    rescue<Self extends object>(fnRescue: RescueType<Self>): MethodDecorator {
         const checkMode = this.checkMode,
             assert: Assertion['assert'] = this._assert;
         this._checkedAssert(typeof fnRescue == 'function', MSG_INVALID_DECORATOR);
@@ -50,9 +50,9 @@ export default class RescueDecorator extends MemberDecorator {
                 return currentDescriptor;
             }
 
-            const Clazz = target.constructor as Constructor<any>,
+            const Class = target.constructor as Constructor<any>,
                 dw = new DescriptorWrapper(currentDescriptor),
-                registration = MemberDecorator.registerFeature(Clazz, propertyKey, dw),
+                registration = MemberDecorator.registerFeature(Class, propertyKey, dw),
                 isStatic = typeof target == 'function';
             // Potentially undefined in pre ES5 environments (compilation target)
             assert(dw.hasDescriptor, MSG_DECORATE_METHOD_ACCESSOR_ONLY, TypeError);

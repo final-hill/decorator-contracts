@@ -96,7 +96,7 @@ export default abstract class MemberDecorator {
     }
 
     /**
-     * Tracks the provided class feauture in a registry defined on the class
+     * Tracks the provided class feature in a registry defined on the class
      * and then replaces it with an error throwing placeholder until the
      * invariant decorator can restore it
      *
@@ -153,34 +153,34 @@ export default abstract class MemberDecorator {
      * Decorated class features are replaced with the fnInvariantRequired definition.
      * This method restores the original descriptor.
      *
-     * @param {Constructor<any>} Clazz - The class
+     * @param {Constructor<any>} Class - The class
      */
-    static restoreFeatures(Clazz: Constructor<any>): void {
-        const proto = Clazz.prototype;
+    static restoreFeatures(Class: Constructor<any>): void {
+        const proto = Class.prototype;
         if(proto == null) {
             return;
         }
 
         // TODO: optimize
-        const {featureRegistry} = CLASS_REGISTRY.getOrCreate(Clazz);
+        const {featureRegistry} = CLASS_REGISTRY.getOrCreate(Class);
         featureRegistry.forEach((registration, propertyKey) => {
             const {descriptorWrapper} = registration,
-                ancRegistries = this.getAncestorRegistrations(Clazz, propertyKey),
+                ancRegistries = this.getAncestorRegistrations(Class, propertyKey),
                 allDemands = [registration.demands, ...ancRegistries.map(r => r.demands)].filter(r => r.length > 0),
                 allEnsures = [registration.ensures, ...ancRegistries.map(r => r.ensures)].filter(r => r.length > 0),
                 fnRescue = registration.rescue ?? ancRegistries.find(registration => registration.rescue != undefined)?.rescue,
                 originalDescriptor = descriptorWrapper.descriptor!,
                 newDescriptor = {...originalDescriptor},
                 // TODO: more specific error. Want the specific class name, feature name, and expression
-                demandsError = `Precondition failed on ${Clazz.name}.prototype.${String(propertyKey)}`,
-                ensuresError = `Postcondition failed on ${Clazz.name}.prototype.${String(propertyKey)}`,
+                demandsError = `Precondition failed on ${Class.name}.prototype.${String(propertyKey)}`,
+                ensuresError = `Postcondition failed on ${Class.name}.prototype.${String(propertyKey)}`,
 
-                checkedFeature = (feature: Function) => function _checkedFeature(this: typeof Clazz, ...args: any[]): any {
+                checkedFeature = (feature: Function) => function _checkedFeature(this: typeof Class, ...args: any[]): any {
                     if(allDemands.length > 0) {
                         checkedAssert(
                             allDemands.some(
                                 demands => demands.every(
-                                    demand => demand.apply(this, args)
+                                    demand => demand.call(this, this, ...args)
                                 )
                             ),
                             demandsError
@@ -194,7 +194,7 @@ export default abstract class MemberDecorator {
                             checkedAssert(
                                 allEnsures.every(
                                     ensures => ensures.every(
-                                        ensure => ensure.apply(this, args)
+                                        ensure => ensure.call(this, this, ...args)
                                     )
                                 ),
                                 ensuresError
@@ -205,7 +205,7 @@ export default abstract class MemberDecorator {
                             throw error;
                         }
                         let hasRetried = false;
-                        fnRescue.call(this, error, args, (...retryArgs: any[]) => {
+                        fnRescue.call(this, this, error, args, (...retryArgs: any[]) => {
                             hasRetried = true;
                             result = _checkedFeature.call(this, ...retryArgs);
                         });
@@ -230,7 +230,7 @@ export default abstract class MemberDecorator {
                     newDescriptor.set = checkedFeature(feature);
                 }
             } else {
-                throw new Error(`Unhandled condition. Unable to restore ${Clazz.name}.prototype.${String(propertyKey)}`);
+                throw new Error(`Unhandled condition. Unable to restore ${Class.name}.prototype.${String(propertyKey)}`);
             }
 
             Object.defineProperty(proto, propertyKey, newDescriptor);

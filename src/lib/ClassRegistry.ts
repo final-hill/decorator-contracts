@@ -15,7 +15,7 @@ import { IS_PROXY, INNER_CLASS, DecoratedConstructor } from '../typings/Decorate
 export class ClassRegistration {
     readonly contractHandler = new ContractHandler(new Assertion(true).assert);
     readonly featureRegistry: FeatureRegistry = new FeatureRegistry();
-    readonly invariants: PredicateType[] = [];
+    readonly invariants: PredicateType<any>[] = [];
     isRestored = false;
 }
 

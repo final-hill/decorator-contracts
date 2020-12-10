@@ -33,7 +33,7 @@ class ContractHandler {
             const invariants = CLASS_REGISTRY.get(Cons)?.invariants ?? [];
             invariants.forEach(invariant => {
                 const name = invariant.name;
-                this._assert(invariant.apply(self), `Invariant violated. ${name}: ${invariant.toString()}`);
+                this._assert(invariant.call(self, self), `Invariant violated. ${name}: ${invariant.toString()}`);
             });
         });
     }

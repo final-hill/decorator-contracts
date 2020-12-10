@@ -64,15 +64,9 @@ describe('The @demands decorator must be a non-static feature decorator only', (
  * https://github.com/final-hill/decorator-contracts/issues/70
  */
 describe('There can be multiple @demands decorators assigned to a class feature', () => {
-    const {invariant, demands} = new Contracts(true);
-
-    function nonNegative(this: Foo): boolean {
-        return this.value >= 0;
-    }
-
-    function isEven(this: Foo): boolean {
-        return this.value % 2 == 0;
-    }
+    const {invariant, demands} = new Contracts(true),
+        nonNegative = (self: Foo): boolean => self.value >= 0,
+        isEven = (self: Foo): boolean => self.value % 2 == 0;
 
     @invariant
     class Foo {
@@ -108,10 +102,6 @@ describe('There can be multiple @demands decorators assigned to a class feature'
 describe('Features that override a @demands decorated feature must be subject to that decorator', () => {
     const {invariant, override, demands} = new Contracts(true);
 
-    function nonNegative(this: Base): boolean {
-        return this.value >= 0;
-    }
-
     @invariant
     class Base {
         #value = 0;
@@ -119,7 +109,7 @@ describe('Features that override a @demands decorated feature must be subject to
         get value(): number { return this.#value; }
         set value(value: number){ this.#value = value; }
 
-        @demands(nonNegative)
+        @demands<Base>(self => self.value >= 0)
         dec(): void { this.value--; }
 
         inc(): void { this.value++; }
@@ -159,10 +149,6 @@ describe('Features that override a @demands decorated feature must be subject to
 describe('@demands is evaluated before its associated feature is called', () => {
     const {invariant, demands} = new Contracts(true);
 
-    function nonNegative(this: Foo): boolean {
-        return this.value >= 0;
-    }
-
     @invariant
     class Foo {
         #value = 0;
@@ -173,7 +159,7 @@ describe('@demands is evaluated before its associated feature is called', () => 
 
     test('true @demands check does not throw', () => {
         class Bar extends Foo {
-            @demands(nonNegative)
+            @demands<Foo>(self => self.value >= 0)
             method(): number {
                 return this.value = -2;
             }
@@ -235,7 +221,7 @@ describe('Preconditions cannot be strengthened in a subtype', () => {
 
     @invariant
     class Base {
-        @demands((value: number) => 10 <= value && value <= 30)
+        @demands((_, value: number) => 10 <= value && value <= 30)
         method(value: number): number { return value; }
     }
 
@@ -253,7 +239,7 @@ describe('Preconditions cannot be strengthened in a subtype', () => {
 
     class Weaker extends Base {
         @override
-        @demands((value: number) => 1 <= value && value <= 50)
+        @demands((_,value: number) => 1 <= value && value <= 50)
         method(value: number): number { return value; }
     }
 
@@ -273,7 +259,7 @@ describe('Preconditions cannot be strengthened in a subtype', () => {
 
     class Stronger extends Base {
         @override
-        @demands((value: number) => 15 <= value && value <= 20)
+        @demands((_,value: number) => 15 <= value && value <= 20)
         method(value: number): number { return value; }
     }
 
@@ -299,7 +285,7 @@ describe('A class feature with a decorator must not be functional until the @inv
 
     @invariant
     class Okay {
-        @demands((value: number) => 10 <= value && value <= 30)
+        @demands((_,value: number) => 10 <= value && value <= 30)
         method(value: number): number { return value; }
     }
 
@@ -310,7 +296,7 @@ describe('A class feature with a decorator must not be functional until the @inv
     });
 
     class Fail {
-        @demands((value: number) => 10 <= value && value <= 30)
+        @demands((_,value: number) => 10 <= value && value <= 30)
         method(value: number): number { return value; }
     }
 

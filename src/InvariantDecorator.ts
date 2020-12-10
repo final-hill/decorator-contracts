@@ -32,7 +32,7 @@ export default class InvariantDecorator {
     }
 
     invariant<T extends Constructor<any>>(Base: T): T;
-    invariant<Self>(predicate: PredicateType): ClassDecorator;
+    invariant<Self extends object>(predicate: PredicateType<Self>): ClassDecorator;
     /**
      * The `@invariant` decorator describes and enforces the properties of a class
      * via assertions. These assertions are checked after the associated class
@@ -43,10 +43,10 @@ export default class InvariantDecorator {
      * @returns {ClassDecorator | Constructor<any>} - The decorated class, or the decorator if a predicate was provided
      * @throws {AssertionError} - Throws an Assertion error if not applied to a class.
      */
-    invariant(fn: PredicateType | Constructor<any>): ClassDecorator | Constructor<any> {
+    invariant(fn: PredicateType<object> | Constructor<any>): ClassDecorator | Constructor<any> {
         const isClazz = isClass(fn),
-            predicate = isClazz ? undefined : fn as PredicateType,
-            Clazz = isClazz ? fn as Constructor<any> : undefined,
+            predicate = isClazz ? undefined : fn as PredicateType<object>,
+            Class = isClazz ? fn as Constructor<any> : undefined,
             assert: Assertion['assert'] = this._assert,
             checkMode = this.checkMode;
 
@@ -55,23 +55,23 @@ export default class InvariantDecorator {
         /**
          * The class decorator
          *
-         * @param {Constructor<any>} Clazz - The class being decorated
+         * @param {Constructor<any>} Class - The class being decorated
          * @returns {Constructor<any>} - The decorated class
          */
-        function decorator(Clazz: Constructor<any>): Constructor<any> {
-            assert(isClass(Clazz), MSG_INVALID_DECORATOR);
+        function decorator(Class: Constructor<any>): Constructor<any> {
+            assert(isClass(Class), MSG_INVALID_DECORATOR);
 
             if(!checkMode) {
-                return Clazz;
+                return Class;
             }
 
-            const registration = CLASS_REGISTRY.getOrCreate(Clazz);
+            const registration = CLASS_REGISTRY.getOrCreate(Class);
             if(predicate != undefined) {
                 registration.invariants.push(predicate);
             }
 
             // TODO: lift
-            const ClazzProxy = new Proxy(Clazz, {
+            const ClazzProxy = new Proxy(Class, {
                 construct(Target: Constructor<any>, args: any[], NewTarget: Constructor<any>): object {
                     const ancestry = getAncestry(NewTarget).reverse();
                     ancestry.forEach(Cons => {
@@ -115,6 +115,6 @@ export default class InvariantDecorator {
             return ClazzProxy;
         }
 
-        return Clazz != undefined ? decorator(Clazz) : decorator as ClassDecorator;
+        return Class != undefined ? decorator(Class) : decorator as ClassDecorator;
     }
 }
