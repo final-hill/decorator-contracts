@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.20.0
+
+* Updated license headers to reference Final Hill LLC
+
 ## v0.19.0
 
 * Updated README to include unpkg reference
