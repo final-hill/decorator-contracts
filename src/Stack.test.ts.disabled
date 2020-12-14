@@ -1,0 +1,72 @@
+/*!
+ * @license
+ * Copyright (C) 2020 Final Hill LLC
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
+ */
+
+import Contracted from 'Contracted';
+import {Contract, invariant} from './Contract';
+
+interface StackType<T> {
+    readonly limit: number;
+    readonly size: number;
+    clear(): void;
+    isEmpty(): boolean;
+    isFull(): boolean;
+    pop(): T;
+    push(item: T): void;
+    top(): T;
+}
+
+const stackContract = new Contract<StackType<any>>({
+    [invariant]: [
+        self => self.isEmpty() == (self.size == 0),
+        self => self.isFull() == (self.size == self.limit),
+        self => self.size >= 0 && self.size <= self.limit
+    ],
+    pop: {
+        demands: self => !self.isEmpty(),
+        ensures: (self,old) => self.size == old.size - 1
+    },
+    push: {
+        ensures: [
+            self => !self.isEmpty(),
+            (self,old) => self.size == old.size + 1
+        ]
+    }
+});
+
+class Stack<T> extends Contracted(stackContract) implements StackType<T> {
+    #implementation: T[] = [];
+
+    constructor(readonly limit: number) { super(); }
+
+    clear(): void {
+        this.#implementation = [];
+    }
+
+    isEmpty(): boolean {
+        return this.#implementation.length == 0;
+    }
+
+    isFull(): boolean {
+        return this.#implementation.length == this.limit;
+    }
+
+    pop(): T {
+        return this.#implementation.pop()!;
+    }
+
+    push(item: T): void {
+        this.#implementation.push(item);
+    }
+
+    get size(): number {
+        return this.#implementation.length;
+    }
+
+    top(): T {
+        return this.#implementation[this.#implementation.length - 1];
+    }
+}

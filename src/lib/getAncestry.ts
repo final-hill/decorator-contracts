@@ -5,17 +5,17 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import {Constructor} from '../typings/Constructor';
+import memo from './memo';
 
-/**
+ /**
  * Returns the inheritance chain of the provided class including the class
  *
- * @param {Constructor<any>} Clazz - The class to evaluate
+ * @param {Constructor<any>} Class - The class to evaluate
  * @returns {Constructor<any>[]} - The array of ancestors
  */
-function getAncestry(Clazz: Constructor<any>): Constructor<any>[] {
-    return Clazz == null ? [] :
-        [Clazz].concat(getAncestry(Object.getPrototypeOf(Clazz)));
-}
+const getAncestry = memo((Class: Constructor<any>): Constructor<any>[] =>
+    Class == null ? [] : [Class].concat(getAncestry(Object.getPrototypeOf(Class)))
+);
+
 
 export default getAncestry;

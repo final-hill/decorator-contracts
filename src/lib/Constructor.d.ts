@@ -5,4 +5,7 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-export type PredicateType<S extends object> = (self: S,...args: any[]) => boolean;
+ /**
+ * Constructs a type representing a constructor
+ */
+type Constructor<T> = new(...args: any[]) => T;
