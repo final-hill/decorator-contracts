@@ -5,8 +5,9 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-//import getAncestry from './lib/getAncestry';
+import getAncestry from './lib/getAncestry';
 import Contract from './Contract';
+import CLASS_REGISTRY from './lib/CLASS_REGISTRY';
 
 const contractHandler = {};
 
@@ -21,11 +22,23 @@ const contractHandler = {};
  * class Stack<T> extends Contracted(stackContract) {}
  */
 function Contracted<T extends Contract<any>,U extends Constructor<any>>(_contract: T, Base?: U): U {
+
+
     class Contracted extends (Base ?? Object) {
         constructor(...args: any[]) {
             super(...args);
-            //const Class = this.constructor as Constructor<any>,
-            //      ancestry = getAncestry(Class).reverse();
+            const Class = this.constructor as Constructor<any>,
+                  ancestry = getAncestry(Class).reverse();
+
+            ancestry.forEach(Class => {
+                const registration = CLASS_REGISTRY.getOrCreate(Class);
+
+                if(registration.isRestored == false) {
+                    OverrideDecorator.checkOverrides(Class);
+                        //MemberDecorator.restoreFeatures(Cons);
+                    registration.isRestored = true;
+                }
+            });
 
             return new Proxy(this, contractHandler);
         }
