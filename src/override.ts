@@ -8,6 +8,7 @@
 import DescriptorWrapper from './lib/DescriptorWrapper';
 import Assertion from './Assertion';
 import { MSG_NO_STATIC, MSG_NO_MATCHING_FEATURE, MSG_DUPLICATE_OVERRIDE, MSG_INVALID_ARG_LENGTH } from './Messages';
+import ancestorFeature from './lib/ancestorFeature';
 
 
 const assert: Assertion['assert'] = new Assertion(true).assert;

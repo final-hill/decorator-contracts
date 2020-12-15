@@ -5,6 +5,9 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
+import CLASS_REGISTRY from './CLASS_REGISTRY';
+import DescriptorWrapper from './DescriptorWrapper';
+
 /**
  * Finds the nearest ancestor feature for the given propertyKey by walking the prototype chain of the target
  *
@@ -25,3 +28,5 @@ function ancestorFeature(targetProto: any, propertyKey: PropertyKey): Descriptor
 
     return descriptorWrapper.hasDescriptor ? descriptorWrapper : this.ancestorFeature(proto, propertyKey);
 }
+
+export default ancestorFeature;

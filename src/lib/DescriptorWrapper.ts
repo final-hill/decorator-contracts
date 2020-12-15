@@ -6,7 +6,15 @@
  */
 
 class DescriptorWrapper {
-    constructor(public descriptor: PropertyDescriptor) {}
+    constructor(public descriptor: PropertyDescriptor | undefined) {}
+
+    /**
+     * Determines if a descriptor is defined.
+     * Potentially undefined in pre ES5 (compilation target)
+     */
+    get hasDescriptor(): boolean {
+        return this.descriptor != undefined;
+    }
 
     get hasGetter(): boolean {
         return this.isAccessor && this.descriptor!.get != undefined;
@@ -20,26 +28,30 @@ class DescriptorWrapper {
      * Determines if the descriptor describes a property
      */
     get isProperty(): boolean {
-        return !['function', 'undefined'].includes(typeof this.descriptor.value);
+        return this.hasDescriptor ?
+            typeof this.descriptor!.value != 'function' &&
+                    typeof this.descriptor!.value != 'undefined' :
+            false;
     }
 
     /**
      * Determines if the descriptor describes a method
      */
     get isMethod(): boolean {
-        return typeof this.descriptor!.value == 'function';
+        return this.hasDescriptor ?
+            typeof this.descriptor!.value == 'function' :
+            false;
     }
 
     /**
      * Determines if the descriptor describes an accessor
      */
     get isAccessor(): boolean {
-        return typeof this.descriptor!.value == 'undefined';
+        return this.hasDescriptor ?
+            typeof this.descriptor!.value == 'undefined' :
+            false;
     }
 
-    /**
-     * A string identifier of the type of descriptor
-     */
     get memberType(): 'method' | 'property' | 'accessor' {
         return this.isMethod ? 'method' :
             this.isProperty ? 'property' :
@@ -47,7 +59,7 @@ class DescriptorWrapper {
     }
 
     get value(): any {
-        return this.descriptor.value;
+        return this.hasDescriptor ? this.descriptor!.value : undefined;
     }
 }
 
