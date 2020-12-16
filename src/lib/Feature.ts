@@ -15,7 +15,7 @@ class Feature {
      */
     hasOverrides = false;
 
-    constructor(readonly classRegistration: ClassRegistration, readonly key: PropertyKey, descriptor: PropertyDescriptor){
+    constructor(readonly classRegistration: ClassRegistration, readonly name: PropertyKey, descriptor: PropertyDescriptor){
         this.#descriptor = descriptor;
     }
 
@@ -23,7 +23,7 @@ class Feature {
      * Finds the nearest ancestor feature of the same key if it exists
      */
     get ancestorFeature(): Feature | null {
-        return this.classRegistration.ancestryFeatures().filter(feature => feature.key === this.key)[0];
+        return this.classRegistration.ancestryFeatures().filter(feature => feature.name === this.name)[0];
     }
 
     /**

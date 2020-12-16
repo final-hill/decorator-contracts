@@ -12,3 +12,4 @@ export const MSG_NO_MATCHING_FEATURE = 'This feature does not override an ancest
 export const MSG_DUPLICATE_OVERRIDE = 'Only a single @override decorator can be assigned to a class member';
 export const MSG_DUPLICATE_RESCUE = 'Only a single @rescue can be assigned to a feature';
 export const MSG_NO_PROPERTY_RESCUE = 'A property can not be assigned a @rescue';
+export const MSG_NOT_CONTRACTED = 'The current class or one of its ancestors must extend Contracted(...)';

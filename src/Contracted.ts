@@ -8,7 +8,8 @@
 import Contract from './Contract';
 import CLASS_REGISTRY from './lib/CLASS_REGISTRY';
 
-const contractHandler = {};
+const contractHandler = {},
+    isContracted = Symbol('isContracted');
 
 /**
  * Associates a contract with a class via the mixin pattern.
@@ -20,8 +21,10 @@ const contractHandler = {};
  *
  * class Stack<T> extends Contracted(stackContract) {}
  */
-function Contracted<T extends Contract<any>,U extends Constructor<any>>(_contract?: T, Base?: U): U {
+function Contracted<T extends Contract<any>,U extends Constructor<any>>(_contract?: T, Base?: U): U & {[isContracted]: boolean} {
     class Contracted extends (Base ?? Object) {
+        static [isContracted] = true;
+
         constructor(...args: any[]) {
             super(...args);
             const Class = this.constructor as Constructor<any>,
@@ -40,7 +43,8 @@ function Contracted<T extends Contract<any>,U extends Constructor<any>>(_contrac
         }
     }
 
-    return Contracted as U;
+    return Contracted as U & {[isContracted]: boolean};
 }
 
+export {isContracted};
 export default Contracted;

@@ -23,7 +23,7 @@ class ClassRegistration {
     constructor(readonly Class: Constructor<any>) {
         this.#features = Object.entries(Object.getOwnPropertyDescriptors(this.Class.prototype))
             .map(([key, descriptor]) => new Feature(this, key, descriptor))
-            .filter(feature => feature.key != 'constructor');
+            .filter(feature => feature.name != 'constructor');
     }
 
     /**
@@ -71,12 +71,13 @@ class ClassRegistration {
      * @throws {AssertionError} - Throws if the verification fails
      */
     checkOverrides(): void {
-        const ancestryFeatureNames = this.ancestryFeatures().map(feature => feature.key);
+        const ancestryFeatureNames = new Set(this.ancestryFeatures().map(feature => feature.name));
 
         this.features.forEach(feature => {
-            const str = `${this.Class.name}.prototype.${String(feature.key)}`;
-            assert(feature.hasOverrides && ancestryFeatureNames.includes(feature.key), `Unnecessary @override declaration on ${str}`);
-            assert(!feature.hasOverrides && !ancestryFeatureNames.includes(feature.key), `@override decorator missing on ${str}`);
+            const str = `${this.Class.name}.prototype.${String(feature.name)}`;
+
+            assert(!feature.hasOverrides || ancestryFeatureNames.has(feature.name),`Unnecessary @override declaration on ${str}`);
+            assert(feature.hasOverrides || !ancestryFeatureNames.has(feature.name), `@override decorator missing on ${str}`);
         });
     }
 

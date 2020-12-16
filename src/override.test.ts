@@ -6,7 +6,7 @@
  */
 
 import { Contracted, override } from './';
-import { MSG_NO_MATCHING_FEATURE, MSG_INVALID_ARG_LENGTH, MSG_DUPLICATE_OVERRIDE, MSG_NO_STATIC } from './Messages';
+import { MSG_NO_MATCHING_FEATURE, MSG_INVALID_ARG_LENGTH, MSG_DUPLICATE_OVERRIDE, MSG_NO_STATIC, MSG_NOT_CONTRACTED } from './Messages';
 
 /**
  * https://github.com/final-hill/decorator-contracts/issues/44
@@ -35,7 +35,7 @@ describe('The override decorator is a non-static member decorator only', () => {
 
     test('instance method decorator does not throw', () => {
         expect(() => {
-            class Base {
+            class Base extends Contracted() {
                 method(): void {}
             }
 
@@ -53,10 +53,9 @@ describe('The override decorator is a non-static member decorator only', () => {
  * https://github.com/final-hill/decorator-contracts/issues/45
  */
 describe('In production mode the @override decorator is a no-op', () => {
-    // TODO: production mode
     test('base class with @override decorator', () => {
         expect(() => {
-            class Base {
+            class Base extends Contracted() {
                 @override
                 method(): void {}
             }
@@ -72,7 +71,7 @@ describe('In production mode the @override decorator is a no-op', () => {
 describe('Using @override on a class member with no ancestor member is an error', () => {
     test('base class with @override decorator', () => {
         expect(() => {
-            class Base {
+            class Base extends Contracted() {
                 @override
                 method(): void {}
             }
@@ -83,7 +82,7 @@ describe('Using @override on a class member with no ancestor member is an error'
 
     test('subclass with @override decorator', () => {
         expect(() => {
-            class Base {}
+            class Base extends Contracted() {}
 
             class Sub extends Base {
                 @override
@@ -96,7 +95,7 @@ describe('Using @override on a class member with no ancestor member is an error'
 
     test('subclass with method overriding non-method', () => {
         expect(() => {
-            class Base {
+            class Base extends Contracted() {
                 method = 'foo';
             }
 
@@ -117,7 +116,7 @@ describe('Using @override on a class member with no ancestor member is an error'
 describe('using @override on a method with an ancestor with a different parameter count is an error', () => {
     test('bad override', () => {
         expect(() => {
-            class Base {
+            class Base extends Contracted() {
                 method(a: string, b: string): string {
                     return `${a}, ${b}`;
                 }
@@ -136,7 +135,7 @@ describe('using @override on a method with an ancestor with a different paramete
 
     test('bad override 2', () => {
         expect(() => {
-            class Base {
+            class Base extends Contracted() {
                 method(a: string): string {
                     return `${a}`;
                 }
@@ -156,7 +155,7 @@ describe('using @override on a method with an ancestor with a different paramete
 
     test('good override', () => {
         expect(() => {
-            class Base {
+            class Base extends Contracted() {
                 method(a: string, b: string): string {
                     return `${a}, ${b}`;
                 }
@@ -181,7 +180,7 @@ describe('using @override on a method with an ancestor with a different paramete
 describe('A subclass with an overriding member missing @override is an error', () => {
     test('@override defined', () => {
         expect(() => {
-            class Base {
+            class Base extends Contracted() {
                 method(): void {}
 
                 get foo(): number { return 3; }
@@ -213,7 +212,7 @@ describe('A subclass with an overriding member missing @override is an error', (
         }).toThrow('@override decorator missing on Sub.prototype.method');
 
         expect(() => {
-            class Base {
+            class Base extends Contracted() {
                 get prop(): number { return 3; }
             }
 
@@ -232,7 +231,7 @@ describe('A subclass with an overriding member missing @override is an error', (
 describe('Only a single @override can be assigned to a member per class', () => {
     test('duplicate @override', () => {
         expect(() => {
-            class Base {
+            class Base extends Contracted() {
                 method(a: string, b: string): string {
                     return `${a}, ${b}`;
                 }
@@ -252,7 +251,7 @@ describe('Only a single @override can be assigned to a member per class', () => 
 
     test('Three level @override', () => {
         expect(() => {
-            class Base {
+            class Base extends Contracted() {
                 method(a: string, b: string): string {
                     return `${a}, ${b}`;
                 }
@@ -283,7 +282,7 @@ describe('Only a single @override can be assigned to a member per class', () => 
 describe('Accessors must support @override', () => {
     test('instance accessor decorator does not throw', () => {
         expect(() => {
-            class Base {
+            class Base extends Contracted() {
                 #value = 0;
                 get value(): number { return this.#value; }
                 set value(x: number) { this.#value = x; }
@@ -320,37 +319,35 @@ describe('Accessors must support @override', () => {
     });
 });
 
-/**
- * https://github.com/final-hill/decorator-contracts/issues/36
- */
-describe('A class feature with a decorator must not be functional until the @invariant is defined', () => {
-    class Base {
-        method(value: number): number { return value; }
-    }
-
-    class Okay extends Base {
-        @override
-        method(value: number): number { return value; }
-    }
-
+// https://github.com/final-hill/decorator-contracts/issues/170
+describe('The \'override\' decorator must have a Contracted class in it\'s ancestry', () => {
     test('Valid declaration', () => {
+        class Base extends Contracted() {
+            method(value: number): number { return value; }
+        }
+
+        class Okay extends Base {
+            @override
+            method(value: number): number { return value; }
+        }
+
         const okay = new Okay();
 
         expect(okay.method(15)).toBe(15);
     });
 
-    class BadBase {
-        method(value: number): number { return value; }
-    }
-
-    class Fail extends BadBase {
-        @override
-        method(value: number): number { return value; }
-    }
-
     test('Invalid declaration', () => {
-        const fail = new Fail();
+        expect(() => {
+            class BadBase {
+                method(value: number): number { return value; }
+            }
 
-        expect(() => fail.method(15)).toThrow(/*MSG_INVARIANT_REQUIRED*/);
+            class Fail extends BadBase {
+                @override
+                method(value: number): number { return value; }
+            }
+
+            return new Fail();
+        }).toThrow(MSG_NOT_CONTRACTED);
     });
 });
