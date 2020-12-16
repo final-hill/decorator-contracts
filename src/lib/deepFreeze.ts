@@ -16,6 +16,8 @@ function deepFreeze(object: object): void {
             deepFreeze(value);
         }
     }
+
+    Object.freeze(object);
 }
 
 export default deepFreeze;

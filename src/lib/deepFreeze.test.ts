@@ -14,10 +14,7 @@ describe('deepFreeze testing', () => {
         };
 
         deepFreeze(obj);
-
-        expect(() => {
-            obj.prop = 33;
-        }).toThrow();
+        expect(() => obj.prop = 33).toThrow();
     });
 
     test('Deep test', () => {
@@ -28,9 +25,6 @@ describe('deepFreeze testing', () => {
         };
 
         deepFreeze(obj);
-
-        expect(() => {
-            obj.prop1.prop2 = 33;
-        }).toThrow();
+        expect(() => obj.prop1.prop2 = 33).toThrow();
     });
 });
