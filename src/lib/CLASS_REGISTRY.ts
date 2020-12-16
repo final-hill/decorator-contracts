@@ -5,9 +5,7 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-class ClassRegistration {
-    isRestored = false;
-}
+import ClassRegistration from './ClassRegistration';
 
 class ClassRegistry extends WeakMap<Constructor<any>, ClassRegistration> {
     get(Class: Constructor<any>): ClassRegistration | undefined {
@@ -26,7 +24,7 @@ class ClassRegistry extends WeakMap<Constructor<any>, ClassRegistration> {
         if(this.has(Class)) {
             return this.get(Class)!;
         } else {
-            this.set(Class, new ClassRegistration());
+            this.set(Class, new ClassRegistration(Class));
 
             return this.get(Class)!;
         }

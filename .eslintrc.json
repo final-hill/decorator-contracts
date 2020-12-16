@@ -267,7 +267,6 @@
             "error",
             "always"
         ],
-        "@typescript-eslint/strict-boolean-expressions": "error",
         "@typescript-eslint/unified-signatures": "error",
         "arrow-body-style": "error",
         "arrow-parens": [

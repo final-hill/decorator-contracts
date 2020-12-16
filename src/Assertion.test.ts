@@ -6,15 +6,15 @@
  */
 
 import AssertionError from './AssertionError';
-
+import Assertion from './Assertion';
 
 /**
  * https://github.com/final-hill/decorator-contracts/issues/8
  */
 describe('Assertions must be toggleable', () => {
     test('false assertions', () => {
-        const {assert: assertDebug} = new Contracts(true),
-            {assert: assertProd} = new Contracts(false);
+        const assertDebug: Assertion['assert'] = new Assertion(true).assert,
+              assertProd: Assertion['assert'] = new Assertion(false).assert;
 
         expect(() => assertDebug(false)).toThrow(AssertionError);
         expect(() => assertProd(false)).not.toThrow();
@@ -25,7 +25,7 @@ describe('Assertions must be toggleable', () => {
  * https://github.com/final-hill/decorator-contracts/issues/22
  */
 describe('Assertions must support throwing custom error types', () => {
-    const assert: Contracts['assert'] = new Contracts(true).assert,
+    const assert: Assertion['assert'] = new Assertion(true).assert,
         fn = (): void => assert(false, 'BOOM!');
 
     expect(fn).toThrow(AssertionError);

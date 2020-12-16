@@ -7,5 +7,6 @@
 
 import Contract from './Contract';
 import Contracted from './Contracted';
+import override from './override';
 
-export {Contract, Contracted};
+export {Contract, Contracted, override};

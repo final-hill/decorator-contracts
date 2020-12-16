@@ -5,7 +5,6 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import getAncestry from './lib/getAncestry';
 import Contract from './Contract';
 import CLASS_REGISTRY from './lib/CLASS_REGISTRY';
 
@@ -21,22 +20,19 @@ const contractHandler = {};
  *
  * class Stack<T> extends Contracted(stackContract) {}
  */
-function Contracted<T extends Contract<any>,U extends Constructor<any>>(_contract: T, Base?: U): U {
-
-
+function Contracted<T extends Contract<any>,U extends Constructor<any>>(_contract?: T, Base?: U): U {
     class Contracted extends (Base ?? Object) {
         constructor(...args: any[]) {
             super(...args);
             const Class = this.constructor as Constructor<any>,
-                  ancestry = getAncestry(Class).reverse();
+                  classRegistration = CLASS_REGISTRY.getOrCreate(Class),
+                  ancRegistrations = classRegistration.ancestry().reverse();
 
-            ancestry.forEach(Class => {
-                const registration = CLASS_REGISTRY.getOrCreate(Class);
-
-                if(registration.isRestored == false) {
-                    OverrideDecorator.checkOverrides(Class);
-                        //MemberDecorator.restoreFeatures(Cons);
-                    registration.isRestored = true;
+            [classRegistration, ...ancRegistrations].forEach(ancRegistration => {
+                if(!ancRegistration.validated) {
+                    ancRegistration.checkOverrides();
+                    //MemberDecorator.restoreFeatures(Cons);
+                    ancRegistration.validated = true;
                 }
             });
 

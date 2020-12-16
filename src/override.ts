@@ -5,11 +5,9 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import DescriptorWrapper from './lib/DescriptorWrapper';
 import Assertion from './Assertion';
 import { MSG_NO_STATIC, MSG_NO_MATCHING_FEATURE, MSG_DUPLICATE_OVERRIDE, MSG_INVALID_ARG_LENGTH } from './Messages';
-import ancestorFeature from './lib/ancestorFeature';
-
+import CLASS_REGISTRY from './lib/CLASS_REGISTRY';
 
 const assert: Assertion['assert'] = new Assertion(true).assert;
 
@@ -23,22 +21,22 @@ const assert: Assertion['assert'] = new Assertion(true).assert;
  * @returns {PropertyDescriptor} - The PropertyDescriptor
  */
 function override(target: object, propertyKey: PropertyKey, descriptor: PropertyDescriptor): PropertyDescriptor {
-    const isStatic = typeof target == 'function',
-        dw = new DescriptorWrapper(descriptor);
+    const Class = (target as any).constructor,
+          isStatic = typeof target == 'function';
 
     assert(!isStatic, MSG_NO_STATIC, TypeError);
 
-    const am = ancestorFeature(target, propertyKey);
-    assert(am != null && dw.memberType === am.memberType, MSG_NO_MATCHING_FEATURE);
+    const registration = CLASS_REGISTRY.getOrCreate(Class),
+          feature = registration.features.find(feature => feature.key === propertyKey)!,
+          ancFeature = feature.ancestorFeature;
 
-    const Clazz = (target as any).constructor,
-        registration = registerFeature(Clazz, propertyKey, dw);
-    assert(!registration.overrides, MSG_DUPLICATE_OVERRIDE);
-    registration.overrides = true;
+    assert(ancFeature != null && feature.memberType === ancFeature.memberType, MSG_NO_MATCHING_FEATURE);
+    assert(!feature.hasOverrides, MSG_DUPLICATE_OVERRIDE);
+    feature.hasOverrides = true;
 
-    if(registration.descriptorWrapper.isMethod) {
-        const thisMethod: Function = registration.descriptorWrapper.value,
-            ancMethod: Function = am!.value;
+    if(feature.isMethod) {
+        const thisMethod: Function = feature.value,
+            ancMethod: Function = ancFeature.value;
         assert(thisMethod.length == ancMethod.length, MSG_INVALID_ARG_LENGTH);
     }
 
