@@ -50,22 +50,6 @@ describe('The override decorator is a non-static member decorator only', () => {
 });
 
 /**
- * https://github.com/final-hill/decorator-contracts/issues/45
- */
-describe('In production mode the @override decorator is a no-op', () => {
-    test('base class with @override decorator', () => {
-        expect(() => {
-            class Base extends Contracted() {
-                @override
-                method(): void {}
-            }
-
-            return Base;
-        }).not.toThrow();
-    });
-});
-
-/**
  * https://github.com/final-hill/decorator-contracts/issues/46
  */
 describe('Using @override on a class member with no ancestor member is an error', () => {
