@@ -28,16 +28,19 @@ function Contracted<T extends Contract<any>,U extends Constructor<any>>(_contrac
         constructor(...args: any[]) {
             super(...args);
             const Class = this.constructor as Constructor<any>,
-                  classRegistration = CLASS_REGISTRY.getOrCreate(Class),
-                  ancRegistrations = classRegistration.ancestry().reverse();
+                  classRegistration = CLASS_REGISTRY.getOrCreate(Class);
 
-            [classRegistration, ...ancRegistrations].forEach(ancRegistration => {
-                if(!ancRegistration.validated) {
-                    ancRegistration.checkOverrides();
-                    //MemberDecorator.restoreFeatures(Cons);
-                    ancRegistration.validated = true;
-                }
-            });
+            if(!classRegistration.isValidated) {
+                const ancRegistrations = classRegistration.ancestry().reverse();
+                [classRegistration, ...ancRegistrations].forEach(ancRegistration => {
+                    if(!ancRegistration.isValidated) {
+                        ancRegistration.checkOverrides();
+                        //MemberDecorator.restoreFeatures(Cons);
+                        ancRegistration.isValidated = true;
+                    }
+                });
+            }
+
 
             return new Proxy(this, contractHandler);
         }
