@@ -3,6 +3,7 @@
 ## v0.20.0
 
 * Updated license headers to reference Final Hill LLC
+* BREAKING CHANGE: contracts now managed separate from the class
 
 ## v0.19.0
 
