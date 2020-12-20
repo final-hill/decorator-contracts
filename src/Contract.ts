@@ -17,21 +17,26 @@ type Demands<T extends object,F extends T[any]> = (self: T, ...args: Parameters<
 type Ensures<T extends object,F extends T[any]> = (self: T, old: Properties<T>, ...args: Parameters<F>) => boolean;
 type Rescue<T extends object,F extends T[any]> = (self: T, error: Error, args: Parameters<F>, retry: (...args: Parameters<F>) => void) => void;
 
+interface InvariantContract<T extends object> {
+    [invariant]?: Invariant<T> | Invariant<T>[];
+}
+
 interface FeatureContract<T extends object, F> {
     demands?: Demands<T,F> | Demands<T,F>[];
     ensures?: Ensures<T,F> | Ensures<T,F>[];
     rescue?: Rescue<T,F> | Rescue<T,F>[];
 }
 
-export type ContractOptions<T extends object> = {
-    [invariant]?: Invariant<T> | Invariant<T>[];
-} & {
+export type ContractOptions<T extends object> = InvariantContract<T> & {
     [K in keyof T]?: FeatureContract<T, T[K]>
 };
 
 class Contract<T extends object> {
-    constructor(readonly cfg: ContractOptions<T>) {
-        deepFreeze(cfg);
+    assertions: ContractOptions<T> = Object.create(null);
+
+    constructor(assertions: ContractOptions<T> = {}) {
+        Object.assign(this.assertions,assertions);
+        deepFreeze(this.assertions);
     }
 }
 
