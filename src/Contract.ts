@@ -32,7 +32,7 @@ export type ContractOptions<T extends object> = InvariantContract<T> & {
 };
 
 class Contract<T extends object> {
-    assertions: ContractOptions<T> = Object.create(null);
+    readonly assertions: ContractOptions<T> = Object.create(null);
 
     constructor(assertions: ContractOptions<T> = {}) {
         Object.assign(this.assertions,assertions);
