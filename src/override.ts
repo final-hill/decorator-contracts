@@ -21,7 +21,7 @@ const assert: Assertion['assert'] = new Assertion(true).assert;
  * @param {PropertyDescriptor} descriptor - The property descriptor
  * @returns {PropertyDescriptor} - The PropertyDescriptor
  */
-function override(target: object, propertyKey: PropertyKey, descriptor: PropertyDescriptor): PropertyDescriptor {
+function override(target: Record<PropertyKey, any>, propertyKey: PropertyKey, descriptor: PropertyDescriptor): PropertyDescriptor {
     const Class = (target as any).constructor,
           isStatic = typeof target == 'function';
 
@@ -37,8 +37,8 @@ function override(target: object, propertyKey: PropertyKey, descriptor: Property
     feature.hasOverrides = true;
 
     if(feature.isMethod) {
-        const thisMethod: Function = feature.value,
-            ancMethod: Function = ancFeature.value;
+        const thisMethod: (...args: any[]) => any = feature.value,
+            ancMethod: (...args: any[]) => any = ancFeature.value;
         assert(thisMethod.length == ancMethod.length, MSG_INVALID_ARG_LENGTH);
     }
 

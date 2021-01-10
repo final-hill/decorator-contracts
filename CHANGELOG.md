@@ -6,6 +6,7 @@
 * BREAKING CHANGE: contracts now managed separate from the class
 * Updated dependencies
 * Merged jest.config.js into package.json
+* Updated linting rules
 
 ## v0.19.0
 

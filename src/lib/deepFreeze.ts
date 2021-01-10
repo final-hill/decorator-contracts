@@ -9,7 +9,7 @@
  * Apply Object.freeze recursively
  * @param {object} object -
  */
-function deepFreeze(object: object): void {
+function deepFreeze(object: Record<PropertyKey, any>): void {
     // Freeze properties before freezing self
     for (const [,value] of Object.entries(object)) {
         if (value != undefined && typeof value === 'object') {
