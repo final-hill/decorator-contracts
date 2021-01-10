@@ -183,6 +183,6 @@ describe('A contract must be independently definable', () => {
                 rescue: (_self, _error, _args, _retry) => {}
             }
         });
-        expect(stackContract.assertions.pop?.rescue).toBeInstanceOf(Function);
+        expect(stackContract.assertions.push?.rescue).toBeInstanceOf(Function);
     });
 });
