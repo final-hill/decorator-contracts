@@ -44,7 +44,7 @@ function Contracted<
                 });
             }
 
-            return new Proxy(this, new ContractHandler(contract));
+            return Object.freeze(new Proxy(this, new ContractHandler(contract)));
         }
     }
 
