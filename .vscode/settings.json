@@ -6,6 +6,10 @@
         "**/azure/*.yml": "azure-pipelines"
     },
     "typescript.tsdk": "node_modules\\typescript\\lib",
+    "cSpell.ignorePaths": [
+        "node_modules",
+        "package.json"
+    ],
     "cSpell.ignoreWords": [
         "agpl",
         "spdx"

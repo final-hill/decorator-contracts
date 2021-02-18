@@ -9,9 +9,10 @@
 - [Introduction](#introduction)
 - [Library Installation](#library-installation)
 - [Usage](#usage)
+- [Checked Mode](#checked-mode)
 - [Assertions](#assertions)
-- [Invariants](#invariants)
 - [Overrides](#overrides)
+- [Invariants](#invariants)
 - [Demands](#demands)
 - [Ensures](#ensures)
 - [Rescue](#rescue)
@@ -42,7 +43,7 @@ As a dependency run the command:
 
 You can also use a specific [version](https://www.npmjs.com/package/@final-hill/decorator-contracts):
 
-`npm install @final-hill/decorator-contracts@0.19.0`
+`npm install @final-hill/decorator-contracts@0.20.0`
 
 For use in a webpage:
 
@@ -50,87 +51,49 @@ For use in a webpage:
 
 With a specific [version](https://www.npmjs.com/package/@final-hill/decorator-contracts):
 
-`<script src="https://unpkg.com/@final-hill/decorator-contracts@0.19.0></script>`
+`<script src="https://unpkg.com/@final-hill/decorator-contracts@0.20.0></script>`
 
 ## Usage
 
-After installation the library can be imported as such:
+After installation the library can be used as such:
 
 ```typescript
-import Contracts from '@final-hill/decorator-contracts';
-```
+import {Contract, Contracted, invariant, checkedMode} from '@final-hill/decorator-contracts';
 
-It is not enough to import the library though, there are two modes of usage:
-`checked` and `unchecked`. This is represented as a boolean argument to the
-`Contracts` constructor.
-
-checked mode: `true`
-
-unchecked mode: `false`
-
-```typescript
-let {assert, invariant, override, rescue, demands, ensures} = new Contracts(true);
-```
-
-During development and testing you will want to use checked mode. This will
-enable all assertion checks. In production mode all assertion checks become
-no-ops for run-time efficiency. As the number of contract definitions can
-be numerous, using the appropriate mode becomes increasingly important.
-
-You are not prevented from mixing modes in the event you desire you maintain
-a number of checks in a production environment.
-
-## Assertions
-
-Assertions are a fundamental tool for enforcing correctness in an implementation.
-They are used inline to express a condition that must evaluate to true at a
-particular point of execution.
-
-```typescript
-let assert: Contracts['assert'] = new Contracts(true).assert;
-
-function avg(xs: number[]): number {
-    assert(xs.length > 0, 'The list can not be empty')
-
-    return xs.reduce((sum, next) => sum + next) / xs.length
+interface StackType<T> {
+    readonly limit: number;
+    readonly size: number;
+    clear(): void;
+    isEmpty(): boolean;
+    isFull(): boolean;
+    pop(): T;
+    push(item: T): void;
+    top(): T;
 }
-```
 
-In TypeScript `assert` will also assert the type of the condition:
+const stackContract = new Contract<StackType<any>>({
+    [checkedMode]: process.env.NODE_ENV === 'development',
+    [invariant]: [
+        self => self.isEmpty() == (self.size == 0),
+        self => self.isFull() == (self.size == self.limit),
+        self => self.size >= 0 && self.size <= self.limit
+    ],
+    pop: {
+        demands: self => !self.isEmpty(),
+        ensures: (self,old) => self.size == old.size - 1
+    },
+    push: {
+        ensures: [
+            self => !self.isEmpty(),
+            (self,old) => self.size == old.size + 1
+        ]
+    }
+});
 
-```typescript
-let str: any = 'foo';
-
-str.toUpperCase(); // str is any
-
-assert(typeof str == 'string');
-
-str.toUpperCase(); // str is now a string
-```
-
-Due to a [limitation](https://github.com/microsoft/TypeScript/issues/36931) in the current version of TypeScript (3.9),
-an explicit type must be assigned to the `assert` as shown above.
-
-In checked mode the assertion is evaluated and throws an exception when its condition is false.
-In unchecked mode, assertions always return.
-
-## Invariants
-
-The `@invariant` decorator describes and enforces the semantics of a class
-via a provided assertion. This assertion is checked after the associated class
-is constructed, before and after every method execution, and before and after
-every accessor usage (get/set). If any of these evaluate to false during class
-usage, an `AssertionError` will be thrown. Truthy assertions do not throw an
-error. An example of this is given below using a Stack:
-
-```typescript
-@invariant<Stack<any>>(self => self.size >= 0 && self.size <= self.limit)
-@invariant<Stack<any>>(self => self.isEmpty() == (self.size == 0))
-@invariant<Stack<any>>(self => self.isFull() == (self.size == self.limit))
-class Stack<T> {
+class Stack<T> extends Contracted(stackContract) implements StackType<T> {
     #implementation: T[] = [];
 
-    constructor(readonly limit: number) {}
+    constructor(readonly limit: number) { super(); }
 
     clear(): void {
         this.#implementation = [];
@@ -162,79 +125,97 @@ class Stack<T> {
 }
 ```
 
-With the above invariants any attempt to construct an invalid stack will fail:
+## Checked Mode
 
-```typescript
-let myStack = new Stack(-1)
+Each contract has two modes of usage:
+`checked` and `unchecked`. This is represented as a boolean property.
+
+```ts
+const stackContract = new Contract<StackType<any>>({
+    [checkedMode]: true,
+    ...
+})
 ```
 
-Additionally, attempting to pop an item from an empty stack would be
-nonsensical according to the invariants therefore the following will
-throw an `AssertionError` and prevent `pop()` from being executed:
+During development and testing you will want to use checked mode. This will
+enable all assertion checks. In production mode all assertion checks become
+no-ops for run-time efficiency. As the number of contract definitions can
+be numerous, using the appropriate mode becomes increasingly important.
+
+You are not prevented from mixing modes in the event you desire to maintain
+a number of checks in a production environment.
+
+This property is optional and defaults to `true`
+
+## Assertions
+
+Assertions are a fundamental tool for enforcing correctness in an implementation.
+They are used inline to express a condition that must evaluate to true at a
+particular point of execution.
 
 ```typescript
-let myStack = new Stack(3)
-let item = myStack.pop();
+import {assert} from '@final-hill/decorator-contracts';
+
+function avg(xs: number[]): number {
+    assert(xs.length > 0, 'The list can not be empty')
+
+    return xs.reduce((sum, next) => sum + next) / xs.length
+}
 ```
 
-Whether you have invariants for a class or not it is necessary to use the
-decorator anyway on one of the base classes.
+In TypeScript `assert` will also assert the type of the condition:
 
 ```typescript
-@invariant
-class BaseClass {}
+let str: any = 'foo';
 
-class Subclass extends BaseClass {}
+str.toUpperCase(); // str is any
+
+assert(typeof str == 'string');
+
+str.toUpperCase(); // str is now a string
 ```
-
-This is because the decorators work in relationship to others
-in the class hierarchy and the `@invariant` manages this interclass
-relationship.
-
-Whether you have invariants for a class or not it is necessary to declare one
-anyway on one of the base classes.
 
 ## Overrides
 
 Class features implemented in a superclass can be overridden in a subclass. The
 subclass implementation can augment or entirely replace the one belonging
-to the superclass. This can be done for a variety of reasons, such as
+to the superclass. This can be done for a variety of reasons such as
 providing a more efficient implementation in the context of the subclass.
-Regardless of the reason, the overridden member should be semantically
+Regardless of the reason the overridden member should be semantically
 consistent with the superclass member. In other
-words, it should follow [Liskov's Substitution Principle](https://en.wikipedia.org/wiki/Liskov_substitution_principle).
+words it should follow [Liskov's Substitution Principle](https://en.wikipedia.org/wiki/Liskov_substitution_principle).
 To aid in the enforcement and documentation of this principle the library
 provides an `@override` decorator for class methods and accessors.
 
 A simple example is calculating the area of Convex Polygons. While a general
-formula exists to accomplish this, more efficient and direct formulas exist
+formula exists to accomplish this more efficient and direct formulas exist
 for specific polygons such as a Right Triangle:
 
 ```typescript
 type Side = number
 type Vertex = [number, number]
 
-let _triArea = (v1: Vertex, v2: Vertex, v3: Vertex): number => {
-    let a = Math.hypot((v1[0] - v2[0]), (v1[1] - v2[1])),
-        b = Math.hypot((v2[0] - v3[0]), (v2[1] - v3[1])),
-        c = Math.hypot((v3[0] - v1[0]), (v3[1] - v1[1])),
-        s = 0.5 * (a + b + c)
-
-    return Math.sqrt(s*(s-a)*(s-b)*(s-c))
-}
-
-@invariant
-class ConvexShape {
+class ConvexShape extends Contracted() {
     readonly vertices: Vertex[]
 
     constructor(...vertices: Vertex[]) {
         this.vertices = vertices
     }
 
+    protected _triArea(v1: Vertex, v2: Vertex, v3: Vertex): number {
+        const {hypot,sqrt} = Math,
+            a = hypot((v1[0] - v2[0]), (v1[1] - v2[1])),
+            b = hypot((v2[0] - v3[0]), (v2[1] - v3[1])),
+            c = hypot((v3[0] - v1[0]), (v3[1] - v1[1])),
+            s = 0.5 * (a + b + c)
+
+        return sqrt(s*(s-a)*(s-b)*(s-c))
+    }
+
     area(): number {
         let [v1, v2, v3, ...vs] = this.vertices
         return this.vertices.length >= 3 ?
-            _triArea(v1, v2, v3) + new ConvexShape(v1, v3, ...vs).area() :
+            this._triArea(v1, v2, v3) + new ConvexShape(v1, v3, ...vs).area() :
             0
     }
 }
@@ -261,44 +242,99 @@ that the method is replacing another implementation.
 This decorator does not only document and verify that the method is
 overridden; it will also verify that the parameter count matches.
 
-An `@invariant` decorator must also be defined either on the current class
-or on an ancestor. When defined, candidate overrides are identified and an
-error is raised if an associated `@override` is missing on that feature.
+The current class or one of its ancestors must extend `Contracted(...)`.
+When extended, candidate overrides are identified and an
+error is raised if an associated `@override` is missing for that feature.
 
-Static methods, including the constructor, can not be assigned an `@override`
+Static methods including the constructor can not be assigned an `@override`
 decorator. In the future this may be enabled for non-constructor static methods
 but the implications are not clear at present.
 
+## Invariants
+
+The `invariant` declaration describes and enforces the semantics of a class
+via a provided assertion. This assertion is checked after the associated class
+is constructed, before and after every method execution, and before and after
+every accessor usage (get/set). If any of these evaluate to false during class
+usage, an `AssertionError` will be thrown. Truthy assertions do not throw an
+error. An example of this is given below using a Stack:
+
+```typescript
+// ...
+
+const stackContract = new Contract<StackType<any>>({
+    [invariant]: [
+        self => self.isEmpty() == (self.size == 0),
+        self => self.isFull() == (self.size == self.limit),
+        self => self.size >= 0 && self.size <= self.limit
+    ]
+})
+
+class Stack<T> extends Contracted(stackContract) implements StackType<T> {
+    constructor(readonly limit: number) {}
+
+    // ...
+}
+```
+
+With the above invariants any attempt to construct an invalid stack will fail:
+
+```typescript
+let myStack = new Stack(-1)
+```
+
+Additionally, attempting to pop an item from an empty stack would be
+nonsensical according to the invariants therefore the following will
+throw an `AssertionError` and prevent `pop()` from being executed:
+
+```typescript
+let myStack = new Stack(3)
+let item = myStack.pop();
+```
+
+Whether you have invariants for a class or not it is necessary to use the
+decorator anyway on one of the base classes.
+
 ## Demands
 
-The `@demands` decorator describes and enforces an assertion that must be true
+The `demands` declaration describes and enforces an assertion that must be true
 before its associated feature can execute. In other words before a client
 of your class can execute a method or accessor the defined precondition
 must first be met or an error will be raised [to the client](#the-order-of-assertions).
 
 ```typescript
-@invariant
-class Stack<T> {
-    ...
-    @demands<Stack<T>>(self => !self.isEmpty())
+// ...
+
+const stackContract = new Contract<StackType<any>>({
+    // ...
+    pop: {
+        demands: self => !self.isEmpty()
+    },
+    push: {
+        demands: self => !self.isFull()
+    }
+})
+
+class Stack<T> extends Contracted(stackContract) implements StackType<T> {
+    // ...
     pop(): T {
         return this.#implementation.pop();
+    }
+    push(item: T): void {
+        this.#implementation.push(item);
     }
 }
 ```
 
 In the above example the precondition of executing `pop`
 on a stack is that it is not empty. If this assertion fails
-an AssertionError is raised.
+an `AssertionError` is raised.
 
-An `@invariant` decorator must also be defined either on the current class
-or on an ancestor as shown in the example.
-
-Static features, including the constructor, can not be assigned a `@demands`
-decorator. In the future this may be enabled for non-constructor static methods
+Static features, including the constructor, can not be assigned a `demands`
+assertion. In the future this may be enabled for non-constructor static methods
 but the implications are not clear at present.
 
-If a class feature is overridden then the `@demands` assertion still applies:
+If a class feature is overridden then the `demands` assertion still applies:
 
 ```typescript
 class MyStack<T> extends Stack<T> {
@@ -312,7 +348,8 @@ let myStack = new MyStack()
 myStack.pop() // throws
 ```
 
-If a class feature with an associated `@demands` is overridden, then the new
+<!--
+If a class feature with an associated `demands` assertion is overridden then the new
 feature can have a `@demands` declaration of its own. This precondition can
 not strengthen the precondition of the original feature. The new precondition
 will be or-ed with it's ancestors. If any are true, then the obligation is
@@ -364,6 +401,7 @@ In the above example the precondition of `Base.prototype.method` is:
 The precondition of `Sub.prototype.method` is:
 
 `(-10 <= x && x <= 20) && Number.isInteger(x) || (0 <= x && x <= 10) && (x % 2 == 0)`
+-->
 
 ## Ensures
 

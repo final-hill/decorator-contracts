@@ -1,6 +1,4 @@
-decorator-contracts TODO
-
-TODO: Test the interception subclass method calls 
+Test the interception subclass method calls 
 
 ===================
 multiple rescues on a feature?
@@ -9,6 +7,15 @@ defined per error type? all errors?
 =============================
 cleanup TODOs
 =======
+Prevent delete
+
+intercept property assignments
+=======
+
+test method.apply and method.call
+	current methods w/ contracts applied to other class
+	other class method applied to contracted class
+============
 
 @override
 
@@ -39,47 +46,6 @@ Change Request
 change the use of 'member' in documentation to class 'feature'
 ======================
 
-Requirements as an object.
-Therefore a class *has* requirements.
-
-abstract class Requirements<T> {
-	abstract classType: Constructor<any>
-	constructor(readonly clazz: this['classType']){}
-}
-
-interface IStack {
-	valueType: any
-
-	push(value: this['valueType']): void
-	pop(): this['valueType']
-	peek(): this['valueType']
-}
-
-class StackRequirements extends Requirements {
-	classType: Stack<any>
-
-	invariant(){}
-	rescue(){}
-
-	pushDemands(value: this['classType']['valueType']){
-		return !this.clazz.isFull()
-	}
-	pushEnsures(){ return !this.clazz.isEmpty()	}
-	pushRescue(value: this['classType']['valueType']){
-		if(!this.clazz.isFull())
-			this.clazz.push(value)
-	}
-}
-
-@requirements(StackRequirements)
-class Stack implements IStack {	}
-
-This seems at first to align well with the interface concept.
-perhaps map symbols 1:1
-
-what about @override ?
-
-=======
 	// FIXME: if debugMode on invariant and prod mode on
 	// other decorators? Need to update unit tests
 ==========
@@ -94,10 +60,6 @@ can COntractHandler be refactored into template pattern at least in part?
 
 if the class member is checkMode and the invariant is prodMode?
 
-=============
-ContractHandler line 71
-use Reflect
-
 ==========
 @invariant on Base class
 
@@ -111,10 +73,6 @@ review typings folder usage
 
 ===================
 
-import wellFormedStack from './requirements'
-import assertTrue from '...'
-
-===============
 member vs class feature
 
 ==================

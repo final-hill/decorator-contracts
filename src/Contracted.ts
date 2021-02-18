@@ -5,24 +5,28 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import Contract from './Contract';
+import ContractHandler from './ContractHandler';
+import {Contract} from './Contract';
 import CLASS_REGISTRY from './lib/CLASS_REGISTRY';
 
-const contractHandler = {},
-    isContracted = Symbol('isContracted');
+const isContracted = Symbol('isContracted');
 
 /**
  * Associates a contract with a class via the mixin pattern.
  *
- * @param {Contract} _contract The Contract definition
+ * @param {Contract} contract The Contract definition
  * @param {T} Base An optional base class
  * @returns {T} The base class for extension
  * @example
  *
  * class Stack<T> extends Contracted(stackContract) {}
  */
-function Contracted<T extends Contract<any>,U extends Constructor<any>>(_contract?: T, Base?: U): U & {[isContracted]: boolean} {
-    class Contracted extends (Base ?? Object) {
+function Contracted<
+    T extends Contract<any> = Contract<any>, U extends Constructor<any> = Constructor<any>
+>(
+    contract: T = new Contract() as T, Base: U = Object as any
+): U & {[isContracted]: boolean} {
+    class Contracted extends Base {
         static [isContracted] = true;
 
         constructor(...args: any[]) {
@@ -35,14 +39,12 @@ function Contracted<T extends Contract<any>,U extends Constructor<any>>(_contrac
                 [classRegistration, ...ancRegistrations].forEach(ancRegistration => {
                     if(!ancRegistration.isValidated) {
                         ancRegistration.checkOverrides();
-                        //MemberDecorator.restoreFeatures(Cons);
                         ancRegistration.isValidated = true;
                     }
                 });
             }
 
-
-            return new Proxy(this, contractHandler);
+            return new Proxy(this, new ContractHandler(contract));
         }
     }
 

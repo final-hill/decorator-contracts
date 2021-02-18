@@ -5,12 +5,10 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import Assertion from './Assertion';
+import {assert} from './';
 import { MSG_NO_STATIC, MSG_NO_MATCHING_FEATURE, MSG_DUPLICATE_OVERRIDE, MSG_INVALID_ARG_LENGTH, MSG_NOT_CONTRACTED } from './Messages';
 import CLASS_REGISTRY from './lib/CLASS_REGISTRY';
 import { isContracted } from './Contracted';
-
-const assert: Assertion['assert'] = new Assertion(true).assert;
 
 /**
  * The 'override' decorator asserts that the current class feature is a specialization or

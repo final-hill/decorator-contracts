@@ -5,7 +5,7 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import {Contract, invariant} from './Contract';
+import {checkedMode, Contract} from './Contract';
 
 interface StackType<T> {
     readonly limit: number;
@@ -20,42 +20,6 @@ interface StackType<T> {
 
 // https://github.com/final-hill/decorator-contracts/issues/171
 describe('A contract must be independently definable', () => {
-
-    test('Specify any number of class invariants', () => {
-        let stackContract = new Contract<StackType<any>>();
-
-        expect(stackContract).toBeDefined();
-
-        stackContract = new Contract<StackType<any>>({
-            [invariant]: []
-        });
-
-        expect(stackContract.assertions[invariant]).toBeInstanceOf(Array);
-        expect(stackContract.assertions[invariant]!.length).toBe(0);
-
-        stackContract = new Contract<StackType<any>>({
-            [invariant]: [
-                self => self.isEmpty() == (self.size == 0),
-                self => self.isFull() == (self.size == self.limit),
-                self => self.size >= 0 && self.size <= self.limit
-            ]
-        });
-
-        expect(stackContract.assertions[invariant]).toBeInstanceOf(Array);
-        expect(stackContract.assertions[invariant]!.length).toBe(3);
-        expect((stackContract.assertions[invariant]! as any[])[0]).toBeInstanceOf(Function);
-        expect((stackContract.assertions[invariant]! as any[])[1]).toBeInstanceOf(Function);
-        expect((stackContract.assertions[invariant]! as any[])[2]).toBeInstanceOf(Function);
-
-        stackContract = new Contract<StackType<any>>({
-            [invariant]: self =>
-                self.isEmpty() == (self.size == 0) &&
-                self.isFull() == (self.size == self.limit) &&
-                self.size >= 0 && self.size <= self.limit
-        });
-
-        expect(typeof stackContract.assertions[invariant]!).toBe('function');
-    });
 
     test('Well typed contract', () => {
         const stackContract = new Contract<StackType<any>>({
@@ -184,5 +148,14 @@ describe('A contract must be independently definable', () => {
             }
         });
         expect(stackContract.assertions.push?.rescue).toBeInstanceOf(Function);
+    });
+
+    // https://github.com/final-hill/decorator-contracts/issues/179
+    test('Specify a \'checkedMode\' declaration', () => {
+        const stackContract = new Contract<StackType<any>>({
+            [checkedMode]: true
+        });
+
+        expect(stackContract.assertions[checkedMode]).toBeTruthy();
     });
 });

@@ -5,11 +5,9 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import Assertion from '../Assertion';
+import {assert} from '../';
 import CLASS_REGISTRY from './CLASS_REGISTRY';
 import Feature from './Feature';
-
-const assert: Assertion['assert'] = new Assertion(true).assert;
 
 class ClassRegistration {
     #features: Feature[];

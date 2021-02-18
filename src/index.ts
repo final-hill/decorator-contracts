@@ -5,8 +5,9 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import Contract from './Contract';
+import {Contract, Demands, invariant, Invariant, checkedMode, Rescue} from './Contract';
 import Contracted from './Contracted';
 import override from './override';
+import assert from './assert';
 
-export {Contract, Contracted, override};
+export {Contract, Contracted, Demands, Invariant, Rescue, invariant, checkedMode, override, assert};

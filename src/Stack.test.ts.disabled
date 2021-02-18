@@ -5,8 +5,7 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import Contracted from 'Contracted';
-import {Contract, invariant} from './Contract';
+import {Contract, Contracted, invariant, assert} from '.';
 
 interface StackType<T> {
     readonly limit: number;
@@ -51,6 +50,8 @@ class Stack<T> extends Contracted(stackContract) implements StackType<T> {
     }
 
     isFull(): boolean {
+        assert(this instanceof Stack);
+
         return this.#implementation.length == this.limit;
     }
 
