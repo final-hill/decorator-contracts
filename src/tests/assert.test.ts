@@ -5,8 +5,8 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import AssertionError from './AssertionError';
-import assert from './assert';
+import AssertionError from '../AssertionError';
+import assert from '../assert';
 
 /**
  * https://github.com/final-hill/decorator-contracts/issues/21

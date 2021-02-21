@@ -5,7 +5,7 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import {Contract, invariant} from './Contract';
+import {Contract, invariant} from '../Contract';
 
 interface StackType<T> {
     readonly limit: number;

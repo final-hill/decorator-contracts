@@ -5,7 +5,7 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import deepFreeze from './deepFreeze';
+import deepFreeze from '../lib/deepFreeze';
 
 describe('deepFreeze testing', () => {
     test('Shallow test', () => {
