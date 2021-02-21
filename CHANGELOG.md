@@ -4,9 +4,12 @@
 
 * Updated license headers to reference Final Hill LLC
 * BREAKING CHANGE: contracts now managed separate from the class
+* Rewrote README to reflect the new architecture
 * Updated dependencies
 * Merged jest.config.js into package.json
 * Updated linting rules
+* Moved unit tests to separate folder
+* Public property definitions are now illegal
 
 ## v0.19.0
 
