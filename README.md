@@ -17,6 +17,7 @@
 - [Ensures](#ensures)
 - [Rescue](#rescue)
 - [The order of assertions](#the-order-of-assertions)
+- [Public Properties are Forbidden](#public-properties-are-forbidden)
 - [Further Reading](#further-reading)
 
 ## Introduction
@@ -92,8 +93,12 @@ const stackContract = new Contract<StackType<any>>({
 
 class Stack<T> extends Contracted(stackContract) implements StackType<T> {
     #implementation: T[] = [];
+    #limit: number
 
-    constructor(readonly limit: number) { super(); }
+    constructor(limit: number) {
+        super();
+        this.#limit = limit
+    }
 
     clear(): void {
         this.#implementation = [];
@@ -105,6 +110,10 @@ class Stack<T> extends Contracted(stackContract) implements StackType<T> {
 
     isFull(): boolean {
         return this.#implementation.length == this.limit;
+    }
+
+    get limit(): number {
+        return this.#limit
     }
 
     pop(): T {
@@ -196,10 +205,10 @@ type Side = number
 type Vertex = [number, number]
 
 class ConvexShape extends Contracted() {
-    readonly vertices: Vertex[]
+    #vertices: Vertex[]
 
     constructor(...vertices: Vertex[]) {
-        this.vertices = vertices
+        this.#vertices = vertices
     }
 
     protected _triArea(v1: Vertex, v2: Vertex, v3: Vertex): number {
@@ -213,25 +222,33 @@ class ConvexShape extends Contracted() {
     }
 
     area(): number {
-        let [v1, v2, v3, ...vs] = this.vertices
-        return this.vertices.length >= 3 ?
+        let [v1, v2, v3, ...vs] = this.#vertices
+        return this.#vertices.length >= 3 ?
             this._triArea(v1, v2, v3) + new ConvexShape(v1, v3, ...vs).area() :
             0
     }
+
+    get vertices(): Vertex[] { return this.#vertices.slice() }
 }
 
 class RightTriangle extends ConvexShape {
-    constructor(
-        readonly base: Side,
-        readonly height: Side
-    ) {
+    #base: Side
+    #height: Side
+    
+    constructor(base: Side, height: Side) {
         super([0,0], [base,0], [base,height])
+        this.#base = base
+        this.#height = height
     }
 
     @override
     area(): number {
-        return this.base * this.height / 2
+        return this.#base * this.#height / 2
     }
+
+    get base(): Side { return this.#base }
+
+    get height(): Side { return this.#height }
 }
 ```
 
@@ -253,10 +270,10 @@ but the implications are not clear at present.
 ## Invariants
 
 The `invariant` declaration describes and enforces the semantics of a class
-via a provided assertion. This assertion is checked after the associated class
+via one or more assertions. These assertions are checked after the associated class
 is constructed, before and after every method execution, and before and after
 every accessor usage (get/set). If any of these evaluate to false during class
-usage, an `AssertionError` will be thrown. Truthy assertions do not throw an
+usage an `AssertionError` will be thrown. Truthy assertions do not throw an
 error. An example of this is given below using a Stack:
 
 ```typescript
@@ -271,8 +288,6 @@ const stackContract = new Contract<StackType<any>>({
 })
 
 class Stack<T> extends Contracted(stackContract) implements StackType<T> {
-    constructor(readonly limit: number) {}
-
     // ...
 }
 ```
@@ -697,6 +712,32 @@ obj.feature(...) -> @invariant -> @demands -> { feature body } --+
                                                      | (throws)  |
                                                      |           |
        (return) <-- @invariant <---------------- @ensures <------+
+```
+
+## Public Properties are Forbidden
+
+To guarantee invariants remain valid, public property definitions are forbidden.
+All interactions with a contracted class must be done through a method or accessor.
+This prevents modification of object state outside of the contract system. Private
+properties with accessors should be used instead. Example:
+
+```ts
+class Point2D extends Contracted() {
+    #x: number
+    #y: number
+
+    constructor(x: number, y: number) {
+        super()
+        this.#x = x
+        this.#y = y
+    }
+
+    get x(): number { return this.#x }
+    set x(value: number) { this.#x = value }
+
+    get y(): number { return this.#y }
+    set y(value: number) { this.#y = value }
+}
 ```
 
 ## Further Reading
