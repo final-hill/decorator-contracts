@@ -27,6 +27,13 @@ class Feature {
     }
 
     /**
+     * Returns a reference to the getter if it exists
+     */
+    get getter() {
+        return this.#descriptor.get;
+    }
+
+    /**
      * Determines if the feature is an accessor with a getter defined
      */
     get hasGetter(): boolean {
@@ -70,6 +77,13 @@ class Feature {
         return this.isMethod ? 'method' :
             this.isProperty ? 'property' :
                 'accessor';
+    }
+
+    /**
+     * Returns a reference to the setter if it exists
+     */
+    get setter() {
+        return this.#descriptor.set;
     }
 
     /**

@@ -39,13 +39,14 @@ export type ContractOptions<T extends AnyObject> = InvariantContract<T> & Checke
     [K in keyof T]?: FeatureContract<T, T[K]>
 };
 
-// TODO:  extending a Contract?
+// TODO: extending a Contract?
 
 export class Contract<T extends AnyObject> {
+    [checkedMode]: boolean;
     readonly assertions: ContractOptions<T> = Object.create(null);
 
     constructor(assertions: ContractOptions<T> = {}) {
-        assertions[checkedMode] = assertions[checkedMode] ?? true;
+        this[checkedMode] = assertions[checkedMode] ?? true;
         Object.assign(this.assertions,assertions);
         deepFreeze(this.assertions);
     }

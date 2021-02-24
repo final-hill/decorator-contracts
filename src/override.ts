@@ -6,7 +6,7 @@
  */
 
 import {assert} from './';
-import { MSG_NO_STATIC, MSG_NO_MATCHING_FEATURE, MSG_DUPLICATE_OVERRIDE, MSG_INVALID_ARG_LENGTH, MSG_NOT_CONTRACTED } from './Messages';
+import { MSG_NO_STATIC, MSG_NO_MATCHING_FEATURE, MSG_DUPLICATE_OVERRIDE, MSG_INVALID_ARG_LENGTH, MSG_NOT_CONTRACTED, MSG_MISSING_FEATURE } from './Messages';
 import CLASS_REGISTRY from './lib/CLASS_REGISTRY';
 import { isContracted } from './Contracted';
 
@@ -27,8 +27,11 @@ function override(target: Record<PropertyKey, any>, propertyKey: PropertyKey, de
     assert(Class[isContracted], MSG_NOT_CONTRACTED);
 
     const registration = CLASS_REGISTRY.getOrCreate(Class),
-          feature = registration.features.find(feature => feature.name === propertyKey)!,
-          ancFeature = feature.ancestorFeature;
+          feature = registration.findFeature(propertyKey);
+
+    assert(feature != null, MSG_MISSING_FEATURE);
+
+    const ancFeature = feature.ancestorFeature;
 
     assert(ancFeature != null && feature.memberType === ancFeature.memberType, MSG_NO_MATCHING_FEATURE);
     assert(!feature.hasOverrides, MSG_DUPLICATE_OVERRIDE);

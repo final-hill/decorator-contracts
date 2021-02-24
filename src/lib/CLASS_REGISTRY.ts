@@ -7,10 +7,27 @@
 
 import ClassRegistration from './ClassRegistration';
 
+/**
+ * If the provided constructor is a ClazzProxy return the inner class
+ * else just return the provided object
+ *
+ * @param {Constructor<any>} Cons - The constructor to evaluate
+ * @returns {Constructor<any>} The decorated class
+ */
+function innerClass(Cons: Constructor<any> | DecoratedConstructor): Constructor<any> {
+    if(Object.getOwnPropertySymbols(Cons).includes(IS_PROXY)) {
+        // TODO: remove cast
+        return (Cons as DecoratedConstructor)[INNER_CLASS]!;
+    } else {
+        return Cons;
+    }
+}
+
 class ClassRegistry extends WeakMap<Constructor<any>, ClassRegistration> {
     get(Class: Constructor<any>): ClassRegistration | undefined {
-        //return super.get(innerClass(Class));
-        return super.get(Class);
+        const cls = innerClass(Class);
+
+        return super.get(cls);
     }
 
     /**
@@ -24,25 +41,27 @@ class ClassRegistry extends WeakMap<Constructor<any>, ClassRegistration> {
         if(this.has(Class)) {
             return this.get(Class)!;
         } else {
-            this.set(Class, new ClassRegistration(Class));
+            this.set(Class, new ClassRegistration(innerClass(Class)));
 
             return this.get(Class)!;
         }
     }
 
     delete(Class: Constructor<any>): boolean {
-        //return super.delete(innerClass(Class));
-        return super.delete(Class);
+        const cls = innerClass(Class);
+
+        return super.delete(cls);
     }
 
     has(Class: Constructor<any>): boolean {
-        //return super.has(innerClass(Class));
-        return super.has(Class);
+        const cls = innerClass(Class);
+
+        return super.has(cls);
     }
 
     set(Class: Constructor<any>, classRegistration: ClassRegistration): this {
-        //super.set(innerClass(Class), classRegistration);
-        super.set(Class, classRegistration);
+        const cls = innerClass(Class);
+        super.set(cls, classRegistration);
 
         return this;
     }

@@ -15,6 +15,8 @@ class ClassRegistration {
     /**
      * Has the current registration been validated?
      * 1. override declarations valid?
+     *
+     * TODO: This smells since only overrides are checked
      */
     isValidated = false;
 
@@ -77,6 +79,18 @@ class ClassRegistration {
             assert(!feature.hasOverrides || ancestryFeatureNames.has(feature.name),`Unnecessary @override declaration on ${str}`);
             assert(feature.hasOverrides || !ancestryFeatureNames.has(feature.name), `@override decorator missing on ${str}`);
         });
+    }
+
+    /**
+     * Searches the current class and its ancestors for the nearest feature
+     * matching the provided propertyKey.
+     *
+     * @param {PropertyKey} propertyKey - The key being searched
+     * @returns {Feature | undefined} - The feature if it exists else otherwise
+     */
+    findFeature(propertyKey: PropertyKey): Feature | undefined {
+        return this.features.find(feature => feature.name === propertyKey) ??
+            this.parentRegistration?.findFeature(propertyKey);
     }
 
     /**

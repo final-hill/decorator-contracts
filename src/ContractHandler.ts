@@ -5,9 +5,10 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import { Ensures } from 'Contract';
-import DescriptorWrapper from './lib/DescriptorWrapper';
-import {assert, checkedMode, Contract, Invariant, Demands, Rescue, invariant} from './';
+import {assert, checkedMode, Contract, Invariant, Demands, Ensures, Rescue, invariant} from './';
+import CLASS_REGISTRY from './lib/CLASS_REGISTRY';
+import Feature from './lib/Feature';
+import { MSG_MISSING_FEATURE } from './Messages';
 
 /**
  * The ContractHandler manages the evaluation of contract assertions for a class
@@ -63,59 +64,24 @@ class ContractHandler implements ProxyHandler<any> {
         ivs.forEach(i => assert(i.call(self,self),`Invariant violated. ${i.toString()}`));
     }
 
-    checkedGet(
-        target: Record<PropertyKey, unknown>,
-        propertyKey: PropertyKey,
-        desc: DescriptorWrapper,
-        old: any,
-        fnRescue: Rescue<any,any>
-    ) {
-        const doGet = (feature: (...args: any[]) => any, args: any[]) => {
-            this.assertInvariants(target);
-            this.assertDemands(target, propertyKey, args);
-            let result;
-            try {
-                result = feature.apply(target,args);
-                this.assertEnsures(target, propertyKey, old);
-            } catch(error) {
-                if(fnRescue == null) {
-                    throw error;
-                }
-                let hasRetried = false;
-                fnRescue.call(this, this, error, [], () => {
-                    hasRetried = true;
-                    result = this.checkedGet.call(this, target, propertyKey, desc, old, fnRescue);
-                });
-                if(!hasRetried) {
-                    throw error;
-                }
-            }
-            this.assertInvariants(target);
-
-            return result;
-        };
-
-        if(desc.isAccessor) {
-            return doGet(desc.descriptor!.get!, []);
-        } else if(desc.isMethod) {
-            return (...args: any[]): any => doGet(desc.value, args);
-        } else if(desc.isProperty) {
-            return doGet(() => Reflect.get(target, propertyKey), []);
-        } else {
-            throw new Error(`Unexpected condition. Unknown feature type. Property: '${String(propertyKey)}'`);
-        }
-    }
-
     /**
      * The handler trap for getting property values
      *
      * @param {Record<PropertyKey, unknown>} target - The target object
      * @param {PropertyKey} propertyKey - The name or Symbol  of the property to get
-     * @param {Record<PropertyKey, unknown>} _receiver - The proxy or the object inheriting from it
+     * @param {Record<PropertyKey, unknown>} receiver - The proxy or the object inheriting from it
      * @returns {any} - The result of executing 'get' on the target
      */
-    get(target: Record<PropertyKey, unknown>, propertyKey: PropertyKey, _receiver: Record<PropertyKey, unknown>) {
-        const desc = new DescriptorWrapper(Reflect.getOwnPropertyDescriptor(Object.getPrototypeOf(target),propertyKey)),
+    get(target: Record<PropertyKey, unknown>, propertyKey: PropertyKey, receiver: Record<PropertyKey, unknown>) {
+        if(!this.contract[checkedMode]) {
+            return Reflect.get(target,propertyKey,receiver);
+        }
+        const Class = (target as any).constructor,
+            registration = CLASS_REGISTRY.getOrCreate(Class),
+            feature = registration.findFeature(propertyKey),
+            // TODO: feature needs its associated context due to private fields
+            // FIXME: not getting the value of getters currently
+            // How to prevent recursion?
             old = Object.entries(target).reduce((acc,[key,value]) => {
                 if(typeof value != 'function') {
                     Object.defineProperty(acc,key,{value});
@@ -125,23 +91,14 @@ class ContractHandler implements ProxyHandler<any> {
             }, Object.create(null)),
             fnRescue: Rescue<any,any> = Reflect.get(this.contract.assertions,propertyKey)?.rescue;
 
-        return this.checkedGet(target, propertyKey, desc, old, fnRescue);
-    }
+        assert(feature != null, MSG_MISSING_FEATURE);
 
-    checkedSet(
-        target: Record<PropertyKey, unknown>,
-        propertyKey: PropertyKey,
-        value: any,
-        desc: DescriptorWrapper,
-        old: any,
-        fnRescue: Rescue<any,any>
-    ) {
-        const doSet = (feature: (...args: any[]) => any, args: any[]) => {
+        const doGet = (fn: (...args: any[]) => any, args: any[]) => {
             this.assertInvariants(target);
             this.assertDemands(target, propertyKey, args);
             let result;
             try {
-                result = feature.apply(target,args);
+                result = fn.apply(target,args);
                 this.assertEnsures(target, propertyKey, old);
             } catch(error) {
                 if(fnRescue == null) {
@@ -150,7 +107,7 @@ class ContractHandler implements ProxyHandler<any> {
                 let hasRetried = false;
                 fnRescue.call(this, this, error, [], () => {
                     hasRetried = true;
-                    result = this.checkedSet.call(this, target, propertyKey, value, desc, old, fnRescue);
+                    result = doGet(fn, args);
                 });
                 if(!hasRetried) {
                     throw error;
@@ -161,11 +118,57 @@ class ContractHandler implements ProxyHandler<any> {
             return result;
         };
 
-        if(desc.isAccessor) {
-            return doSet(desc.descriptor!.set!, [value]);
-        } else if(desc.isMethod) {
-            return (...args: any[]): any => doSet(desc.value, args);
-        } else if(desc.isProperty) {
+        if(feature.hasGetter) {
+            return doGet(feature.getter!, []);
+        } else if(feature.isMethod) {
+            // FIXME: target is Bar, receiver is Proxy, but method must be bound to Foo
+            // thus proxy must expose the inner class?
+            return (...args: any[]): any => doGet(feature.value, args);
+        } else if(feature.isProperty) {
+            return doGet(() => Reflect.get(target, propertyKey, receiver), []);
+        } else {
+            throw new Error(`Unexpected condition. Unknown feature type. Property: '${String(propertyKey)}'`);
+        }
+    }
+
+    checkedSet(
+        target: Record<PropertyKey, unknown>,
+        propertyKey: PropertyKey,
+        value: any,
+        feature: Feature,
+        old: any,
+        fnRescue: Rescue<any,any>
+    ) {
+        const doSet = (fn: (...args: any[]) => any, args: any[]) => {
+            this.assertInvariants(target);
+            this.assertDemands(target, propertyKey, args);
+            let result;
+            try {
+                result = fn.apply(target,args);
+                this.assertEnsures(target, propertyKey, old);
+            } catch(error) {
+                if(fnRescue == null) {
+                    throw error;
+                }
+                let hasRetried = false;
+                fnRescue.call(this, this, error, [], () => {
+                    hasRetried = true;
+                    result = this.checkedSet.call(this, target, propertyKey, value, feature, old, fnRescue);
+                });
+                if(!hasRetried) {
+                    throw error;
+                }
+            }
+            this.assertInvariants(target);
+
+            return result;
+        };
+
+        if(feature.hasSetter) {
+            return doSet(feature.setter!, [value]);
+        } else if(feature.isMethod) {
+            return (...args: any[]): any => doSet(feature.value, args);
+        } else if(feature.isProperty) {
             return doSet(() => Reflect.set(target, propertyKey, value), []);
         } else {
             throw new Error(`Unexpected condition. Unknown feature type. Property: '${String(propertyKey)}'`);
@@ -178,10 +181,16 @@ class ContractHandler implements ProxyHandler<any> {
      * @param {Record<PropertyKey, unknown>} target - The target object
      * @param {PropertyKey} propertyKey - The name or Symbol of the property to set
      * @param {any} value - The new value of the property to set.
+     * @param {Record<PropertyKey, unknown>} receiver - The proxy or the object inheriting from it
      * @returns {boolean} - The result of executing 'set' on the target
      */
-    set(target: Record<PropertyKey, unknown>, propertyKey: PropertyKey, value: any): boolean {
-        const desc = new DescriptorWrapper(Object.getOwnPropertyDescriptor(Object.getPrototypeOf(target),propertyKey)),
+    set(target: Record<PropertyKey, unknown>, propertyKey: PropertyKey, value: any, receiver: Record<PropertyKey, unknown>): boolean {
+        if(!this.contract[checkedMode]) {
+            return Reflect.set(target, propertyKey, value, receiver);
+        }
+        const Class = (target as any).constructor,
+            registration = CLASS_REGISTRY.getOrCreate(Class),
+            feature = registration.findFeature(propertyKey),
             old = Object.entries(this).reduce((acc,[key,value]) => {
                 if(typeof value != 'function') {
                     Object.defineProperty(acc,key,{value});
@@ -191,10 +200,12 @@ class ContractHandler implements ProxyHandler<any> {
             }, Object.create(null)),
             fnRescue: Rescue<any,any> = Reflect.get(this.contract.assertions,propertyKey)?.rescue;
 
+        assert(feature != null, MSG_MISSING_FEATURE);
+
         // TODO: prevent replacing a function with a value on proto and vice-versa
         // can instance properties be set as functions?
 
-        return this.checkedSet(target, propertyKey, value, desc, old, fnRescue);
+        return this.checkedSet(target, propertyKey, value, feature, old, fnRescue);
     }
 }
 

@@ -13,3 +13,4 @@ export const MSG_DUPLICATE_OVERRIDE = 'Only a single @override decorator can be 
 export const MSG_DUPLICATE_RESCUE = 'Only a single @rescue can be assigned to a feature';
 export const MSG_NO_PROPERTY_RESCUE = 'A property can not be assigned a @rescue';
 export const MSG_NOT_CONTRACTED = 'The current class or one of its ancestors must extend Contracted(...)';
+export const MSG_MISSING_FEATURE = 'The requested feature is not registered';
