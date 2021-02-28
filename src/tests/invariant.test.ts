@@ -58,7 +58,7 @@ describe('The subclasses of a contracted class must obey the invariants', () => 
             const bar = new Bar();
 
             return bar.value == 0;
-        }).not.toThrow(AssertionError);
+        }).not.toThrow();
 
         expect(() => {
             const bar = new Bar();
@@ -97,7 +97,7 @@ describe('The subclasses of a contracted class must obey the invariants', () => 
             const baz = new Baz();
 
             return baz.value == 0;
-        }).not.toThrow(AssertionError);
+        }).not.toThrow();
 
         expect(() => {
             const baz = new Baz();
@@ -143,12 +143,12 @@ describe('The subclasses of a contracted class must obey the invariants', () => 
             const bar = new Bar();
 
             return bar.value == 0;
-        }).not.toThrow(AssertionError);
+        }).not.toThrow();
 
         expect(() => {
             const bar = new Bar();
             bar.value = -1;
-        }).not.toThrow(AssertionError);
+        }).not.toThrow();
     });
 });
 
@@ -163,8 +163,8 @@ describe('There can be multiple invariants assigned to a contract', () => {
             [invariant]: []
         });
 
-        expect(stackContract.assertions[invariant]).toBeInstanceOf(Array);
-        expect(stackContract.assertions[invariant]!.length).toBe(0);
+        expect(stackContract[invariant]).toBeInstanceOf(Array);
+        expect(stackContract[invariant]!.length).toBe(0);
 
         stackContract = new Contract<StackType<any>>({
             [invariant]: [
@@ -174,11 +174,11 @@ describe('There can be multiple invariants assigned to a contract', () => {
             ]
         });
 
-        expect(stackContract.assertions[invariant]).toBeInstanceOf(Array);
-        expect(stackContract.assertions[invariant]!.length).toBe(3);
-        expect((stackContract.assertions[invariant]! as any[])[0]).toBeInstanceOf(Function);
-        expect((stackContract.assertions[invariant]! as any[])[1]).toBeInstanceOf(Function);
-        expect((stackContract.assertions[invariant]! as any[])[2]).toBeInstanceOf(Function);
+        expect(stackContract[invariant]).toBeInstanceOf(Array);
+        expect(stackContract[invariant].length).toBe(3);
+        expect(stackContract[invariant][0]).toBeInstanceOf(Function);
+        expect(stackContract[invariant][1]).toBeInstanceOf(Function);
+        expect(stackContract[invariant][2]).toBeInstanceOf(Function);
 
         stackContract = new Contract<StackType<any>>({
             [invariant]: self =>
@@ -187,7 +187,9 @@ describe('There can be multiple invariants assigned to a contract', () => {
                 self.size >= 0 && self.size <= self.limit
         });
 
-        expect(typeof stackContract.assertions[invariant]!).toBe('function');
+        expect(stackContract[invariant]).toBeInstanceOf(Array);
+        expect(stackContract[invariant].length).toBe(1);
+        expect(stackContract[invariant][0]).toBeInstanceOf(Function);
     });
 });
 

@@ -5,7 +5,6 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import ContractHandler from './ContractHandler';
 import {Contract} from './Contract';
 import CLASS_REGISTRY from './lib/CLASS_REGISTRY';
 
@@ -19,7 +18,7 @@ const isContracted = Symbol('isContracted');
  * @returns {T} The base class for extension
  * @example
  *
- * class Stack<T> extends Contracted(stackContract) {}
+ * class Stack<T> extends Contracted(stackContract) { ... }
  */
 function Contracted<
     T extends Contract<any> = Contract<any>, U extends Constructor<any> = Constructor<any>
@@ -42,9 +41,13 @@ function Contracted<
                         ancRegistration.isValidated = true;
                     }
                 });
+                classRegistration.bindContract(contract);
             }
 
-            return Object.freeze(new Proxy(this, new ContractHandler(contract)));
+            // TODO: Should a proxy be used for preventing 3rd party methods
+            // being called/applied to this instance? They could
+            // modify internal state without an invariant check...
+            return Object.freeze(this); // Freezing to prevent public property definitions
         }
     }
 
