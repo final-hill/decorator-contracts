@@ -351,3 +351,50 @@ https://www2.cs.duke.edu/courses/fall07/cps108/papers/ocp.pdf
 
 https://stackoverflow.com/questions/8155850/how-to-test-whether-a-set-is-reflexive-symmetric-anti-symmetric-and-or-transit?rq=1
 https://math.stackexchange.com/questions/2164422/how-to-find-binary-representation-of-sets
+
+
+========
+Decorator Contracts TODO
+=======
+
+https://www.microsoft.com/en-us/research/project/code-contracts/?from=http%3A%2F%2Fresearch.microsoft.com%2Fen-us%2Fprojects%2Fcontracts%2Ffaq.aspx 
+https://docs.microsoft.com/en-us/archive/blogs/francesco/faq-1-what-is-the-difference-between-assert-and-assume 
+https://github.com/dotnet/csharplang/issues/105 
+
+=========
+
+https://www.eiffel.org/doc/eiffel/ET-_Design_by_Contract_%28tm%29%2C_Assertions_and_Exceptions
+
+==========
+https://web.archive.org/web/20151220045527/http://disnetdev.com/contracts.coffee
+https://web.archive.org/web/20151002175109/http://eschertech.com/papers/safe_oo_software.pdf
+==========
+No side-effects in requires, ensures, invariants?
+
+IOW, no field modification.
+
+How is it enforced? No method reference to avoid 'this' usage?
+@invariant prevents public properties on classes?
+
+	this is enforced by not allowing public fields
+
+- automatically assign validation checks to new feature branches
+- master branch: only accept merge from feature/*
+
+https://docs.microsoft.com/en-us/dotnet/framework/debug-trace-profile/code-contracts
+https://www.dotnetcurry.com/csharp/1172/code-contracts-csharp-static-runtime-checks
+https://en.wikipedia.org/wiki/Design_by_contract
+https://en.wikipedia.org/wiki/Invariant_(mathematics)#cite_ref-4
+are invariants == axioms?
+
+Research paper:
+	Object-Oriented First-Order Logic by Eyal Amir
+	Association with Requirements
+
+=========
+
+Code Contracts
+
+https://sorbet.org/
+https://dry-rb.org/gems/dry-schema/1.5/
+https://www.microsoft.com/en-us/research/project/code-contracts/?from=http%3A%2F%2Fresearch.microsoft.com%2Fen-us%2Fprojects%2Fcontracts%2Ffaq.aspx
