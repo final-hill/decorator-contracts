@@ -41,7 +41,8 @@ describe('A contract must be independently definable', () => {
                 demands: undefined
             }
         });
-        expect(stackContract.assertions.pop!.demands).toBeUndefined();
+        expect(stackContract.assertions.pop!.demands).toBeInstanceOf(Array);
+        expect(stackContract.assertions.pop!.demands!.length).toBe(0);
 
         stackContract = new Contract<StackType<any>>({
             pop: {
@@ -56,7 +57,9 @@ describe('A contract must be independently definable', () => {
                 demands: self => !self.isEmpty()
             }
         });
-        expect(stackContract.assertions.pop!.demands).toBeInstanceOf(Function);
+        expect(stackContract.assertions.pop!.demands).toBeInstanceOf(Array);
+        expect(stackContract.assertions.pop!.demands!.length).toBe(1);
+        expect(stackContract.assertions.pop!.demands[0]).toBeInstanceOf(Function);
 
         stackContract = new Contract<StackType<any>>({
             pop: {
@@ -89,7 +92,8 @@ describe('A contract must be independently definable', () => {
                 ensures: undefined
             }
         });
-        expect(stackContract.assertions.pop!.ensures).toBeUndefined();
+        expect(stackContract.assertions.pop!.ensures).toBeInstanceOf(Array);
+        expect(stackContract.assertions.pop!.ensures.length).toBe(0);
 
         stackContract = new Contract<StackType<any>>({
             pop: {
@@ -106,7 +110,9 @@ describe('A contract must be independently definable', () => {
             }
         });
 
-        expect(stackContract.assertions.pop!.ensures).toBeInstanceOf(Function);
+        expect(stackContract.assertions.pop!.ensures).toBeInstanceOf(Array);
+        expect(stackContract.assertions.pop!.ensures!.length).toBe(1);
+        expect(stackContract.assertions.pop!.ensures[0]).toBeInstanceOf(Function);
 
         stackContract = new Contract<StackType<any>>({
             pop: {
@@ -156,6 +162,6 @@ describe('A contract must be independently definable', () => {
             [checkedMode]: true
         });
 
-        expect(stackContract.assertions[checkedMode]).toBeTruthy();
+        expect(stackContract[checkedMode]).toBeTruthy();
     });
 });

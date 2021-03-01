@@ -27,6 +27,21 @@ class Feature {
     }
 
     /**
+     * Returns a reference to the descriptor
+     */
+    get descriptor() {
+        return this.#descriptor;
+    }
+
+    /**
+     * Updates the descriptor
+     * @param {PropertyDescriptor} desc - The new descriptor
+     */
+    set descriptor(desc: PropertyDescriptor) {
+        this.#descriptor = desc;
+    }
+
+    /**
      * Returns a reference to the getter if it exists
      */
     get getter() {

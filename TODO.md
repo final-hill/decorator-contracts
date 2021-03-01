@@ -170,6 +170,17 @@ I should be able to know what version of code I have from the code itself and no
 
 Also don't want to have to manually tag in multiple places
 
+Version dictated by build/release only?
+
+=======
+
+Test Contracted() on intermediary class
+
+Test Contracted on Contracted class
+
+
+incompatible contracts?
+	base class Contract vs subclass contract
 
 ================
 
