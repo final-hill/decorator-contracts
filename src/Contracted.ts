@@ -5,6 +5,7 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
+import takeWhile from './lib/takeWhile';
 import {Contract} from './Contract';
 import CLASS_REGISTRY from './lib/CLASS_REGISTRY';
 
@@ -33,15 +34,21 @@ function Contracted<
             const Class = this.constructor as Constructor<any>,
                   classRegistration = CLASS_REGISTRY.getOrCreate(Class);
 
-            if(!classRegistration.isValidated) {
-                const ancRegistrations = classRegistration.ancestry().reverse();
-                [classRegistration, ...ancRegistrations].forEach(ancRegistration => {
-                    if(!ancRegistration.isValidated) {
+            if(!classRegistration.contractsChecked) {
+                let ancRegistrations = classRegistration.ancestry().reverse();
+                // top-down check overrides
+                [...ancRegistrations, classRegistration].forEach(ancRegistration => {
+                    if(!ancRegistration.contractsChecked) {
                         ancRegistration.checkOverrides();
-                        ancRegistration.isValidated = true;
+                        ancRegistration.contractsChecked = true;
                     }
                 });
-                classRegistration.bindContract(contract);
+
+                // bottom-up to Contracted class (exclusive) bind contracts
+                ancRegistrations = takeWhile(ancRegistrations.reverse(), (cr => !Reflect.ownKeys(cr.Class).includes(isContracted)));
+                [classRegistration, ...ancRegistrations].forEach(registration => {
+                    registration.bindContract(contract);
+                });
             }
 
             // TODO: Should a proxy be used for preventing 3rd party methods

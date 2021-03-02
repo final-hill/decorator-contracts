@@ -78,13 +78,7 @@ function checkedFeature(
 class ClassRegistration {
     #features: Feature[];
 
-    /**
-     * Has the current registration been validated?
-     * 1. override declarations valid?
-     * 2. features have bound contracts
-     * 3. prototype frozen
-     */
-    isValidated = false;
+    contractsChecked = false;
 
     constructor(readonly Class: Constructor<any>) {
         this.#features = Object.entries(Object.getOwnPropertyDescriptors(this.Class.prototype))
@@ -136,7 +130,7 @@ class ClassRegistration {
         if(!contract[checkedMode]) {
             return;
         }
-        const proto = Object.getPrototypeOf(this.Class),
+        const proto = this.Class.prototype,
             className = this.Class.name;
         assert(!Object.isFrozen(proto), 'Unable to bind contract. Prototype is frozen');
         this.features.forEach(feature => {
