@@ -364,8 +364,27 @@ https://stackoverflow.com/questions/8155850/how-to-test-whether-a-set-is-reflexi
 https://math.stackexchange.com/questions/2164422/how-to-find-binary-representation-of-sets
 
 
-========
-Decorator Contracts TODO
+Should there be a class-level rescue definition?
+
+document that contract checking is disabled in the body of the assertion
+in order to prevent infinite recursion.
+======
+
+Documentation:
+With contracts, how much unit testing is needed?
+
+====
+
+Contracts are part of specification and not implementation.
+
+
+Relationship between specification and verification?
+
+====
+
+compare with boost contract library
+https://www.boost.org/doc/libs/develop/libs/contract/doc/html/boost_contract/contract_programming_overview.html
+
 =======
 
 https://www.microsoft.com/en-us/research/project/code-contracts/?from=http%3A%2F%2Fresearch.microsoft.com%2Fen-us%2Fprojects%2Fcontracts%2Ffaq.aspx 
