@@ -6,9 +6,23 @@
  */
 
 import assert from '../assert';
-import {checkedMode, Contract, invariant, Invariant, NormalizedFeatureContract} from '../Contract';
+import {checkedMode, Contract, invariant, NormalizedFeatureContract} from '../Contract';
 import CLASS_REGISTRY from './CLASS_REGISTRY';
 import Feature from './Feature';
+
+/**
+ * Disable contract checking for the provided function
+ * @param {Contract<any>} contract - The code contract
+ * @param {function(...args: any[]): any} fn - The function to execute
+ */
+const unChecked = (contract: Contract<any>, fn: () => any) => {
+    try {
+        contract[checkedMode] = false;
+        fn();
+    } finally {
+        contract[checkedMode] = true;
+    }
+};
 
 /**
  * Manages the evaluation of contract assertions for a feature
@@ -16,8 +30,7 @@ import Feature from './Feature';
  * @param {string} className - The name of the owning class
  * @param {string} featureName - The name of the feature
  * @param {function(...args: any[]): any} fnOrig - The original unchecked feature
- * @param {Invariant<any>[]} invariants - The invariant assertions
- * @param {NormalizedFeatureContract<any,any>} featureContract - The feature assertions
+ * @param {Contract<any>} contract - The code contract
  *
  * @returns {function(...args: any[]): any} - The original function augments with assertion checks
  */
@@ -25,51 +38,54 @@ function checkedFeature(
     className: string,
     featureName: string,
     fnOrig: (...args: any[]) => any,
-    invariants: Invariant<any>[],
-    {demands, ensures, rescue}: NormalizedFeatureContract<any, any>
+    contract: Contract<any>
 ) {
     const demandsError = `demands failed on ${className}.prototype.${featureName}`,
-          ensuresError = `ensures failed on ${className}.prototype.${featureName}`,
-          assertDemands = (self: Record<PropertyKey, unknown>, ...args: any[]) =>
+        ensuresError = `ensures failed on ${className}.prototype.${featureName}`,
+        invariants = contract[invariant],
+        {demands, ensures, rescue}: NormalizedFeatureContract<any, any> = Reflect.get(contract.assertions,featureName) ?? {demands: [], ensures: []},
+        assertDemands = (self: Record<PropertyKey, unknown>, ...args: any[]) =>
             assert(demands.every(demand => demand.call(self, self, ...args)), demandsError),
-          assertEnsures = (self: Record<PropertyKey, unknown>, ...args: any[]) =>
+        assertEnsures = (self: Record<PropertyKey, unknown>, old: Record<PropertyKey, unknown>, ...args: any[]) =>
             assert(ensures.every(ensure => ensure.call(self, self, old, ...args)), ensuresError),
-          assertInvariants = (self: Record<PropertyKey, unknown>) =>
-            invariants.forEach(i => assert(i.call(self,self),`Invariant violated. ${i.toString()}`)),
-        // TODO: How is this accomplished without triggering recursion in the contract?
-          old = Object.create(null);
-
-    /* TODO:  oldValues
-        old = Object.entries(target).reduce((acc,[key,value]) => {
-        if(typeof value != 'function') {
-            Object.defineProperty(acc,key,{value});
-        }
-
-        return acc;
-    }, Object.create(null)),
-    */
+        assertInvariants = (self: Record<PropertyKey, unknown>) =>
+            invariants.forEach(i => assert(i.call(self,self),`Invariant violated. ${i.toString()}`));
 
     return function checkedFeature(this: any, ...args: any[]) {
-        assertInvariants(this);
-        assertDemands(this, featureName, args);
+        if(!contract[checkedMode]) {
+            return fnOrig.apply(this,args);
+        }
+
+        let old = Object.create(null);
+        unChecked(contract, () => {
+            old = Object.entries(this).reduce((acc,[key,value]) => {
+                if(typeof value != 'function') {
+                    Object.defineProperty(acc,key,{value});
+                }
+
+                return acc;
+            }, Object.create(null));
+            assertInvariants(this);
+            assertDemands(this, args);
+        });
+
         let result;
         try {
             result = fnOrig.apply(this,args);
-            assertEnsures(this, featureName, old);
+            unChecked(contract, () => assertEnsures(this, old, args));
         } catch(error) {
-            if(rescue == null) {
-                throw error;
-            }
+            if(rescue == null) { throw error; }
             let hasRetried = false;
-            rescue.call(this, this, error, [], () => {
-                hasRetried = true;
-                result = checkedFeature.call(this, ...args);
+            unChecked(contract, () => {
+                rescue.call(this, this, error, [], () => {
+                    hasRetried = true;
+                    contract[checkedMode] = true;
+                    result = checkedFeature.call(this, ...args);
+                });
             });
-            if(!hasRetried) {
-                throw error;
-            }
+            if(!hasRetried) { throw error; }
         }
-        assertInvariants(this);
+        unChecked(contract, () => assertInvariants(this));
 
         return result;
     };
@@ -133,22 +149,20 @@ class ClassRegistration {
         const proto = this.Class.prototype,
             className = this.Class.name;
         assert(!Object.isFrozen(proto), 'Unable to bind contract. Prototype is frozen');
+
         this.features.forEach(feature => {
             const name = String(feature.name),
-                {hasGetter, hasSetter, isMethod} = feature,
-                invariants = contract[invariant],
-                featureContract: NormalizedFeatureContract<any, any> = Reflect.get(contract.assertions,name) ?? {demands: [], ensures: []};
+                {hasGetter, hasSetter, isMethod} = feature;
+
 
             Object.defineProperty(proto, name, {
-                ...(hasGetter ? {get: checkedFeature(className, name, feature.getter!, invariants, featureContract) } : {}),
-                ...(hasSetter ? {set: checkedFeature(className, name, feature.setter!, invariants, featureContract) } : {}),
-                ...(isMethod ? {value: checkedFeature(className, name, feature.value, invariants, featureContract) } : {})
+                ...(hasGetter ? {get: checkedFeature(className, name, feature.getter!, contract) } : {}),
+                ...(hasSetter ? {set: checkedFeature(className, name, feature.setter!, contract) } : {}),
+                ...(isMethod ? {value: checkedFeature(className, name, feature.value, contract) } : {})
             });
 
             feature.descriptor = Object.getOwnPropertyDescriptor(proto, name)!;
         });
-
-        Object.freeze(proto); // Prevent modification of features and sneaky extensions
     }
 
     /**
