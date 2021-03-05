@@ -1,28 +1,22 @@
 /*!
  * @license
- * Copyright (C) 2020 Final Hill LLC
+ * Copyright (C) 2021 Final Hill LLC
  * SPDX-License-Identifier: AGPL-3.0-only
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import assert from '../assert';
-import {checkedMode, Contract, invariant, NormalizedFeatureContract} from '../Contract';
+import { assert, checkedMode, Contract, Demands, Ensures, Invariant, invariant } from '../';
+import {NormalizedFeatureContract} from '../Contract';
 import CLASS_REGISTRY from './CLASS_REGISTRY';
 import Feature from './Feature';
+import unChecked from './unChecked';
 
-/**
- * Disable contract checking for the provided function
- * @param {Contract<any>} contract - The code contract
- * @param {function(...args: any[]): any} fn - The function to execute
- */
-const unChecked = (contract: Contract<any>, fn: () => any) => {
-    try {
-        contract[checkedMode] = false;
-        fn();
-    } finally {
-        contract[checkedMode] = true;
-    }
-};
+const assertDemands = (demands: Demands<any,any>[], demandsError: string, self: Record<PropertyKey, unknown>, ...args: any[]) =>
+        assert(demands.every(demand => demand.call(self, self, ...args)), demandsError),
+    assertEnsures = (ensures: Ensures<any, any>[], ensuresError: string, self: Record<PropertyKey, unknown>, old: Record<PropertyKey, unknown>, ...args: any[]) =>
+        assert(ensures.every(ensure => ensure.call(self, self, old, ...args)), ensuresError),
+    assertInvariants = (invariants: Invariant<any>[], self: Record<PropertyKey, unknown>) =>
+        invariants.forEach(i => assert(i.call(self,self),`Invariant violated. ${i.toString()}`));
 
 /**
  * Manages the evaluation of contract assertions for a feature
@@ -43,13 +37,7 @@ function checkedFeature(
     const demandsError = `demands failed on ${className}.prototype.${featureName}`,
         ensuresError = `ensures failed on ${className}.prototype.${featureName}`,
         invariants = contract[invariant],
-        {demands, ensures, rescue}: NormalizedFeatureContract<any, any> = Reflect.get(contract.assertions,featureName) ?? {demands: [], ensures: []},
-        assertDemands = (self: Record<PropertyKey, unknown>, ...args: any[]) =>
-            assert(demands.every(demand => demand.call(self, self, ...args)), demandsError),
-        assertEnsures = (self: Record<PropertyKey, unknown>, old: Record<PropertyKey, unknown>, ...args: any[]) =>
-            assert(ensures.every(ensure => ensure.call(self, self, old, ...args)), ensuresError),
-        assertInvariants = (self: Record<PropertyKey, unknown>) =>
-            invariants.forEach(i => assert(i.call(self,self),`Invariant violated. ${i.toString()}`));
+        {demands, ensures, rescue}: NormalizedFeatureContract<any, any> = Reflect.get(contract.assertions,featureName) ?? {demands: [], ensures: []};
 
     return function checkedFeature(this: any, ...args: any[]) {
         if(!contract[checkedMode]) {
@@ -65,14 +53,14 @@ function checkedFeature(
 
                 return acc;
             }, Object.create(null));
-            assertInvariants(this);
-            assertDemands(this, args);
+            assertInvariants(invariants,this);
+            assertDemands(demands, demandsError, this, args);
         });
 
         let result;
         try {
             result = fnOrig.apply(this,args);
-            unChecked(contract, () => assertEnsures(this, old, args));
+            unChecked(contract, () => assertEnsures(ensures, ensuresError, this, old, args));
         } catch(error) {
             if(rescue == null) { throw error; }
             let hasRetried = false;
@@ -85,7 +73,7 @@ function checkedFeature(
             });
             if(!hasRetried) { throw error; }
         }
-        unChecked(contract, () => assertInvariants(this));
+        unChecked(contract, () => assertInvariants(invariants,this));
 
         return result;
     };
@@ -200,4 +188,5 @@ class ClassRegistration {
     }
 }
 
+export {assertInvariants};
 export default ClassRegistration;
