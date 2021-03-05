@@ -1,6 +1,6 @@
 /*!
  * @license
- * Copyright (C) 2020 Final Hill LLC
+ * Copyright (C) 2021 Final Hill LLC
  * SPDX-License-Identifier: AGPL-3.0-only
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
@@ -152,6 +152,273 @@ describe('The subclasses of a contracted class must obey the invariants', () => 
     });
 });
 
+/**
+ * https://github.com/final-hill/decorator-contracts/issues/31
+ */
+describe('A truthy invariant does not throw an exception when evaluated', () => {
+     test('Construction does not throw', () => {
+        expect(() => {
+            const enabledContract: Contract<Foo> = new Contract<Foo>({
+                [checkedMode]: true,
+                [invariant]: self => self instanceof Foo
+            });
+            class Foo extends Contracted(enabledContract) {}
+
+            return new Foo();
+        }).not.toThrow();
+        expect(() => {
+            const disabledContract: Contract<Foo> = new Contract<Foo>({
+                [checkedMode]: false,
+                [invariant]: self => self instanceof Foo
+            });
+            class Foo extends Contracted(disabledContract) {}
+
+            return new Foo();
+        }).not.toThrow();
+    });
+
+    test('Method does not throw', () => {
+        expect(() => {
+            const enabledContract: Contract<Foo> =  new Contract<Foo>({
+                [checkedMode]: true,
+                [invariant]: self => self.value >= 0
+            });
+
+            class Foo extends Contracted(enabledContract) {
+                #value = 0;
+                get value(): number { return this.#value; }
+                set value(v) { this.#value = v; }
+
+                dec(): void { this.value--; }
+                inc(): void { this.value++; }
+            }
+
+            const foo = new Foo();
+            foo.inc();
+            foo.dec();
+
+            return foo;
+        }).not.toThrow();
+
+        expect(() => {
+            const disabledContract: Contract<Foo> =  new Contract<Foo>({
+                [checkedMode]: false,
+                [invariant]: self => self.value >= 0
+            });
+
+            class Foo extends Contracted(disabledContract) {
+                #value = 0;
+                get value(): number { return this.#value; }
+                set value(v) { this.#value = v; }
+
+                dec(): void { this.value--; }
+                inc(): void { this.value++; }
+            }
+
+            const foo = new Foo();
+            foo.inc();
+            foo.dec();
+
+            return foo;
+        }).not.toThrow();
+    });
+
+});
+
+/**
+ * https://github.com/final-hill/decorator-contracts/issues/32
+ */
+describe('A falsy invariant throws an exception when evaluated', () => {
+    test('Construction throws in checkMode', () => {
+        expect(() => {
+            const badContract: Contract<Foo> = new Contract({
+                [invariant]: self => self instanceof Array
+            });
+
+            class Foo extends Contracted(badContract) {}
+
+            return new Foo();
+        }).toThrow(AssertionError);
+    });
+
+    test('Construction does not throw in unchecked mode', () => {
+        expect(() => {
+            const badContract: Contract<Foo> = new Contract<Foo>({
+                [checkedMode]: false,
+                [invariant]: self => self instanceof Array
+            });
+
+            class Foo extends Contracted(badContract) {}
+
+            return new Foo();
+        }).not.toThrow();
+    });
+
+    test('Method throws in checkMode', () => {
+        expect(() => {
+            const fooContract: Contract<Foo> = new Contract<Foo>({
+                [invariant]: self => self.value === 37
+            });
+
+            class Foo extends Contracted(fooContract) {
+                #value = 37;
+                get value(): number { return this.#value; }
+                set value(v) { this.#value = v; }
+
+                dec(): void { this.value--; }
+                inc(): void { this.value++; }
+            }
+
+            const foo = new Foo();
+            foo.inc();
+            foo.dec();
+
+            return foo;
+        }).toThrow(AssertionError);
+    });
+
+    test('Method does not throw in unchecked mode', () => {
+        expect(() => {
+            const fooContract: Contract<Foo> = new Contract<Foo>({
+                [checkedMode]: false,
+                [invariant]: self => self.value === 37
+            });
+
+            class Foo extends Contracted(fooContract) {
+                #value = 37;
+                get value(): number { return this.#value; }
+                set value(v) { this.#value = v; }
+
+                dec(): void { this.value--; }
+                inc(): void { this.value++; }
+            }
+
+            const foo = new Foo();
+            foo.inc();
+            foo.dec();
+
+            return foo;
+        }).not.toThrow();
+    });
+});
+
+/**
+ * https://github.com/final-hill/decorator-contracts/issues/33
+ */
+describe('Invariants are evaluated after the associated class is constructed', () => {
+    test('truthy construction does not throw in checked and unchecked mode', () => {
+        expect(() => {
+            const enabledContract: Contract<Foo> = new Contract<Foo>({
+                [invariant]: self => self instanceof Foo
+            });
+
+            class Foo extends Contracted(enabledContract) {}
+
+            return new Foo();
+        }).not.toThrow();
+
+        expect(() => {
+            const disabledContract: Contract<Foo> = new Contract<Foo>({
+                [checkedMode]: false,
+                [invariant]: self => self instanceof Foo
+            });
+
+            class Foo extends Contracted(disabledContract) {}
+
+            return new Foo();
+        }).not.toThrow();
+    });
+
+    test('falsy construction throws in checked mode', () => {
+          expect(() => {
+              const fooContract: Contract<Foo> = new Contract<Foo>({
+                  [invariant]: self => self instanceof Array
+              });
+
+            class Foo extends Contracted(fooContract) {}
+
+            return new Foo();
+        }).toThrow();
+    });
+
+    test('falsy construction does not throw in prod mode', () => {
+        expect(() => {
+            const fooContract: Contract<Foo> = new Contract<Foo>({
+                [checkedMode]: false,
+                [invariant]: self => self instanceof Array
+            });
+
+          class Foo extends Contracted(fooContract) {}
+
+          return new Foo();
+        }).not.toThrow();
+    });
+});
+
+/**
+ * https://github.com/final-hill/decorator-contracts/issues/34
+ */
+describe('An invariant is evaluated before and after every method call on the associated class', () => {
+    test('Test method call in checked kMode', () => {
+        const fooContract: Contract<Foo> = new Contract<Foo>({
+            [invariant]: self => self.value >= 0
+        });
+
+        class Foo extends Contracted(fooContract) {
+            #value = 0;
+            get value(): number { return this.#value; }
+            set value(v) { this.#value = v; }
+
+            inc(): void { this.value++; }
+            dec(): void { this.value--; }
+        }
+
+        const foo = new Foo();
+
+        expect(() => {
+            foo.inc();
+        }).not.toThrow();
+
+        expect(() => {
+            foo.dec();
+        }).not.toThrow();
+
+        expect(() => {
+            foo.dec();
+        }).toThrow(AssertionError);
+    });
+
+    test('Test method call in unchecked mode', () => {
+        const fooContract: Contract<Foo> = new Contract<Foo>({
+            [checkedMode]: false,
+            [invariant]: self => self.value >= 0
+        });
+
+        class Foo extends Contracted(fooContract) {
+            #value = 0;
+            get value(): number { return this.#value; }
+            set value(v) { this.#value = v; }
+
+            inc(): void { this.value++; }
+            dec(): void { this.value--; }
+        }
+
+        const foo = new Foo();
+
+        expect(() => {
+            foo.inc();
+        }).not.toThrow();
+
+        expect(() => {
+            foo.dec();
+        }).not.toThrow();
+
+        expect(() => {
+            foo.dec();
+        }).not.toThrow();
+    });
+});
+
 // https://github.com/final-hill/decorator-contracts/issues/178
 describe('There can be multiple invariants assigned to a contract', () => {
     test('', () => {
@@ -191,8 +458,4 @@ describe('There can be multiple invariants assigned to a contract', () => {
         expect(stackContract[invariant].length).toBe(1);
         expect(stackContract[invariant][0]).toBeInstanceOf(Function);
     });
-});
-
-describe('Invariants are evaluated after the associated class is constructed', () => {
-    // TODO
 });
