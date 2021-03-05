@@ -1,6 +1,6 @@
 /*!
  * @license
- * Copyright (C) 2020 Final Hill LLC
+ * Copyright (C) 2021 Final Hill LLC
  * SPDX-License-Identifier: AGPL-3.0-only
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
@@ -52,8 +52,10 @@ function Contracted<
             }
 
             // TODO: Should a proxy be used for preventing 3rd party methods
-            // being called/applied to this instance? They could
-            // modify internal state without an invariant check...
+            // being called/applied to this instance? can they
+            // modify internal state without an invariant check?
+            // Is there a way for the external code to reference #foo?
+
             return Object.freeze(this); // Freezing to prevent public property definitions
         }
     }
