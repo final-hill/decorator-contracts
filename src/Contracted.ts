@@ -5,13 +5,24 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import takeWhile from './lib/takeWhile';
-import CLASS_REGISTRY from './lib/CLASS_REGISTRY';
+import { assertInvariants, ClassRegistration, CLASS_REGISTRY, Feature, takeWhile, unChecked } from './lib';
 import { assert, Contract, invariant } from './';
-import unChecked from './lib/unChecked';
-import { assertInvariants } from './lib/ClassRegistration';
+import { MSG_NO_PROPERTIES, MSG_SINGLE_CONTRACT } from './Messages';
 
 const isContracted = Symbol('isContracted');
+
+/**
+ * Checks the features of the provided object for properties.
+ * If any are found an exception is thrown
+ * @param {ClassRegistration} registration - The ClassRegistration for the object
+ * @param {Record<PropertyKey,unknown>} obj - The object to check
+ * @throws {AssertionError} - Throws if a property is found
+ * @returns {boolean} - The result of the test
+ */
+function hasProperties(registration: ClassRegistration, obj: Record<PropertyKey, unknown>): boolean {
+    return Object.entries(Object.getOwnPropertyDescriptors(obj))
+        .some(([key, desc]) => new Feature(registration,key,desc).isProperty);
+}
 
 /**
  * Associates a contract with a class via the mixin pattern.
@@ -31,7 +42,7 @@ function Contracted<
     return function(Base: U): U {
         const classRegistration = CLASS_REGISTRY.getOrCreate(Base);
 
-        assert(!classRegistration.isContracted, 'Only a single @Contracted decorator is allowed');
+        assert(!classRegistration.isContracted, MSG_SINGLE_CONTRACT);
 
         // TODO: unit test double decorator is an error
         const Contracted = class extends Base {
@@ -39,12 +50,15 @@ function Contracted<
 
             constructor(...args: any[]) {
                 super(...args);
+
                 const Class = this.constructor as Constructor<any>,
-                  classRegistration = CLASS_REGISTRY.getOrCreate(Class);
+                      classRegistration = CLASS_REGISTRY.getOrCreate(Class);
+
+                assert(!hasProperties(classRegistration,this), MSG_NO_PROPERTIES);
 
                 if(!classRegistration.contractsChecked) {
                     let ancRegistrations = classRegistration.ancestry().reverse();
-                    // top-down check overrides
+                    // top-down check overrides and pre-existing properties
                     [...ancRegistrations, classRegistration].forEach(ancRegistration => {
                         if(!ancRegistration.contractsChecked) {
                             ancRegistration.checkOverrides();
@@ -59,14 +73,16 @@ function Contracted<
                     });
                 }
 
-                this[invariant]();
+                unChecked(contract, () => assertInvariants(contract[invariant], this));
 
                 // Freezing to prevent public property definitions
+                // TODO: test on sub classes
                 return Object.freeze(this);
             }
-
-            [invariant]() { unChecked(contract, () => assertInvariants(contract[invariant], this)); }
         };
+
+        //Object.freeze(Base);
+        //Object.freeze(Base.prototype);
 
         return Contracted;
     };

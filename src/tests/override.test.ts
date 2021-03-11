@@ -63,7 +63,7 @@ describe('Using @override on a class member with no ancestor member is an error'
             }
 
             return Base;
-        }).toThrow(MSG_NO_MATCHING_FEATURE);
+        }).toThrow(MSG_NOT_CONTRACTED);
     });
 
     test('subclass with @override decorator', () => {

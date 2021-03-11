@@ -238,7 +238,7 @@ describe('A falsy invariant throws an exception when evaluated', () => {
     test('Construction throws in checkMode', () => {
         expect(() => {
             const badContract: Contract<Foo> = new Contract({
-                [invariant]: self => self instanceof Array
+                [invariant]: self => self instanceof Set
             });
 
             @Contracted(badContract)
@@ -252,7 +252,7 @@ describe('A falsy invariant throws an exception when evaluated', () => {
         expect(() => {
             const badContract: Contract<Foo> = new Contract<Foo>({
                 [checkedMode]: false,
-                [invariant]: self => self instanceof Array
+                [invariant]: self => self instanceof Map
             });
 
             @Contracted(badContract)
@@ -358,7 +358,7 @@ describe('Invariants are evaluated after the associated class is constructed', (
         expect(() => {
             const fooContract: Contract<Foo> = new Contract<Foo>({
                 [checkedMode]: false,
-                [invariant]: self => self instanceof Array
+                [invariant]: self => self instanceof Error
             });
 
 

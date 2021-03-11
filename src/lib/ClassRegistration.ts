@@ -6,7 +6,7 @@
  */
 
 import { assert, checkedMode, Contract, Demands, Ensures, Invariant, invariant } from '../';
-import {NormalizedFeatureContract} from '../Contract';
+import { NormalizedFeatureContract } from '../Contract';
 import CLASS_REGISTRY from './CLASS_REGISTRY';
 import Feature from './Feature';
 import unChecked from './unChecked';
@@ -52,7 +52,7 @@ function checkedFeature(
 
                 return acc;
             }, Object.create(null));
-            this[invariant]();
+            assertInvariants(contract[invariant],this);
             assertDemands(demands, demandsError, this, args);
         });
 
@@ -72,7 +72,7 @@ function checkedFeature(
             });
             if(!hasRetried) { throw error; }
         }
-        unChecked(contract, () => this[invariant]());
+        unChecked(contract, () => assertInvariants(contract[invariant],this));
 
         return result;
     };

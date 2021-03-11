@@ -5,9 +5,9 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import {assert} from './';
+import { assert } from './';
 import { MSG_NO_STATIC, MSG_NO_MATCHING_FEATURE, MSG_DUPLICATE_OVERRIDE, MSG_INVALID_ARG_LENGTH, MSG_NOT_CONTRACTED, MSG_MISSING_FEATURE } from './Messages';
-import CLASS_REGISTRY from './lib/CLASS_REGISTRY';
+import { CLASS_REGISTRY } from './lib';
 import { isContracted } from './Contracted';
 
 /**
