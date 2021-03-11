@@ -10,12 +10,12 @@ import { Contracted } from '../';
 // https://github.com/final-hill/decorator-contracts/issues/35
 describe('Public properties must be forbidden', () => {
     test('No public properties okay', () => {
-        class Point2D extends Contracted() {
+        @Contracted()
+        class Point2D {
             #x: number;
             #y: number;
 
             constructor(x: number, y: number) {
-                super();
                 this.#x = x;
                 this.#y = y;
             }
@@ -31,11 +31,12 @@ describe('Public properties must be forbidden', () => {
     });
 
     test('Public properties throw', () => {
-        class Point2D extends Contracted() {
+        @Contracted()
+        class Point2D {
             constructor(
                 public x: number,
                 public y: number
-            ) { super(); }
+            ) { }
         }
 
         expect(() => new Point2D(12, 5)).toThrow();

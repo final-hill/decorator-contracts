@@ -36,7 +36,6 @@ function checkedFeature(
 ) {
     const demandsError = `demands failed on ${className}.prototype.${featureName}`,
         ensuresError = `ensures failed on ${className}.prototype.${featureName}`,
-        invariants = contract[invariant],
         {demands, ensures, rescue}: NormalizedFeatureContract<any, any> = Reflect.get(contract.assertions,featureName) ?? {demands: [], ensures: []};
 
     return function checkedFeature(this: any, ...args: any[]) {
@@ -53,7 +52,7 @@ function checkedFeature(
 
                 return acc;
             }, Object.create(null));
-            assertInvariants(invariants,this);
+            this[invariant]();
             assertDemands(demands, demandsError, this, args);
         });
 
@@ -73,7 +72,7 @@ function checkedFeature(
             });
             if(!hasRetried) { throw error; }
         }
-        unChecked(contract, () => assertInvariants(invariants,this));
+        unChecked(contract, () => this[invariant]());
 
         return result;
     };
@@ -83,6 +82,7 @@ class ClassRegistration {
     #features: Feature[];
 
     contractsChecked = false;
+    isContracted = false;
 
     constructor(readonly Class: Constructor<any>) {
         this.#features = Object.entries(Object.getOwnPropertyDescriptors(this.Class.prototype))
@@ -136,12 +136,11 @@ class ClassRegistration {
         }
         const proto = this.Class.prototype,
             className = this.Class.name;
-        assert(!Object.isFrozen(proto), 'Unable to bind contract. Prototype is frozen');
+        assert(!Object.isFrozen(proto), 'Unable to bind contract feature. Prototype is frozen');
 
         this.features.forEach(feature => {
             const name = String(feature.name),
                 {hasGetter, hasSetter, isMethod} = feature;
-
 
             Object.defineProperty(proto, name, {
                 ...(hasGetter ? {get: checkedFeature(className, name, feature.getter!, contract) } : {}),

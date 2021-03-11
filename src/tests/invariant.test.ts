@@ -26,7 +26,8 @@ describe('The subclasses of a contracted class must obey the invariants', () => 
             [invariant]: self => self.value >= 0
         });
 
-        class Foo extends Contracted(fooContract) {
+        @Contracted(fooContract)
+        class Foo {
             #value = 0;
 
             get value(): number { return this.#value; }
@@ -111,7 +112,8 @@ describe('The subclasses of a contracted class must obey the invariants', () => 
             [invariant]: self => self.value >= 0
         });
 
-        class Foo extends Contracted(fooContract) {
+        @Contracted(fooContract)
+        class Foo {
             #value = 0;
 
             get value(): number { return this.#value; }
@@ -162,7 +164,8 @@ describe('A truthy invariant does not throw an exception when evaluated', () => 
                 [checkedMode]: true,
                 [invariant]: self => self instanceof Foo
             });
-            class Foo extends Contracted(enabledContract) {}
+            @Contracted(enabledContract)
+            class Foo {}
 
             return new Foo();
         }).not.toThrow();
@@ -171,7 +174,8 @@ describe('A truthy invariant does not throw an exception when evaluated', () => 
                 [checkedMode]: false,
                 [invariant]: self => self instanceof Foo
             });
-            class Foo extends Contracted(disabledContract) {}
+            @Contracted(disabledContract)
+            class Foo {}
 
             return new Foo();
         }).not.toThrow();
@@ -184,7 +188,8 @@ describe('A truthy invariant does not throw an exception when evaluated', () => 
                 [invariant]: self => self.value >= 0
             });
 
-            class Foo extends Contracted(enabledContract) {
+            @Contracted(enabledContract)
+            class Foo {
                 #value = 0;
                 get value(): number { return this.#value; }
                 set value(v) { this.#value = v; }
@@ -206,7 +211,8 @@ describe('A truthy invariant does not throw an exception when evaluated', () => 
                 [invariant]: self => self.value >= 0
             });
 
-            class Foo extends Contracted(disabledContract) {
+            @Contracted(disabledContract)
+            class Foo {
                 #value = 0;
                 get value(): number { return this.#value; }
                 set value(v) { this.#value = v; }
@@ -235,7 +241,8 @@ describe('A falsy invariant throws an exception when evaluated', () => {
                 [invariant]: self => self instanceof Array
             });
 
-            class Foo extends Contracted(badContract) {}
+            @Contracted(badContract)
+            class Foo {}
 
             return new Foo();
         }).toThrow(AssertionError);
@@ -248,7 +255,8 @@ describe('A falsy invariant throws an exception when evaluated', () => {
                 [invariant]: self => self instanceof Array
             });
 
-            class Foo extends Contracted(badContract) {}
+            @Contracted(badContract)
+            class Foo {}
 
             return new Foo();
         }).not.toThrow();
@@ -260,7 +268,8 @@ describe('A falsy invariant throws an exception when evaluated', () => {
                 [invariant]: self => self.value === 37
             });
 
-            class Foo extends Contracted(fooContract) {
+            @Contracted(fooContract)
+            class Foo {
                 #value = 37;
                 get value(): number { return this.#value; }
                 set value(v) { this.#value = v; }
@@ -284,7 +293,8 @@ describe('A falsy invariant throws an exception when evaluated', () => {
                 [invariant]: self => self.value === 37
             });
 
-            class Foo extends Contracted(fooContract) {
+            @Contracted(fooContract)
+            class Foo {
                 #value = 37;
                 get value(): number { return this.#value; }
                 set value(v) { this.#value = v; }
@@ -312,7 +322,8 @@ describe('Invariants are evaluated after the associated class is constructed', (
                 [invariant]: self => self instanceof Foo
             });
 
-            class Foo extends Contracted(enabledContract) {}
+            @Contracted(enabledContract)
+            class Foo {}
 
             return new Foo();
         }).not.toThrow();
@@ -323,19 +334,21 @@ describe('Invariants are evaluated after the associated class is constructed', (
                 [invariant]: self => self instanceof Foo
             });
 
-            class Foo extends Contracted(disabledContract) {}
+            @Contracted(disabledContract)
+            class Foo {}
 
             return new Foo();
         }).not.toThrow();
     });
 
     test('falsy construction throws in checked mode', () => {
-          expect(() => {
-              const fooContract: Contract<Foo> = new Contract<Foo>({
-                  [invariant]: self => self instanceof Array
-              });
+        expect(() => {
+            const fooContract: Contract<Foo> = new Contract<Foo>({
+                [invariant]: self => self instanceof Array
+            });
 
-            class Foo extends Contracted(fooContract) {}
+            @Contracted(fooContract)
+            class Foo {}
 
             return new Foo();
         }).toThrow();
@@ -348,9 +361,11 @@ describe('Invariants are evaluated after the associated class is constructed', (
                 [invariant]: self => self instanceof Array
             });
 
-          class Foo extends Contracted(fooContract) {}
 
-          return new Foo();
+            @Contracted(fooContract)
+            class Foo {}
+
+            return new Foo();
         }).not.toThrow();
     });
 });
@@ -364,7 +379,8 @@ describe('An invariant is evaluated before and after every method call on the as
             [invariant]: self => self.value >= 0
         });
 
-        class Foo extends Contracted(fooContract) {
+        @Contracted(fooContract)
+        class Foo {
             #value = 0;
             get value(): number { return this.#value; }
             set value(v) { this.#value = v; }
@@ -394,7 +410,8 @@ describe('An invariant is evaluated before and after every method call on the as
             [invariant]: self => self.value >= 0
         });
 
-        class Foo extends Contracted(fooContract) {
+        @Contracted(fooContract)
+        class Foo {
             #value = 0;
             get value(): number { return this.#value; }
             set value(v) { this.#value = v; }
