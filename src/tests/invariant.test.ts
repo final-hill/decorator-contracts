@@ -47,7 +47,7 @@ describe('The subclasses of a contracted class must obey the invariants', () => 
 
         expect(() => {
             const bar = new Bar();
-            bar.dec();
+            bar.dec(); //FIXME: The method was not replaced?  bar.dec is not the checkedFeature
         }).toThrow(AssertionError);
 
         expect(() => {

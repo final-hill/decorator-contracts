@@ -77,7 +77,6 @@
         "webpack": "^5.12.3",
         "webpack-cli": "^4.3.1"
     },
-    "dependencies": {},
     "files": [
         "dist"
     ]
