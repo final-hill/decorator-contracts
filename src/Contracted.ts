@@ -67,7 +67,7 @@ function Contracted<
                     });
 
                     // bottom-up to Contracted class (exclusive) bind contracts
-                    ancRegistrations = takeWhile(ancRegistrations.reverse(), (cr => !Reflect.ownKeys(cr.Class).includes(isContracted)));
+                    ancRegistrations = takeWhile(ancRegistrations.reverse(), (cr => !Reflect.ownKeys(cr).includes(isContracted)));
                     [classRegistration, ...ancRegistrations].forEach(registration => {
                         registration.bindContract(contract);
                     });
