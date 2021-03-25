@@ -10,7 +10,7 @@
         "build-nofix": "webpack",
         "clean": "rimraf ./dist ./coverage",
         "clean-full": "rimraf ./dist, ./coverage, ./.cache, ./node_modules",
-        "debug": "node --debug-brk --inspect ./node_modules/jest/bin/jest -i",
+        "debug": "node --inspect-brk --expose-gc ./node_modules/.bin/jest --runInBand --logHeapUsage",
         "prelint": "npm run type-check",
         "lint": "eslint src/ --ext .ts --fix",
         "prelint-nofix": "npm run type-check",
