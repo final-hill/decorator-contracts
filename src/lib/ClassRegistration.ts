@@ -38,7 +38,7 @@ function checkedFeature(
         ensuresError = `ensures failed on ${className}.prototype.${featureName}`,
         {demands, ensures, rescue}: NormalizedFeatureContract<any, any> = Reflect.get(contract.assertions,featureName) ?? {demands: [], ensures: []};
 
-    return function checkedFeature(this: any, ...args: any[]) {
+    return function innerCheckedFeature(this: any, ...args: any[]) {
         if(!contract[checkedMode]) {
             return fnOrig.apply(this,args);
         }
@@ -67,7 +67,7 @@ function checkedFeature(
                 rescue.call(this, this, error, [], () => {
                     hasRetried = true;
                     contract[checkedMode] = true;
-                    result = checkedFeature.call(this, ...args);
+                    result = innerCheckedFeature.call(this, ...args);
                 });
             });
             if(!hasRetried) { throw error; }
@@ -82,7 +82,6 @@ class ClassRegistration {
     #features: Feature[];
 
     contractsChecked = false;
-    isContracted = false;
 
     constructor(readonly Class: Constructor<any>) {
         this.#features = Object.entries(Object.getOwnPropertyDescriptors(this.Class.prototype))

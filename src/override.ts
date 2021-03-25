@@ -24,11 +24,11 @@ function override(target: Record<PropertyKey, any>, propertyKey: PropertyKey, de
           isStatic = typeof target == 'function';
 
     assert(!isStatic, MSG_NO_STATIC, TypeError);
-    assert(Class[isContracted], MSG_NOT_CONTRACTED);
 
     const registration = CLASS_REGISTRY.getOrCreate(Class),
-          feature = registration.findFeature(propertyKey);
+        feature = registration.findFeature(propertyKey);
 
+    assert(Class[isContracted], MSG_NOT_CONTRACTED);
     assert(feature != null, MSG_MISSING_FEATURE);
 
     const ancFeature = feature.ancestorFeature;

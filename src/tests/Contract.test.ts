@@ -5,7 +5,7 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import {checkedMode, Contract} from '../Contract';
+import {checkedMode, Contract} from '../';
 
 interface StackType<T> {
     readonly limit: number;

@@ -20,36 +20,30 @@ interface StackType<T> {
 
 // https://github.com/final-hill/decorator-contracts/issues/30
 describe('The subclasses of a contracted class must obey the invariants', () => {
+    const fooContract: Contract<Foo> = new Contract<Foo>({
+        [checkedMode]: true,
+        [invariant]: self => self.value >= 0
+    });
+
+    @Contracted(fooContract)
+    class Foo {
+        #value = 0;
+
+        get value(): number { return this.#value; }
+        set value(value: number) { this.#value = value; }
+
+        inc(): void { this.value++; }
+        dec(): void { this.value--; }
+    }
+
+    class Bar extends Foo { }
     test('Test subclassing in debug mode', () => {
-        const fooContract: Contract<Foo> = new Contract<Foo>({
-            [checkedMode]: true,
-            [invariant]: self => self.value >= 0
-        });
-
-        @Contracted(fooContract)
-        class Foo {
-            #value = 0;
-
-            get value(): number { return this.#value; }
-            set value(value: number) { this.#value = value; }
-
-            inc(): void { this.value++; }
-            dec(): void { this.value--; }
-        }
-
-        class Bar extends Foo { }
-
         expect(() => {
             const bar = new Bar();
             bar.inc();
             bar.dec();
         }).not.toThrow();
 
-        // FIXME: This test breaks Jest
-        // Private field related?
-        // targeting ES5 works for some: <https://translate.google.com/translate?sl=auto&tl=en&u=http://www.bowen-tech.top/articles/detail/76>
-        // but private fields prevent this from being a target for this project
-        // https://github.com/facebook/jest/issues/8769
         expect(() => {
             const bar = new Bar();
             bar.dec();
@@ -71,7 +65,7 @@ describe('The subclasses of a contracted class must obey the invariants', () => 
             bar.value = -1;
         }).toThrow(AssertionError);
 
-        /*
+
         // overriding members
         class Baz extends Foo {
             @override
@@ -110,7 +104,6 @@ describe('The subclasses of a contracted class must obey the invariants', () => 
             const baz = new Baz();
             baz.value = -1;
         }).toThrow(AssertionError);
-    */
     });
 
     test('Test subclassing in prod mode', () => {
@@ -235,7 +228,6 @@ describe('A truthy invariant does not throw an exception when evaluated', () => 
             return foo;
         }).not.toThrow();
     });
-
 });
 
 /**

@@ -6,7 +6,7 @@
  */
 
 import { assertInvariants, ClassRegistration, CLASS_REGISTRY, Feature, takeWhile, unChecked } from './lib';
-import { assert, Contract, invariant } from './';
+import { assert, checkedMode, Contract, invariant } from './';
 import { MSG_NO_PROPERTIES, MSG_SINGLE_CONTRACT } from './Messages';
 
 const isContracted = Symbol('isContracted');
@@ -39,15 +39,16 @@ function Contracted<
     T extends Contract<any> = Contract<any>,
     U extends Constructor<any> = Constructor<any>
 >(contract: T = new Contract() as T) {
-    return function(Base: U): U {
-        const classRegistration = CLASS_REGISTRY.getOrCreate(Base);
+    return function(Base: U & {[isContracted]?: boolean}): U {
+        assert(!Base[isContracted], MSG_SINGLE_CONTRACT);
+        Base[isContracted] = true;
 
-        assert(!classRegistration.isContracted, MSG_SINGLE_CONTRACT);
+        if(contract[checkedMode] === false) {
+            return Base;
+        }
 
         // TODO: unit test double decorator is an error
         const Contracted = class extends Base {
-            static get [isContracted](){ return true; }
-
             constructor(...args: any[]) {
                 super(...args);
 
@@ -66,9 +67,9 @@ function Contracted<
                         }
                     });
 
-                    // bottom-up to Contracted class (exclusive) bind contracts
-                    ancRegistrations = takeWhile(ancRegistrations.reverse(), (cr => !Reflect.ownKeys(cr).includes(isContracted)));
-                    [classRegistration, ...ancRegistrations].forEach(registration => {
+                    // bottom-up to Contracted class bind contracts
+                    ancRegistrations = takeWhile(ancRegistrations.reverse(), (cr => cr.Class !== Base));
+                    [classRegistration, ...ancRegistrations, CLASS_REGISTRY.get(Base)!].forEach(registration => {
                         registration.bindContract(contract);
                     });
                 }
@@ -81,7 +82,7 @@ function Contracted<
             }
         };
 
-        //Object.freeze(Base);
+        Object.freeze(Base); // prevent modification of Base[isContracted] and more
         //Object.freeze(Base.prototype);
 
         return Contracted;
