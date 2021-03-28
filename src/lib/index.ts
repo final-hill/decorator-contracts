@@ -6,18 +6,20 @@
  */
 
 import CLASS_REGISTRY from './CLASS_REGISTRY';
-import ClassRegistration, { assertInvariants } from './ClassRegistration';
+import ClassRegistration from './ClassRegistration';
 import deepFreeze from './deepFreeze';
 import Feature from './Feature';
 import takeWhile from './takeWhile';
 import unChecked from './unChecked';
 
+const fnTrue = () => true;
+
 export {
-    assertInvariants,
     CLASS_REGISTRY,
     ClassRegistration,
     deepFreeze,
     Feature,
+    fnTrue,
     takeWhile,
     unChecked
 };

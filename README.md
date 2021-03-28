@@ -74,7 +74,7 @@ interface StackType<T> {
 
 const stackContract = new Contract<StackType<any>>({
     [checkedMode]: process.env.NODE_ENV === 'development',
-    [invariant]: [
+    [invariants]: [
         self => self.isEmpty() == (self.size == 0),
         self => self.isFull() == (self.size == self.limit),
         self => self.size >= 0 && self.size <= self.limit
@@ -280,7 +280,7 @@ error. An example of this is given below using a Stack:
 // ...
 
 const stackContract = new Contract<StackType<any>>({
-    [invariant]: [
+    [invariants]: [
         self => self.isEmpty() == (self.size == 0),
         self => self.isFull() == (self.size == self.limit),
         self => self.size >= 0 && self.size <= self.limit

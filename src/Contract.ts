@@ -5,10 +5,11 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import {deepFreeze} from './lib';
+import {deepFreeze, fnTrue} from './lib';
 
 const checkedMode = Symbol('checkedMode'),
-      invariants = Symbol('invariant');
+      invariant = Symbol('invariant');
+      //extend = Symbol('extend');
 
 type AnyObject = Record<PropertyKey, any>;
 type AnyFunc = (...args: any[]) => any;
@@ -21,55 +22,40 @@ export type Demands<T extends AnyObject, F extends T[any]> = (self: T, ...args: 
 export type Ensures<T extends AnyObject, F extends T[any]> = (self: T, old: Properties<T>, ...args: Parameters<F>) => boolean;
 export type Rescue<T extends AnyObject, F extends T[any]> = (self: T, error: Error, args: Parameters<F>, retry: (...args: Parameters<F>) => void) => void;
 
-export interface InvariantOption<T extends AnyObject> {
-    [invariants]?: Invariant<T> | Invariant<T>[];
-}
-
-export interface CheckedOption {
-    [checkedMode]?: boolean;
-}
-
-export type FeatureOptions<T extends AnyObject> = {
+export type ContractOptions<
+    T extends AnyObject
+> = {
+    [invariant]: Invariant<T>;
+    [checkedMode]: boolean;
+} & {
     [K in keyof T]?: FeatureOption<T, T[K]>
 };
 
-export type NormalizedFeatureOptions<T extends AnyObject> = {
-    [K in keyof T]?: NormalizedFeatureContract<T, T[K]>
-};
-
 export interface FeatureOption<T extends AnyObject, F> {
-    demands?: Demands<T,F> | Demands<T,F>[];
-    ensures?: Ensures<T,F> | Ensures<T,F>[];
+    demands?: Demands<T,F>;
+    ensures?: Ensures<T,F>;
     rescue?: Rescue<T,F>;
 }
-
-export interface NormalizedFeatureContract<T extends AnyObject, F> {
-    demands: Demands<T,F>[];
-    ensures: Ensures<T,F>[];
-    rescue?: Rescue<T,F>;
-}
-
-export type ContractOptions<T extends AnyObject> = InvariantOption<T> & CheckedOption & FeatureOptions<T>;
-
-export type NormalizedContractOptions<T extends AnyObject> = NormalizedFeatureOptions<T>;
-
-// TODO: extending a Contract?
 
 export class Contract<T extends AnyObject> {
     [checkedMode]: boolean;
-    [invariants]: Invariant<T>[];
-    readonly assertions: NormalizedContractOptions<T> = Object.create(null);
+    // TODO
+    //[extend]: this;
+    [invariant]: Invariant<T>;
+    readonly assertions: ContractOptions<T> = Object.create(null);
 
-    constructor(assertions: ContractOptions<T> = {}) {
+    constructor(assertions: Partial<ContractOptions<T>> = Object.create(null)) {
         this[checkedMode] = assertions[checkedMode] ?? true;
-        this[invariants] = ([] as Invariant<T>[]).concat(assertions[invariants] ?? []);
+        this[invariant] = assertions[invariant] ?? fnTrue;
+        // TODO
+        //this[extend] = assertions[extend] ??
 
         Object.keys(assertions).forEach(propertyKey => {
             const featureOption = assertions[propertyKey]!;
             Object.defineProperty(this.assertions,propertyKey, {
                 value: {
-                    demands: ([] as Demands<T, any>[]).concat(featureOption.demands ?? []),
-                    ensures: ([] as Ensures<T, any>[]).concat(featureOption.ensures ?? []),
+                    demands: featureOption.demands ?? fnTrue,
+                    ensures: featureOption.ensures ?? fnTrue,
                     rescue: featureOption.rescue
                 }
             });
@@ -79,4 +65,4 @@ export class Contract<T extends AnyObject> {
     }
 }
 
-export {checkedMode, invariants as invariant};
+export {checkedMode, invariant};

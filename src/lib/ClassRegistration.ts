@@ -5,18 +5,9 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import { assert, checkedMode, Contract, Demands, Ensures, Invariant, invariant } from '../';
-import { NormalizedFeatureContract } from '../Contract';
-import CLASS_REGISTRY from './CLASS_REGISTRY';
-import Feature from './Feature';
-import unChecked from './unChecked';
-
-const assertDemands = (demands: Demands<any,any>[], demandsError: string, self: Record<PropertyKey, unknown>, ...args: any[]) =>
-        assert(demands.every(demand => demand.call(self, self, ...args)), demandsError),
-    assertEnsures = (ensures: Ensures<any, any>[], ensuresError: string, self: Record<PropertyKey, unknown>, old: Record<PropertyKey, unknown>, ...args: any[]) =>
-        assert(ensures.every(ensure => ensure.call(self, self, old, ...args)), ensuresError),
-    assertInvariants = (invariants: Invariant<any>[], self: Record<PropertyKey, unknown>) =>
-        invariants.forEach(i => assert(i.call(self,self),`Invariant violated. ${i.toString()}`));
+import { assert, checkedMode, Contract, invariant } from '../';
+import { FeatureOption } from '../Contract';
+import {CLASS_REGISTRY, Feature, fnTrue, unChecked} from './';
 
 /**
  * Manages the evaluation of contract assertions for a feature
@@ -36,7 +27,10 @@ function checkedFeature(
 ) {
     const demandsError = `demands failed on ${className}.prototype.${featureName}`,
         ensuresError = `ensures failed on ${className}.prototype.${featureName}`,
-        {demands, ensures, rescue}: NormalizedFeatureContract<any, any> = Reflect.get(contract.assertions,featureName) ?? {demands: [], ensures: []};
+        inv = contract[invariant],
+        featureOptions: FeatureOption<any, any> = Reflect.get(contract.assertions,featureName) ?? {demands: fnTrue, ensures: fnTrue},
+        {demands, ensures} = featureOptions as Required<FeatureOption<any,any>>,
+        {rescue} = featureOptions;
 
     return function innerCheckedFeature(this: any, ...args: any[]) {
         if(!contract[checkedMode]) {
@@ -52,14 +46,16 @@ function checkedFeature(
 
                 return acc;
             }, Object.create(null));
-            assertInvariants(contract[invariant],this);
-            assertDemands(demands, demandsError, this, args);
+            assert(inv.call(this,this),`Invariant violated. ${inv.toString()}`);
+            assert(demands.call(this, this, ...args), demandsError);
         });
 
         let result;
         try {
             result = fnOrig.apply(this,args);
-            unChecked(contract, () => assertEnsures(ensures, ensuresError, this, old, args));
+            unChecked(contract, () =>
+                assert(ensures.call(this, this, old, ...args), ensuresError)
+            );
         } catch(error) {
             if(rescue == null) { throw error; }
             let hasRetried = false;
@@ -72,7 +68,9 @@ function checkedFeature(
             });
             if(!hasRetried) { throw error; }
         }
-        unChecked(contract, () => assertInvariants(contract[invariant],this));
+        unChecked(contract, () =>
+            assert(inv.call(this,this),`Invariant violated. ${inv.toString()}`)
+        );
 
         return result;
     };
@@ -186,5 +184,4 @@ class ClassRegistration {
     }
 }
 
-export {assertInvariants};
 export default ClassRegistration;

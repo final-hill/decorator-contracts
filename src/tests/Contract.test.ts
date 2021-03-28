@@ -35,109 +35,45 @@ describe('A contract must be independently definable', () => {
         expect(stackContract.assertions.foo);
     });
 
-    test('Specify and number of \'demands\' assertions on features', () => {
+    test('Specify \'demands\' assertion on features', () => {
         let stackContract = new Contract<StackType<any>>({
             pop: {
                 demands: undefined
+            },
+            push: {
+                // @ts-expect-error
+                demands: false
             }
         });
-        expect(stackContract.assertions.pop!.demands).toBeInstanceOf(Array);
-        expect(stackContract.assertions.pop!.demands!.length).toBe(0);
+        expect(stackContract.assertions.pop!.demands).toBeInstanceOf(Function);
 
         stackContract = new Contract<StackType<any>>({
             pop: {
-                demands: []
+                demands(){ return true; }
             }
         });
-        expect(stackContract.assertions.pop!.demands).toBeInstanceOf(Array);
-        expect(stackContract.assertions.pop!.demands!.length).toBe(0);
-
-        stackContract = new Contract<StackType<any>>({
-            pop: {
-                demands: self => !self.isEmpty()
-            }
-        });
-        expect(stackContract.assertions.pop!.demands).toBeInstanceOf(Array);
-        expect(stackContract.assertions.pop!.demands!.length).toBe(1);
-        expect(stackContract.assertions.pop!.demands[0]).toBeInstanceOf(Function);
-
-        stackContract = new Contract<StackType<any>>({
-            pop: {
-                demands: [
-                    self => !self.isEmpty()
-                ]
-            }
-        });
-        expect(stackContract.assertions.pop!.demands).toBeInstanceOf(Array);
-        expect(stackContract.assertions.pop!.demands!.length).toBe(1);
-        expect((stackContract.assertions.pop!.demands as any[])[0]).toBeInstanceOf(Function);
-
-        stackContract = new Contract<StackType<any>>({
-            pop: {
-                demands: [
-                    self => !self.isEmpty(),
-                    self => self.size > 0
-                ]
-            }
-        });
-        expect(stackContract.assertions.pop!.demands).toBeInstanceOf(Array);
-        expect(stackContract.assertions.pop!.demands!.length).toBe(2);
-        expect((stackContract.assertions.pop!.demands as any[])[0]).toBeInstanceOf(Function);
-        expect((stackContract.assertions.pop!.demands as any[])[1]).toBeInstanceOf(Function);
+        expect(stackContract.assertions.pop!.demands).toBeInstanceOf(Function);
     });
 
-    test('Specify and number of \'ensures\' assertions on features', () => {
+    test('Specify \'ensures\' assertion on features', () => {
         let stackContract = new Contract<StackType<any>>({
             pop: {
                 ensures: undefined
+            },
+            push: {
+                // @ts-expect-error
+                ensures: false
             }
         });
-        expect(stackContract.assertions.pop!.ensures).toBeInstanceOf(Array);
-        expect(stackContract.assertions.pop!.ensures.length).toBe(0);
+        expect(stackContract.assertions.pop!.ensures).toBeInstanceOf(Function);
 
         stackContract = new Contract<StackType<any>>({
             pop: {
-                ensures: []
+                ensures(){ return true; }
             }
         });
 
-        expect(stackContract.assertions.pop!.ensures).toBeInstanceOf(Array);
-        expect(stackContract.assertions.pop!.ensures!.length).toBe(0);
-
-        stackContract = new Contract<StackType<any>>({
-            pop: {
-                ensures: (self,old) => self.size == old.size - 1
-            }
-        });
-
-        expect(stackContract.assertions.pop!.ensures).toBeInstanceOf(Array);
-        expect(stackContract.assertions.pop!.ensures!.length).toBe(1);
-        expect(stackContract.assertions.pop!.ensures[0]).toBeInstanceOf(Function);
-
-        stackContract = new Contract<StackType<any>>({
-            pop: {
-                ensures: [(self,old) => self.size == old.size - 1]
-            }
-        });
-
-        expect(stackContract.assertions.pop!.ensures).toBeInstanceOf(Array);
-        expect(stackContract.assertions.pop!.ensures!.length).toBe(1);
-        expect((stackContract.assertions.pop!.ensures! as any[])[0]).toBeInstanceOf(Function);
-
-        stackContract = new Contract<StackType<any>>({
-            pop: {
-                ensures: [
-                    (self,old) => self.size == old.size - 1,
-                    self => !self.isFull()
-                ]
-            }
-        });
-        const ensures = stackContract.assertions.pop!.ensures;
-
-        expect(ensures).toBeInstanceOf(Array);
-        expect(ensures!.length).toBe(2);
-        expect((ensures as any[])[0]).toBeInstanceOf(Function);
-        expect((ensures! as any[])[1]).toBeInstanceOf(Function);
+        expect(stackContract.assertions.pop!.ensures).toBeInstanceOf(Function);
     });
 
     test('Specify a "rescue" on features', () => {
@@ -150,7 +86,11 @@ describe('A contract must be independently definable', () => {
 
         stackContract = new Contract<StackType<any>>({
             push: {
-                rescue: (_self, _error, _args, _retry) => {}
+                rescue(_self, _error, _args, _retry) {}
+            },
+            pop: {
+                // @ts-expect-error
+                rescue: false
             }
         });
         expect(stackContract.assertions.push?.rescue).toBeInstanceOf(Function);
@@ -163,5 +103,9 @@ describe('A contract must be independently definable', () => {
         });
 
         expect(stackContract[checkedMode]).toBeTruthy();
+    });
+
+    test('Specify an \'extend\' declaration', () => {
+        // TODO
     });
 });
