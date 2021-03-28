@@ -428,3 +428,9 @@ Code Contracts
 https://sorbet.org/
 https://dry-rb.org/gems/dry-schema/1.5/
 https://www.microsoft.com/en-us/research/project/code-contracts/?from=http%3A%2F%2Fresearch.microsoft.com%2Fen-us%2Fprojects%2Fcontracts%2Ffaq.aspx
+
+
+=========
+
+Contracts as a class?
+Needs @override?
