@@ -74,19 +74,19 @@ interface StackType<T> {
 
 const stackContract = new Contract<StackType<any>>({
     [checkedMode]: process.env.NODE_ENV === 'development',
-    [invariants]: [
-        self => self.isEmpty() == (self.size == 0),
-        self => self.isFull() == (self.size == self.limit),
-        self => self.size >= 0 && self.size <= self.limit
+    [invariant](self) {
+        return self.isEmpty() == (self.size == 0) &&
+               self.isFull() == (self.size == self.limit) &&
+               self.size >= 0 && self.size <= self.limit
     ],
     pop: {
         demands: self => !self.isEmpty(),
         ensures: (self,old) => self.size == old.size - 1
     },
     push: {
-        ensures: [
-            self => !self.isEmpty(),
-            (self,old) => self.size == old.size + 1
+        ensures(self, old) {
+            return !self.isEmpty() &&
+                   self.size == old.size + 1
         ]
     }
 });
@@ -280,11 +280,11 @@ error. An example of this is given below using a Stack:
 // ...
 
 const stackContract = new Contract<StackType<any>>({
-    [invariants]: [
-        self => self.isEmpty() == (self.size == 0),
-        self => self.isFull() == (self.size == self.limit),
-        self => self.size >= 0 && self.size <= self.limit
-    ]
+    [invariants](self) {
+        return self.isEmpty() == (self.size == 0) &&
+               self.isFull() == (self.size == self.limit) &&
+               self.size >= 0 && self.size <= self.limit
+    }
 })
 
 class Stack<T> extends Contracted(stackContract) implements StackType<T> {
