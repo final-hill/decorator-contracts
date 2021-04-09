@@ -1,6 +1,3 @@
-Test the interception subclass method calls 
-
-===================
 multiple rescues on a feature?
 defined per error type? all errors?
 
@@ -16,8 +13,6 @@ test method.apply and method.call
 	current methods w/ contracts applied to other class
 	other class method applied to contracted class
 ============
-
-@override
 
 @override needs to test input for use in non-TS environments. assert(isFunction) and such
 
@@ -44,29 +39,17 @@ Inheritance?
 
 Change Request
 change the use of 'member' in documentation to class 'feature'
-======================
 
-	// FIXME: if debugMode on invariant and prod mode on
-	// other decorators? Need to update unit tests
 ==========
 async method handling?
 https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/catch
 
-=========
-
-can COntractHandler be refactored into template pattern at least in part?
-
-=========
-
-if the class member is checkMode and the invariant is prodMode?
-
-==========
-@invariant on Base class
-
-@invariant on SubClass
 =============
 overrides
 	writable | configurable | enumerable verification
+
+Does the typescript 4.3 override feature not cover these use cases? Therefore does not subsume this
+library feature?
 
 ===================
 review typings folder usage
@@ -93,11 +76,6 @@ What invariant applies?
 {Encoding of error checking}
 {Complicates implementation}
 {All of this extraneous checking has nothing to do with the datastructure}
-
-==============
-
-If @invariant comes from checkMode=false and @demands comes from checkMode true, what happens?
-vice-versa?
 
 =======
 
@@ -130,29 +108,6 @@ postcondition is fulfilled. }
 
 Unit testing is one thing, but a test plan is needed as well to show that the library can be installed and used in another library
 
-=============
-implement a Predicate builder instead of passing functions to enable early-errors?
-
-let StackContracts = new AssertionBuilder((self: Stack<any>) => {
-    notEmpty() { self. }
-})
-
-@invariant
-class Stack {
-  ...
-  @demands(StackContracts.notEmpty)
-  pop(){ ... }
-  ...
-}
-=========
-
-3 step inheritance and restoreFeatures method => getAncestorRegistry 	
-	
-	parent has registry. registry does not have entry for feature.
-	grandparent also has registry with the entry for the feature.
-	
-	the entry is therefore not restored properly...
-
 ============
 `Precondition failed on ${Clazz.name}.${String(propertyKey)}`
 
@@ -178,7 +133,6 @@ Test Contracted() on intermediary class
 
 Test Contracted on Contracted class
 
-
 incompatible contracts?
 	base class Contract vs subclass contract
 
@@ -198,10 +152,6 @@ Test getter/setter on @demands
 =============
 
 Test contracts on async methods, constructors, etc
-
-===================
-override decorator line 83 - 85
-else do what?
 
 ================
 competitor/comparable
@@ -264,9 +214,6 @@ Add branching rules to Contributing.md
 Business opportunity?
 https://marketplace.visualstudio.com/search?term=Contributor%20License%20Agreement&target=AzureDevOps&category=All%20categories&sortBy=Relevance
 
-
-https://www.typescriptlang.org/play/index.html?experimentalDecorators=true#code/AISwdgbghgTiVgC4ApkGcCmAbAZgLgAIBlRKAYwGsBKAgXgD4DkBvAKAI4LRAC8MBhLFAC2ABwwATQgAYCAHlpdsOAHTc+BAGSaluNbwzzFmPVhDCQiADTtOGMYgCeACShoAcgHsiBwidUgaACiDo7INLSK6Mr6GpEE0lQ2nAQ4AK5YWACSaACCiAAy5pZ+MYEAYhlY4XRR-rGG8fVmFohUrAC+VO1kQmhoxKSUBGwplvYAKo7iAISECI6sthyiMJ6IGGQbEgQA+uaiWPYYSFCIIJ5ghLkwMFCOcogAFoEA2gBE48JT4u8AuoxFK8-ksUmRLmhEDA0ltPDBkDAMFAJJcsI4CC0SgQwGlhAAjDAwGjMDqgziBEKiJzhQh4zyeI4IEbLFIERGINIwMAEZ6BFT7MRHYQnUjnS4qI5gADmz1qCRZpJZFSqNIIdIZSO5o1ZHHZnO5vLQ-IOQpFZwuYAlJxlTzlholxUQCrJHGAiIAjmkQIi0Kh-IQSORqHRGCwWSkwOtKU5CDN6hTQuEFd0WcATmhORhfdFcAGhhQrARYFK0IRgYWGVJBkGIqHtTrI4hKplY-G0M3qklw5x1BgACKbRHCpCl3SqXtyysNAgAWgIAEZk+0UqJPKJVYaPl8fhh-sydbqMByuTyXkaBYdjqcxZbV+uqDNnamPV6fX7lHmayGmPXWY2O62ZTtiqy6cF0oGuummbZv61aUIWrxfH8ZaBpQrwAOTbtMGDoX8fwVlgVaocGDA-t2HCNtGjiAXoCZUmEXYHgQohpGgTySDkExrqUeiIGuNSRIoXzJAevZZGAZBDiKo71BO8RThOADUC5LiyLFscgXyEJumEbN82G4VQhAQJ4IA7L+KT2heprXhaKjqU8ml6RBBCKikUpHlwBiqji+KEvuB56ieVkmleop2ZKNpPikboYJ63pZu+uZwSRdbkdi6wAQQcZAR2SYpOBLJ8fe2lnhhWHiLhAU6kFBpnsagphealyvCFjXDuF4qRbKc7zn8ADczodEAA
-
 ==========
 cleanup TODOs
 
@@ -312,16 +259,6 @@ object invariants?
 
 function invariants?
 
-
-==========
-prevent duplicate empty @invariant
-
-@invariant
-class Base {}
-
-@invariant
-class Sub extends Base {}
-
 ===============
 Document difference from Eiffel
 https://stackoverflow.com/questions/57694623/is-the-rescue-clause-being-called-on-descendent-redefinition
@@ -363,7 +300,6 @@ https://www2.cs.duke.edu/courses/fall07/cps108/papers/ocp.pdf
 https://stackoverflow.com/questions/8155850/how-to-test-whether-a-set-is-reflexive-symmetric-anti-symmetric-and-or-transit?rq=1
 https://math.stackexchange.com/questions/2164422/how-to-find-binary-representation-of-sets
 
-
 Should there be a class-level rescue definition?
 
 document that contract checking is disabled in the body of the assertion
@@ -401,15 +337,7 @@ https://web.archive.org/web/20151002175109/http://eschertech.com/papers/safe_oo_
 ==========
 No side-effects in requires, ensures, invariants?
 
-IOW, no field modification.
-
-How is it enforced? No method reference to avoid 'this' usage?
-@invariant prevents public properties on classes?
-
-	this is enforced by not allowing public fields
-
-- automatically assign validation checks to new feature branches
-- master branch: only accept merge from feature/*
+How is it enforced?
 
 https://docs.microsoft.com/en-us/dotnet/framework/debug-trace-profile/code-contracts
 https://www.dotnetcurry.com/csharp/1172/code-contracts-csharp-static-runtime-checks
@@ -423,8 +351,6 @@ Research paper:
 
 =========
 
-Code Contracts
-
 https://sorbet.org/
 https://dry-rb.org/gems/dry-schema/1.5/
 https://www.microsoft.com/en-us/research/project/code-contracts/?from=http%3A%2F%2Fresearch.microsoft.com%2Fen-us%2Fprojects%2Fcontracts%2Ffaq.aspx
@@ -432,5 +358,9 @@ https://www.microsoft.com/en-us/research/project/code-contracts/?from=http%3A%2F
 
 =========
 
-Contracts as a class?
-Needs @override?
+Contracts as a class instead of object?
+Implies a need to define @override. 
+
+
+checkedMode override vs inherited assertions?
+would have to be dynamic lookups instead of the current static approach

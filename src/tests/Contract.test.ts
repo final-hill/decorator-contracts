@@ -5,7 +5,7 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import {checkedMode, Contract} from '../';
+import {checkedMode, Contract, extend} from '../';
 
 interface StackType<T> {
     readonly limit: number;
@@ -106,6 +106,13 @@ describe('A contract must be independently definable', () => {
     });
 
     test('Specify an \'extend\' declaration', () => {
-        // TODO
+        const stackContract = new Contract<StackType<any>>({
+            [checkedMode]: true
+        }),
+        subContract = new Contract<StackType<any>>({
+            [extend]: stackContract
+        });
+
+        expect(subContract[extend]).toBeDefined();
     });
 });

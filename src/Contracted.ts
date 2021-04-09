@@ -6,7 +6,7 @@
  */
 
 import { ClassRegistration, CLASS_REGISTRY, Feature, takeWhile, unChecked } from './lib';
-import { assert, checkedMode, Contract, invariant } from './';
+import { assert, checkedMode, Contract, invariants } from './';
 import { MSG_NO_PROPERTIES, MSG_SINGLE_CONTRACT } from './Messages';
 
 const isContracted = Symbol('isContracted');
@@ -74,8 +74,11 @@ function Contracted<
                     });
                 }
 
+                // TODO: inherited invariants: any or all apply?
                 unChecked(contract, () =>
-                    assert(contract[invariant].call(this,this),`Invariant violated. ${contract[invariant].toString()}`)
+                    contract[invariants].forEach(i =>
+                        assert(i.call(this,this),`Invariant violated. ${i.toString()}`)
+                    )
                 );
 
                 // Freezing to prevent public property definitions

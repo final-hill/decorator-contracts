@@ -5,21 +5,8 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import { AssertionError, checkedMode, Contract, Contracted, invariant, override } from '../';
+import { AssertionError, checkedMode, Contract, Contracted, extend, invariant, override } from '../';
 import { MSG_NO_PROPERTIES } from '../Messages';
-
-/*
-interface StackType<T> {
-    readonly limit: number;
-    readonly size: number;
-    clear(): void;
-    isEmpty(): boolean;
-    isFull(): boolean;
-    pop(): T;
-    push(item: T): void;
-    top(): T;
-}
-*/
 
 // https://github.com/final-hill/decorator-contracts/issues/30
 describe('The subclasses of a contracted class must obey the invariants', () => {
@@ -581,7 +568,6 @@ describe('In unchecked mode the invariant is not evaluated', () => {
 /**
  * https://github.com/final-hill/decorator-contracts/issues/40
  */
-/*
 describe('A subclass with its own invariants must enforce all ancestor invariants',() => {
     test('Checked Mode', () => {
         expect(() => {
@@ -643,7 +629,6 @@ describe('A subclass with its own invariants must enforce all ancestor invariant
         // TODO
     });
 });
-*/
 
 // Public properties forbidden
 // TODO: update README

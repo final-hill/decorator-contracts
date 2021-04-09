@@ -5,9 +5,9 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import { assert, checkedMode, Contract, invariant } from '../';
+import { assert, checkedMode, Contract, invariants } from '../';
 import { FeatureOption } from '../Contract';
-import {CLASS_REGISTRY, Feature, fnTrue, unChecked} from './';
+import { CLASS_REGISTRY, Feature, fnTrue, unChecked } from './';
 
 /**
  * Manages the evaluation of contract assertions for a feature
@@ -27,7 +27,7 @@ function checkedFeature(
 ) {
     const demandsError = `demands failed on ${className}.prototype.${featureName}`,
         ensuresError = `ensures failed on ${className}.prototype.${featureName}`,
-        inv = contract[invariant],
+        ivs = contract[invariants],
         featureOptions: FeatureOption<any, any> = Reflect.get(contract.assertions,featureName) ?? {demands: fnTrue, ensures: fnTrue},
         {demands, ensures} = featureOptions as Required<FeatureOption<any,any>>,
         {rescue} = featureOptions;
@@ -46,13 +46,17 @@ function checkedFeature(
 
                 return acc;
             }, Object.create(null));
-            assert(inv.call(this,this),`Invariant violated. ${inv.toString()}`);
+            ivs.forEach(i =>
+                assert(i.call(this,this),`Invariant violated. ${i.toString()}`)
+            );
+            // TODO: inherited as AND assertions
             assert(demands.call(this, this, ...args), demandsError);
         });
 
         let result;
         try {
             result = fnOrig.apply(this,args);
+            // TODO: inherited as OR assertions
             unChecked(contract, () =>
                 assert(ensures.call(this, this, old, ...args), ensuresError)
             );
@@ -68,8 +72,10 @@ function checkedFeature(
             });
             if(!hasRetried) { throw error; }
         }
+        // OR assertions?
         unChecked(contract, () =>
-            assert(inv.call(this,this),`Invariant violated. ${inv.toString()}`)
+            ivs.some()
+            assert(ivs.call(this,this),`Invariant violated. ${ivs.toString()}`)
         );
 
         return result;

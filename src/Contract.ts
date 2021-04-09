@@ -8,8 +8,9 @@
 import {deepFreeze, fnTrue} from './lib';
 
 const checkedMode = Symbol('checkedMode'),
-      invariant = Symbol('invariant');
-      //extend = Symbol('extend');
+      invariant = Symbol('invariant'),
+      invariants = Symbol('invariants'),
+      extend = Symbol('extend');
 
 type AnyObject = Record<PropertyKey, any>;
 type AnyFunc = (...args: any[]) => any;
@@ -25,6 +26,7 @@ export type Rescue<T extends AnyObject, F extends T[any]> = (self: T, error: Err
 export type ContractOptions<
     T extends AnyObject
 > = {
+    [extend]: Contract<T>;
     [invariant]: Invariant<T>;
     [checkedMode]: boolean;
 } & {
@@ -38,22 +40,27 @@ export interface FeatureOption<T extends AnyObject, F> {
 }
 
 export class Contract<T extends AnyObject> {
+    #invariant: Invariant<T>;
     [checkedMode]: boolean;
-    // TODO
-    //[extend]: this;
-    [invariant]: Invariant<T>;
+    readonly [extend]?: Contract<T>;
     readonly assertions: ContractOptions<T> = Object.create(null);
+    get [invariants](): readonly Invariant<T>[] {
+        return [
+            this[checkedMode] ? this.#invariant : fnTrue,
+            ...(this[extend]?.[invariants] ?? [])
+        ];
+    }
 
     constructor(assertions: Partial<ContractOptions<T>> = Object.create(null)) {
+        this[extend] = assertions[extend];
         this[checkedMode] = assertions[checkedMode] ?? true;
-        this[invariant] = assertions[invariant] ?? fnTrue;
-        // TODO
-        //this[extend] = assertions[extend] ??
+        this.#invariant = assertions[invariant] ?? fnTrue;
 
         Object.keys(assertions).forEach(propertyKey => {
             const featureOption = assertions[propertyKey]!;
             Object.defineProperty(this.assertions,propertyKey, {
                 value: {
+                    // TODO: this[extend] ?
                     demands: featureOption.demands ?? fnTrue,
                     ensures: featureOption.ensures ?? fnTrue,
                     rescue: featureOption.rescue
@@ -65,4 +72,4 @@ export class Contract<T extends AnyObject> {
     }
 }
 
-export {checkedMode, invariant};
+export {checkedMode, extend, invariant, invariants};
