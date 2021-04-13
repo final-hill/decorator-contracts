@@ -46,7 +46,7 @@ export class Contract<T extends AnyObject> {
     readonly assertions: ContractOptions<T> = Object.create(null);
     get [invariants](): readonly Invariant<T>[] {
         return [
-            this[checkedMode] ? this.#invariant : fnTrue,
+            this.#invariant,
             ...(this[extend]?.[invariants] ?? [])
         ];
     }

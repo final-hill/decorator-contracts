@@ -40,15 +40,14 @@ function Contracted<
     U extends Constructor<any> = Constructor<any>
 >(contract: T = new Contract() as T) {
     return function(Base: U & {[isContracted]?: boolean}): U {
-        assert(!Base[isContracted], MSG_SINGLE_CONTRACT);
-        Base[isContracted] = true;
+        assert(!Object.getOwnPropertySymbols(Base).includes(isContracted), MSG_SINGLE_CONTRACT);
 
         if(contract[checkedMode] === false) {
             return Base;
         }
 
-        // TODO: unit test double decorator is an error
         const Contracted = class extends Base {
+            static [isContracted] = true;
             constructor(...args: any[]) {
                 super(...args);
 
@@ -74,7 +73,6 @@ function Contracted<
                     });
                 }
 
-                // TODO: inherited invariants: any or all apply?
                 unChecked(contract, () =>
                     contract[invariants].forEach(i =>
                         assert(i.call(this,this),`Invariant violated. ${i.toString()}`)

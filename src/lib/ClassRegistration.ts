@@ -72,10 +72,11 @@ function checkedFeature(
             });
             if(!hasRetried) { throw error; }
         }
-        // OR assertions?
+
         unChecked(contract, () =>
-            ivs.some()
-            assert(ivs.call(this,this),`Invariant violated. ${ivs.toString()}`)
+            ivs.forEach(i =>
+                assert(i.call(this,this),`Invariant violated. ${i.toString()}`)
+            )
         );
 
         return result;

@@ -14,4 +14,4 @@ export const MSG_DUPLICATE_RESCUE = 'Only a single @rescue can be assigned to a 
 export const MSG_NO_PROPERTIES = 'Public properties are forbidden';
 export const MSG_NOT_CONTRACTED = 'The current class or one of its ancestors must declare @Contracted(...)';
 export const MSG_MISSING_FEATURE = 'The requested feature is not registered';
-export const MSG_SINGLE_CONTRACT = 'Only a single @Contracted decorator is allowed';
+export const MSG_SINGLE_CONTRACT = 'Only a single @Contracted decorator is allowed per class';

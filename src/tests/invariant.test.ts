@@ -629,6 +629,3 @@ describe('A subclass with its own invariants must enforce all ancestor invariant
         // TODO
     });
 });
-
-// Public properties forbidden
-// TODO: update README

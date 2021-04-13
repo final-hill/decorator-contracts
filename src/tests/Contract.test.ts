@@ -5,7 +5,8 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import {checkedMode, Contract, extend} from '../';
+import { MSG_SINGLE_CONTRACT } from '../Messages';
+import {Contracted, checkedMode, Contract, extend} from '../';
 
 interface StackType<T> {
     readonly limit: number;
@@ -114,5 +115,33 @@ describe('A contract must be independently definable', () => {
         });
 
         expect(subContract[extend]).toBeDefined();
+    });
+});
+
+// https://github.com/final-hill/decorator-contracts/issues/181
+describe('Only a single contract can be assigned to a class', () => {
+    const fooContract = new Contract(),
+          barContract = new Contract();
+
+    test('Good declaration', () => {
+        expect(() => {
+            @Contracted(fooContract)
+            class Foo {}
+
+            @Contracted(barContract)
+            class Bar extends Foo{}
+
+            return new Bar();
+        }).not.toThrow();
+    });
+
+    test('Bad Declaration', () => {
+        expect(() => {
+            @Contracted(fooContract)
+            @Contracted(barContract)
+            class Foo {}
+
+            return new Foo();
+        }).toThrow(MSG_SINGLE_CONTRACT);
     });
 });
