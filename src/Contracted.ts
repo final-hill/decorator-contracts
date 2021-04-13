@@ -5,8 +5,8 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import { ClassRegistration, CLASS_REGISTRY, Feature, takeWhile, unChecked } from './lib';
-import { assert, checkedMode, Contract, invariants } from './';
+import { ClassRegistration, CLASS_REGISTRY, Feature, takeWhile, assertInvariants } from './lib';
+import { assert, checkedMode, Contract } from './';
 import { MSG_NO_PROPERTIES, MSG_SINGLE_CONTRACT } from './Messages';
 
 const isContracted = Symbol('isContracted');
@@ -73,11 +73,7 @@ function Contracted<
                     });
                 }
 
-                unChecked(contract, () =>
-                    contract[invariants].forEach(i =>
-                        assert(i.call(this,this),`Invariant violated. ${i.toString()}`)
-                    )
-                );
+                assertInvariants(this, contract);
 
                 // Freezing to prevent public property definitions
                 // TODO: test on sub classes

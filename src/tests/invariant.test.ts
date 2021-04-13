@@ -625,7 +625,88 @@ describe('A subclass with its own invariants must enforce all ancestor invariant
         }).not.toThrow();
     });
 
-    test('Unchecked mode', () => {
-        // TODO
+    test('Unchecked mode both contracts', () => {
+        expect(() => {
+            const baseContract = new Contract<Base>({
+                [checkedMode]: false,
+                [invariant]: () => false
+            }),
+            subContract = new Contract<Sub>({
+                [checkedMode]: false,
+                [extend]: baseContract,
+                [invariant]: () => false
+            });
+
+            @Contracted(baseContract)
+            class Base {}
+
+            @Contracted(subContract)
+            class Sub extends Base {}
+
+            return new Sub();
+        }).not.toThrow(AssertionError);
+    });
+
+    test('Unchecked mode base contract', () => {
+        expect(() => {
+            const baseContract = new Contract<Base>({
+                [checkedMode]: false,
+                [invariant]: () => false
+            }),
+            subContract = new Contract<Sub>({
+                [checkedMode]: true,
+                [extend]: baseContract,
+                [invariant]: () => true
+            });
+
+            @Contracted(baseContract)
+            class Base {}
+
+            @Contracted(subContract)
+            class Sub extends Base {}
+
+            return new Sub();
+        }).not.toThrow(AssertionError);
+    });
+
+    test('Unchecked mode sub contract', () => {
+        expect(() => {
+            const baseContract = new Contract<Base>({
+                [checkedMode]: true,
+                [invariant]: () => false
+            }),
+            subContract = new Contract<Sub>({
+                [checkedMode]: false,
+                [extend]: baseContract,
+                [invariant]: () => true
+            });
+
+            @Contracted(baseContract)
+            class Base {}
+
+            @Contracted(subContract)
+            class Sub extends Base {}
+
+            return new Sub();
+        }).toThrow(AssertionError);
+        expect(() => {
+            const baseContract = new Contract<Base>({
+                [checkedMode]: true,
+                [invariant]: () => true
+            }),
+            subContract = new Contract<Sub>({
+                [checkedMode]: false,
+                [extend]: baseContract,
+                [invariant]: () => false
+            });
+
+            @Contracted(baseContract)
+            class Base {}
+
+            @Contracted(subContract)
+            class Sub extends Base {}
+
+            return new Sub();
+        }).not.toThrow(AssertionError);
     });
 });

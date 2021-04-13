@@ -5,6 +5,7 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
+import assertInvariants from './assertInvariants';
 import CLASS_REGISTRY from './CLASS_REGISTRY';
 import ClassRegistration from './ClassRegistration';
 import deepFreeze from './deepFreeze';
@@ -15,6 +16,7 @@ import unChecked from './unChecked';
 const fnTrue = () => true;
 
 export {
+    assertInvariants,
     CLASS_REGISTRY,
     ClassRegistration,
     deepFreeze,

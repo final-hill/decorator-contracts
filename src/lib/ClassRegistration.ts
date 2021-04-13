@@ -5,9 +5,9 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import { assert, checkedMode, Contract, invariants } from '../';
+import { assert, checkedMode, Contract } from '../';
 import { FeatureOption } from '../Contract';
-import { CLASS_REGISTRY, Feature, fnTrue, unChecked } from './';
+import { assertInvariants, CLASS_REGISTRY, Feature, fnTrue, unChecked } from './';
 
 /**
  * Manages the evaluation of contract assertions for a feature
@@ -27,7 +27,6 @@ function checkedFeature(
 ) {
     const demandsError = `demands failed on ${className}.prototype.${featureName}`,
         ensuresError = `ensures failed on ${className}.prototype.${featureName}`,
-        ivs = contract[invariants],
         featureOptions: FeatureOption<any, any> = Reflect.get(contract.assertions,featureName) ?? {demands: fnTrue, ensures: fnTrue},
         {demands, ensures} = featureOptions as Required<FeatureOption<any,any>>,
         {rescue} = featureOptions;
@@ -46,9 +45,9 @@ function checkedFeature(
 
                 return acc;
             }, Object.create(null));
-            ivs.forEach(i =>
-                assert(i.call(this,this),`Invariant violated. ${i.toString()}`)
-            );
+        });
+        assertInvariants(this, contract);
+        unChecked(contract, () => {
             // TODO: inherited as AND assertions
             assert(demands.call(this, this, ...args), demandsError);
         });
@@ -73,11 +72,7 @@ function checkedFeature(
             if(!hasRetried) { throw error; }
         }
 
-        unChecked(contract, () =>
-            ivs.forEach(i =>
-                assert(i.call(this,this),`Invariant violated. ${i.toString()}`)
-            )
-        );
+        assertInvariants(this, contract);
 
         return result;
     };

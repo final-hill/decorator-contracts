@@ -9,7 +9,6 @@ import {deepFreeze, fnTrue} from './lib';
 
 const checkedMode = Symbol('checkedMode'),
       invariant = Symbol('invariant'),
-      invariants = Symbol('invariants'),
       extend = Symbol('extend');
 
 type AnyObject = Record<PropertyKey, any>;
@@ -44,11 +43,8 @@ export class Contract<T extends AnyObject> {
     [checkedMode]: boolean;
     readonly [extend]?: Contract<T>;
     readonly assertions: ContractOptions<T> = Object.create(null);
-    get [invariants](): readonly Invariant<T>[] {
-        return [
-            this.#invariant,
-            ...(this[extend]?.[invariants] ?? [])
-        ];
+    get [invariant](): Invariant<T> {
+        return this.#invariant;
     }
 
     constructor(assertions: Partial<ContractOptions<T>> = Object.create(null)) {
@@ -72,4 +68,4 @@ export class Contract<T extends AnyObject> {
     }
 }
 
-export {checkedMode, extend, invariant, invariants};
+export {checkedMode, extend, invariant};
