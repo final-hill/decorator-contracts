@@ -5,6 +5,8 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
+import assertDemands from './assertDemands';
+import assertEnsures from './assertEnsures';
 import assertInvariants from './assertInvariants';
 import CLASS_REGISTRY from './CLASS_REGISTRY';
 import ClassRegistration from './ClassRegistration';
@@ -16,6 +18,8 @@ import unChecked from './unChecked';
 const fnTrue = () => true;
 
 export {
+    assertDemands,
+    assertEnsures,
     assertInvariants,
     CLASS_REGISTRY,
     ClassRegistration,

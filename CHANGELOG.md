@@ -11,6 +11,7 @@
 * Moved unit tests to separate folder
 * Public property definitions are now illegal
 * Fixed package.json debug command
+* Bugfix of invariant inheritance
 
 ## v0.19.0
 

@@ -9,7 +9,8 @@ import { ClassRegistration, CLASS_REGISTRY, Feature, takeWhile, assertInvariants
 import { assert, checkedMode, Contract } from './';
 import { MSG_NO_PROPERTIES, MSG_SINGLE_CONTRACT } from './Messages';
 
-const isContracted = Symbol('isContracted');
+const isContracted = Symbol('isContracted'),
+    innerContract = Symbol('Contract');
 
 /**
  * Checks the features of the provided object for properties.
@@ -46,8 +47,11 @@ function Contracted<
             return Base;
         }
 
-        const Contracted = class extends Base {
-            static [isContracted] = true;
+        class InnerContracted extends Base {
+            // prevents multiple @Contracted decorators from being applied
+            static readonly [isContracted] = true;
+            // The closure variable can not be used directly as a subclass may override the contract
+            get [innerContract]() { return contract; }
             constructor(...args: any[]) {
                 super(...args);
 
@@ -66,25 +70,28 @@ function Contracted<
                         }
                     });
 
-                    // bottom-up to Contracted class bind contracts
+                    // bottom-up to closest Contracted class bind contracts
                     ancRegistrations = takeWhile(ancRegistrations.reverse(), (cr => cr.Class !== Base));
                     [classRegistration, ...ancRegistrations, CLASS_REGISTRY.get(Base)!].forEach(registration => {
-                        registration.bindContract(contract);
+                        registration.bindContract(this[innerContract]);
                     });
                 }
 
-                assertInvariants(this, contract);
+                // TODO: move to classRegistration as a method?
+                assertInvariants(this, classRegistration.contract);
 
-                // Freezing to prevent public property definitions
-                // TODO: test on sub classes
-                return Object.freeze(this);
+                return this;
             }
-        };
+        }
 
-        Object.freeze(Base); // prevent modification of Base[isContracted] and more
+        const classRegistration = CLASS_REGISTRY.getOrCreate(InnerContracted);
+        classRegistration.contractsChecked = false;
+
+        // TODO: test and defined requirement
+        Object.freeze(Base);
         //Object.freeze(Base.prototype);
 
-        return Contracted;
+        return InnerContracted;
     };
 }
 
