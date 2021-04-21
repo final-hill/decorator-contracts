@@ -32,13 +32,13 @@ function checkedFeature(
 
         let old = Object.create(null);
         unChecked(contract, () => {
-            old = Object.entries(this).reduce((acc,[key,value]) => {
-                if(typeof value != 'function') {
-                    Object.defineProperty(acc,key,{value});
+            old = registration.features.reduce((acc,{hasGetter, name}) => {
+                if(hasGetter) {
+                    Object.defineProperty(acc, name, {value: this[name]});
                 }
 
                 return acc;
-            }, Object.create(null));
+            }, old);
         });
         assertInvariants(this, contract);
         assertDemands(this, contract, className, featureName, args);
@@ -130,6 +130,7 @@ class ClassRegistration {
                 {hasGetter, hasSetter, isMethod} = feature;
 
             Object.defineProperty(proto, name, {
+                enumerable: true,
                 ...(hasGetter ? {get: checkedFeature(name, feature.getter!, this) } : {}),
                 ...(hasSetter ? {set: checkedFeature(name, feature.setter!, this) } : {}),
                 ...(isMethod ? {value: checkedFeature(name, feature.value, this) } : {})
