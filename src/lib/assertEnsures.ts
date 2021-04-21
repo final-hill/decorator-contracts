@@ -27,23 +27,19 @@ function assertEnsures(
     old: Record<PropertyKey, unknown>,
     args: any[]
 ){
-    let result = true;
     const e: Ensures<any, any> | undefined = Reflect.get(contract.assertions, featureName)?.ensures,
         ensuresError = `ensures not met on ${className}.prototype.${String(featureName)}\r\n${e}`;
 
-    // TODO: inherited as OR assertions
     if(contract[checkedMode]) {
         if(e) {
             unChecked(contract, () =>
-                result = e.call(ctx, ctx, old, ...args)
+                assert(e.call(ctx, ctx, old, ...args), ensuresError)
             );
         }
     }
 
-    if(contract[extend] && !result) {
+    if(contract[extend]) {
         assertEnsures(ctx, contract[extend]!, className, featureName, old, args);
-    } else {
-        assert(result, ensuresError);
     }
 }
 
