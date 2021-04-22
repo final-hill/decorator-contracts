@@ -5,7 +5,7 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import {Contract, Contracted, invariant, assert} from '..';
+import {Contract, Contracted, invariant} from '../';
 
 interface StackType<T> {
     readonly limit: number;
@@ -66,8 +66,6 @@ class Stack<T> implements StackType<T> {
     }
 
     isFull(): boolean {
-        assert(this instanceof Stack);
-
         return this.#implementation.length == this.limit;
     }
 
@@ -99,5 +97,11 @@ describe('Testing Stack', () => {
     test('Creating stack', () => {
         expect(() => new Stack(3)).not.toThrow();
         expect(() => new Stack(-1)).toThrow();
+    });
+
+    test('popping empty stack throws', () => {
+        const myStack = new Stack(3);
+
+        expect(() => myStack.pop()).toThrow(/^Invariant violated/);
     });
 });
