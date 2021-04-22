@@ -130,7 +130,7 @@ class ClassRegistration {
     bindContract<T extends Contract<any>>(contract: T) {
         this.contract = contract;
         if(!contract[checkedMode]) {
-            return;
+            return; // TODO: is this reachable?
         }
         const proto = this.Class.prototype;
         this.features.forEach(feature => {

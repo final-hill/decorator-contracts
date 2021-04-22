@@ -364,3 +364,12 @@ Implies a need to define @override.
 
 checkedMode override vs inherited assertions?
 would have to be dynamic lookups instead of the current static approach
+
+=======
+
+enforce subtyping relationship between contracts
+
+
+@Contracted on abstract class
+
+document typing issues with accessors in retry
