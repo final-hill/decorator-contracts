@@ -19,34 +19,46 @@ interface StackType<T> {
 }
 
 const stackContract = new Contract<StackType<any>>({
-    [invariants]: [
-        self => self.isEmpty() == (self.size == 0),
-        self => self.isFull() == (self.size == self.limit),
-        self => self.size >= 0 && self.size <= self.limit
-    ],
+    [invariant](self) {
+        return self.isEmpty() == (self.size == 0) &&
+            self.isFull() == (self.size == self.limit) &&
+            self.size >= 0 && self.size <= self.limit;
+    },
     pop: {
-        demands: self => !self.isEmpty(),
-        ensures: (self,old) => self.size == old.size - 1
+        demands(self) { return !self.isEmpty(); },
+        ensures(self,old) {
+            return !self.isFull() &&
+                   self.size == old.size - 1;
+        }
     },
     push: {
-        ensures: [
-            self => !self.isEmpty(),
-            (self,old) => self.size == old.size + 1
-        ]
+        demands(self){ return !self.isFull(); },
+        ensures(self, old, item) {
+            return !self.isEmpty() &&
+                self.top === item &&
+                self.size === old.size + 1;
+        }
+    },
+    top: {
+        demands(self) {
+            return !self.isEmpty();
+        }
     }
 });
 
-class Stack<T> extends Contracted(stackContract) implements StackType<T> {
+@Contracted(stackContract)
+class Stack<T> implements StackType<T> {
     #implementation: T[] = [];
+    #size = 0;
     #limit: number;
 
     constructor(limit: number) {
-         super();
-         this.#limit = limit;
+        this.#limit = limit;
     }
 
     clear(): void {
         this.#implementation = [];
+        this.#size = 0;
     }
 
     isEmpty(): boolean {
@@ -64,15 +76,18 @@ class Stack<T> extends Contracted(stackContract) implements StackType<T> {
     }
 
     pop(): T {
+        this.#size--;
+
         return this.#implementation.pop()!;
     }
 
     push(item: T): void {
+        this.#size++;
         this.#implementation.push(item);
     }
 
     get size(): number {
-        return this.#implementation.length;
+        return this.#size;
     }
 
     top(): T {
