@@ -5,6 +5,7 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
+import { MSG_SINGLE_RETRY } from '../Messages';
 import { assert, checkedMode, Contract } from '../';
 import { assertInvariants, assertDemands, CLASS_REGISTRY, Feature, unChecked } from './';
 import assertEnsures from './assertEnsures';
@@ -30,35 +31,42 @@ function checkedFeature(
             return fnOrig.apply(this,args);
         }
 
-        let old = Object.create(null);
-        unChecked(contract, () => {
-            old = registration.features.reduce((acc,{hasGetter, name}) => {
-                if(hasGetter) {
-                    Object.defineProperty(acc, name, {value: this[name]});
-                }
-
-                return acc;
-            }, old);
-        });
         assertInvariants(this, contract);
         assertDemands(this, contract, className, featureName, args);
 
         let result;
         try {
+            let old = Object.create(null);
+            unChecked(contract, () => {
+                old = registration.features.reduce((acc,{hasGetter, name}) => {
+                    if(hasGetter) {
+                        Object.defineProperty(acc, name, {value: this[name]});
+                    }
+
+                    return acc;
+                }, old);
+            });
             result = fnOrig.apply(this,args);
             assertEnsures(this, contract, className, featureName, old, args);
         } catch(error) {
             const rescue = contract.assertions[featureName]?.rescue;
-            if(rescue == null) { throw error; }
+            if(rescue == null) {
+                assertInvariants(this, contract);
+                throw error;
+            }
             let hasRetried = false;
             unChecked(contract, () => {
-                rescue.call(this, this, error, [], () => {
+                rescue.call(this, this, error, [], (...args: any[]) => {
+                    assert(!hasRetried, MSG_SINGLE_RETRY);
                     hasRetried = true;
                     contract[checkedMode] = true;
                     result = innerCheckedFeature.call(this, ...args);
                 });
             });
-            if(!hasRetried) { throw error; }
+            if(!hasRetried) {
+                assertInvariants(this, contract);
+                throw error;
+            }
         }
 
         assertInvariants(this, contract);
