@@ -5,7 +5,7 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import { ClassRegistration, CLASS_REGISTRY, Feature, takeWhile, assertInvariants } from './lib';
+import { ClassRegistration, CLASS_REGISTRY, Constructor, Feature, takeWhile, assertInvariants } from './lib';
 import { assert, checkedMode, Contract } from './';
 import { MSG_NO_PROPERTIES, MSG_SINGLE_CONTRACT } from './Messages';
 

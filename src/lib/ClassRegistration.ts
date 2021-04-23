@@ -7,7 +7,7 @@
 
 import { MSG_SINGLE_RETRY } from '../Messages';
 import { assert, checkedMode, Contract } from '../';
-import { assertInvariants, assertDemands, CLASS_REGISTRY, Feature, unChecked } from './';
+import { assertInvariants, assertDemands, CLASS_REGISTRY, Constructor, Feature, unChecked } from './';
 import assertEnsures from './assertEnsures';
 
 /**

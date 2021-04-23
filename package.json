@@ -3,6 +3,7 @@
     "version": "0.20.0",
     "description": "Code Contracts for TypeScript and ECMAScript classes",
     "main": "dist/index.js",
+    "types": "dist/index.d.ts",
     "scripts": {
         "prebuild": "npm run clean && npm run lint",
         "build": "webpack",
