@@ -102,6 +102,6 @@ describe('Testing Stack', () => {
     test('popping empty stack throws', () => {
         const myStack = new Stack(3);
 
-        expect(() => myStack.pop()).toThrow(/^Invariant violated/);
+        expect(() => myStack.pop()).toThrow(/^demands not met/);
     });
 });
