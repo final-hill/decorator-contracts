@@ -7,6 +7,7 @@
 
 import AssertionError from './AssertionError';
 import { ASSERTION_FAILED } from './Messages';
+import { Constructor } from './lib';
 
 /**
  * An assertion is an expression of a property that must be true at a particular

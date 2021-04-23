@@ -5,7 +5,7 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import ClassRegistration from './ClassRegistration';
+import {ClassRegistration, Constructor} from './';
 
 /**
  * A WeakMap that tracks class registrations.

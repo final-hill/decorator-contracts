@@ -5,7 +5,7 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
- /**
+/**
  * Constructs a type representing a constructor
  */
-type Constructor<T> = new(...args: any[]) => T;
+export type Constructor<T> = new(...args: any[]) => T;
