@@ -36,13 +36,26 @@
             "error",
             { "treatUndefinedAsUnspecified": true }
         ],
-        "@typescript-eslint/camelcase": [
-            "error"
-        ],
-        "@typescript-eslint/class-name-casing": "error",
+        "@typescript-eslint/naming-convention": ["error",
+            { "selector": "default", "format": ["camelCase"] },
+
+            { "selector": "variableLike", "format": ["camelCase"] },
+            { "selector": "accessor", "format": ["camelCase", "UPPER_CASE", "PascalCase"] },
+            { "selector": "variable", "format": ["camelCase", "UPPER_CASE", "PascalCase"] },
+            { "selector": "parameterProperty", "format": ["camelCase", "UPPER_CASE", "PascalCase"] },
+
+            { "selector": "function", "format": ["camelCase", "PascalCase"] },
+            { "selector": "parameter", "format": ["camelCase", "PascalCase"], "leadingUnderscore": "allow" },
+
+            { "selector": "memberLike", "format": ["camelCase"] },
+            { "selector": "memberLike", "modifiers": ["private"], "format": ["camelCase"], "leadingUnderscore": "require"  },
+
+            { "selector": "typeLike", "format": ["PascalCase"] },
+            { "selector": "typeParameter", "format": ["PascalCase"] },
+
+            { "selector": "interface", "format": ["PascalCase"], "custom": { "regex": "^I[A-Z]", "match": false } }
+          ],
         "@typescript-eslint/consistent-type-assertions": "error",
-        "@typescript-eslint/explicit-function-return-type":  "error",
-        "@typescript-eslint/interface-name-prefix": "error",
         "@typescript-eslint/member-delimiter-style": "error",
         "no-array-constructor": [
             "off"
@@ -204,7 +217,7 @@
             "error"
         ],
         "no-undef": [
-            "error"
+            "off"
         ],
         "no-unexpected-multiline": [
             "error"
@@ -268,7 +281,6 @@
             "error",
             "always"
         ],
-        "@typescript-eslint/strict-boolean-expressions": "error",
         "@typescript-eslint/unified-signatures": "error",
         "arrow-body-style": "error",
         "arrow-parens": [
@@ -335,7 +347,7 @@
         "header/header": [2, "block", [
             "!",
             " * @license",
-            " * Copyright (C) 2020 Final Hill LLC",
+            " * Copyright (C) 2021 Final Hill LLC",
             " * SPDX-License-Identifier: AGPL-3.0-only",
             " * @see <https://spdx.org/licenses/AGPL-3.0-only.html>",
             " "

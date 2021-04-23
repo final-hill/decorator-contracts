@@ -24,9 +24,7 @@
           "name": "Jest Current File",
           "program": "${workspaceFolder}/node_modules/.bin/jest",
           "args": [
-            "${fileBasenameNoExtension}",
-            "--config",
-            "jest.config.js"
+            "${fileBasenameNoExtension}"
           ],
           "console": "integratedTerminal",
           "internalConsoleOptions": "neverOpen",
