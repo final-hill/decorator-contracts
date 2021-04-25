@@ -3,6 +3,7 @@
 ## v0.20.2
 
 * Additional usability for for [#197](https://github.com/final-hill/decorator-contracts/issues/197)
+* Updated README
 
 ## v0.20.1
 
