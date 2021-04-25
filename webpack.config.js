@@ -26,7 +26,6 @@ module.exports = {
   // https://github.com/riversun/making-library-with-webpack
   output: {
     filename: 'index.js',
-    library: 'decoratorContracts',
     libraryTarget: 'umd',
     globalObject: 'this',
     path: path.resolve(__dirname, 'dist'),
