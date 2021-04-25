@@ -1,6 +1,6 @@
 {
     "name": "@final-hill/decorator-contracts",
-    "version": "0.20.0",
+    "version": "0.20.1",
     "description": "Code Contracts for TypeScript and ECMAScript classes",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",

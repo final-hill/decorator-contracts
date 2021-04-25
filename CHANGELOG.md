@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.20.1
+
+* Fixed bug [#197](https://github.com/final-hill/decorator-contracts/issues/197)
 ## v0.20.0
 
 * Updated license headers to reference Final Hill LLC
