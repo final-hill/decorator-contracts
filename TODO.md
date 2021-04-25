@@ -174,7 +174,6 @@ http://web.archive.org/web/20190128011444/https://zedshaw.com/archive/why-i-algp
 https://hn.algolia.com/?query=GPL&sort=byPopularity&prefix&page=0&dateRange=all&type=story
 
 =========
-https://en.wikipedia.org/wiki/Open%E2%80%93closed_principle
 https://www2.cs.duke.edu/courses/fall07/cps108/papers/ocp.pdf
 
 https://stackoverflow.com/questions/8155850/how-to-test-whether-a-set-is-reflexive-symmetric-anti-symmetric-and-or-transit?rq=1
@@ -218,6 +217,5 @@ Research paper:
 
 =========
 
-https://sorbet.org/
 https://dry-rb.org/gems/dry-schema/1.5/
 https://www.microsoft.com/en-us/research/project/code-contracts/?from=http%3A%2F%2Fresearch.microsoft.com%2Fen-us%2Fprojects%2Fcontracts%2Ffaq.aspx
