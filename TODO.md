@@ -173,10 +173,6 @@ https://news.ycombinator.com/item?id=705715
 http://web.archive.org/web/20190128011444/https://zedshaw.com/archive/why-i-algpl/
 https://hn.algolia.com/?query=GPL&sort=byPopularity&prefix&page=0&dateRange=all&type=story
 
-================
-https://docs.microsoft.com/en-us/azure/devops/artifacts/get-started-npm?view=azure-devops&tabs=windows
-https://www.twilio.com/blog/2017/06/writing-a-node-module-in-typescript.html
-
 =========
 https://en.wikipedia.org/wiki/Open%E2%80%93closed_principle
 https://www2.cs.duke.edu/courses/fall07/cps108/papers/ocp.pdf
