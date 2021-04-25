@@ -1,17 +1,5 @@
-multiple rescues on a feature?
-defined per error type? all errors?
-
-=============================
-cleanup TODOs
-=======
 Prevent delete
 
-intercept property assignments
-=======
-
-test method.apply and method.call
-	current methods w/ contracts applied to other class
-	other class method applied to contracted class
 ============
 
 @override needs to test input for use in non-TS environments. assert(isFunction) and such
@@ -19,26 +7,6 @@ test method.apply and method.call
 test for @override assigned to class
 
 does an @override member return a value as expected?
-
-======================
-	only a single @rescue can be assigned to a feature
-invariant required
-
-@staticRescue can be assigned to a class or its static features
-	when assigned to a class it will act as the @static rescue for all of its static features
-		including the constructor
-	
-	subclasses also use this @staticRescue
-	
-	only a single @rescue can be assigned to a feature
-	invariant required
-
-Inheritance?
-
-===================
-
-Change Request
-change the use of 'member' in documentation to class 'feature'
 
 ==========
 async method handling?
@@ -51,23 +19,32 @@ overrides
 Does the typescript 4.3 override feature not cover these use cases? Therefore does not subsume this
 library feature?
 
-===================
-review typings folder usage
+=========
+	• https://web.archive.org/web/20151205005155/https://blog.mozilla.org/dherman/2011/08/29/contracts-coffee/
+	• https://web.archive.org/web/20151002033716/http://c2.com/cgi/wiki?DesignByContract
+	• https://en.wikipedia.org/wiki/Code_contract
+	• https://web.archive.org/web/20150905075048/http://users.eecs.northwestern.edu/~robby/pubs/papers/ho-contracts-techreport.pdf
+	• https://cstheory.stackexchange.com/questions/5228/relationship-between-contracts-and-dependent-typing?newreg=666f3092f1644974935c5ca8436097c4
+	• https://mobile.twitter.com/graydon_pub/status/1045674497271988230
+	• http://homepages.inf.ed.ac.uk/wadler/topics/blame.html
+	• http://www.drdobbs.com/architecture-and-design/ada-2012-ada-with-contracts/240150569
+https://web.archive.org/web/20150905075048/http://users.eecs.northwestern.edu/~robby/pubs/papers/ho-contracts-techreport.pdf
 
-===================
+====
+	only public features have to honor the invariant
+	invariant can be broken during exection
+	
+A class is not just a collection of methods
+=============
 
-member vs class feature
+Contracts and variance
+contracts vs unit tests
+unit tests vs type systems
 
-==================
-COntracted class methods can not use method.apply(...)?
-	or can apply/call be captured and the contracts disabled?
+separation from main implementation
 
-otherClass.apply(contractedClass)
-	how is invariant applied? can proxy capture?
-
-Foo.prototype.method.apply(other)
-
-What invariant applies?
+====
+Are Contracts and Unit Tests dual?
 
 ====================
 @demands
@@ -77,45 +54,13 @@ What invariant applies?
 {Complicates implementation}
 {All of this extraneous checking has nothing to do with the datastructure}
 
-=======
-
-test @demands w/ params
-
-
-=========
-
-simplify tests by refactoring requirement to "member decorator" terminology
-
-===========
-
-LSP
-http://www.blackwasp.co.uk/LSP.aspx
-
 ===========
 https://www.eiffel.org/doc/solutions/Design_by_Contract_and_Assertions
 
-=========
-
-SHow documentation example of timing requirements
-
-======
-
-{Philosophically speaking: when the user of a class one of its features they are required 
-to fulfill its defined preconditions. After the feature has completed its execution the defined 
-postcondition is fulfilled. }
 
 ===========
 
 Unit testing is one thing, but a test plan is needed as well to show that the library can be installed and used in another library
-
-============
-`Precondition failed on ${Clazz.name}.${String(propertyKey)}`
-
-Should display the precondition:
-
-`Precondition failed on ${Clazz.name}.${String(propertyKey)} : ${precondition.toString()}`
-
-THe message is also innacurate. It should say ${Clazz.name}.prototype.${String(propertyKey)}
 
 ===============
 
@@ -127,15 +72,6 @@ Also don't want to have to manually tag in multiple places
 
 Version dictated by build/release only?
 
-=======
-
-Test Contracted() on intermediary class
-
-Test Contracted on Contracted class
-
-incompatible contracts?
-	base class Contract vs subclass contract
-
 ================
 
 "A class is not simply an interface. ":
@@ -143,34 +79,12 @@ incompatible contracts?
 Stack vs Queue interface 
 
 "Contracts specify the semantics of a class..."
-============
-The description of @override should immediately follow @invariant so that it's not used before being defined
-
-============
-Test getter/setter on @demands
-
-=============
-
-Test contracts on async methods, constructors, etc
-
-================
-competitor/comparable
-https://github.com/alexreardon/tiny-invariant
-
-=============
-Add further reading section to README
 
 ========
 	
-compare with other contract libraries
+competitor/comparable
+https://github.com/alexreardon/tiny-invariantcompare with other contract libraries
 	https://en.wikipedia.org/wiki/Design_by_contract
-===============
-update release name format
-https://dev.azure.com/thenewobjective/decorator-contracts/_releaseDefinition?definitionId=3&_a=definition-options
-https://dev.azure.com/thenewobjective/decorator-contracts/_git/ddacbfd1-8e95-4067-8b9c-95324bac6926/commit/c20d4263b7f0b6301179141ac2bd81c0ba9130a1
-==============
-
-See badges of https://github.com/parcel-bundler/parcel
 
 ==============
 
@@ -214,34 +128,11 @@ Add branching rules to Contributing.md
 Business opportunity?
 https://marketplace.visualstudio.com/search?term=Contributor%20License%20Agreement&target=AzureDevOps&category=All%20categories&sortBy=Relevance
 
-==========
-cleanup TODOs
-
-=================
-
-inline asserts should not be used for things like null checking because...
-
 =============
 
 Russian Doll Pattern vs N-version programming (page 426 of OOSC 2nd Ed.)
 
 ===================
-Notify:
-	https://github.com/microsoft/TypeScript/issues/2000
-	
-============
-class Stack<T> {
-	...
-	@require(self => !self.isEmpty()
-	top(): T {
-		if(this.isEmpty()) {
-			console.log('The Stack is empty');
-			// throw 'The stack is empty' ?
-		} else {
-			...
-		}
-	}
-}
 
 Object-oriented Software Construction
 	page 121
@@ -251,13 +142,6 @@ Object-oriented Software Construction
 	efficient implementation of stack operations. To keep the body of top
 	simple and convincing, the precondition not empty must be assumed
 	"""
-	
-===========
-What about static methods?
-
-object invariants?
-
-function invariants?
 
 ===============
 Document difference from Eiffel
@@ -300,19 +184,9 @@ https://www2.cs.duke.edu/courses/fall07/cps108/papers/ocp.pdf
 https://stackoverflow.com/questions/8155850/how-to-test-whether-a-set-is-reflexive-symmetric-anti-symmetric-and-or-transit?rq=1
 https://math.stackexchange.com/questions/2164422/how-to-find-binary-representation-of-sets
 
-Should there be a class-level rescue definition?
-
-document that contract checking is disabled in the body of the assertion
-in order to prevent infinite recursion.
 ======
 
-Documentation:
-With contracts, how much unit testing is needed?
-
-====
-
 Contracts are part of specification and not implementation.
-
 
 Relationship between specification and verification?
 
@@ -335,9 +209,6 @@ https://www.eiffel.org/doc/eiffel/ET-_Design_by_Contract_%28tm%29%2C_Assertions_
 https://web.archive.org/web/20151220045527/http://disnetdev.com/contracts.coffee
 https://web.archive.org/web/20151002175109/http://eschertech.com/papers/safe_oo_software.pdf
 ==========
-No side-effects in requires, ensures, invariants?
-
-How is it enforced?
 
 https://docs.microsoft.com/en-us/dotnet/framework/debug-trace-profile/code-contracts
 https://www.dotnetcurry.com/csharp/1172/code-contracts-csharp-static-runtime-checks
@@ -354,22 +225,3 @@ Research paper:
 https://sorbet.org/
 https://dry-rb.org/gems/dry-schema/1.5/
 https://www.microsoft.com/en-us/research/project/code-contracts/?from=http%3A%2F%2Fresearch.microsoft.com%2Fen-us%2Fprojects%2Fcontracts%2Ffaq.aspx
-
-
-=========
-
-Contracts as a class instead of object?
-Implies a need to define @override. 
-
-
-checkedMode override vs inherited assertions?
-would have to be dynamic lookups instead of the current static approach
-
-=======
-
-enforce subtyping relationship between contracts
-
-
-@Contracted on abstract class
-
-document typing issues with accessors in retry

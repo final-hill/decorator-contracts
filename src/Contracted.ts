@@ -77,7 +77,6 @@ function Contracted<
                     });
                 }
 
-                // TODO: move to classRegistration as a method?
                 assertInvariants(this, classRegistration.contract);
 
                 return this;
@@ -87,9 +86,7 @@ function Contracted<
         const classRegistration = CLASS_REGISTRY.getOrCreate(InnerContracted);
         classRegistration.contractsChecked = false;
 
-        // TODO: test and defined requirement
         Object.freeze(Base);
-        //Object.freeze(Base.prototype);
 
         return InnerContracted;
     };
