@@ -56,7 +56,6 @@ export class Contract<T extends AnyObject> {
             const featureOption = assertions[propertyKey]!;
             Object.defineProperty(this.assertions,propertyKey, {
                 value: {
-                    // TODO: this[extend] ?
                     demands: featureOption.demands ?? fnTrue,
                     ensures: featureOption.ensures ?? fnTrue,
                     rescue: featureOption.rescue
