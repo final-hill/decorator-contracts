@@ -4,8 +4,6 @@ Prevent delete
 
 @override needs to test input for use in non-TS environments. assert(isFunction) and such
 
-test for @override assigned to class
-
 does an @override member return a value as expected?
 
 ==========
@@ -31,17 +29,10 @@ library feature?
 https://web.archive.org/web/20150905075048/http://users.eecs.northwestern.edu/~robby/pubs/papers/ho-contracts-techreport.pdf
 
 ====
-	only public features have to honor the invariant
-	invariant can be broken during exection
-	
-A class is not just a collection of methods
-=============
 
 Contracts and variance
 contracts vs unit tests
 unit tests vs type systems
-
-separation from main implementation
 
 ====
 Are Contracts and Unit Tests dual?
@@ -50,13 +41,9 @@ Are Contracts and Unit Tests dual?
 @demands
 
 {Be liberal in what you accept, and conservative in what you give}
-{Encoding of error checking}
-{Complicates implementation}
-{All of this extraneous checking has nothing to do with the datastructure}
 
 ===========
 https://www.eiffel.org/doc/solutions/Design_by_Contract_and_Assertions
-
 
 ===========
 
@@ -77,8 +64,6 @@ Version dictated by build/release only?
 "A class is not simply an interface. ":
 
 Stack vs Queue interface 
-
-"Contracts specify the semantics of a class..."
 
 ========
 	
@@ -119,7 +104,6 @@ History constraint (the "history rule"). Objects are regarded as being
 """
 How to enforce? @invariant proxy should be able to catch this...
 
-
 https://en.wikipedia.org/wiki/Liskov_substitution_principle
 
 ================
@@ -147,20 +131,6 @@ Object-oriented Software Construction
 Document difference from Eiffel
 https://stackoverflow.com/questions/57694623/is-the-rescue-clause-being-called-on-descendent-redefinition
 
-==============
-"""
-Precondition violations are reported to the caller. They indicate a bug in the caller. 
-If bugs are expected or possible in the callers, you can catch and handle them in the callers.
-
-Postcondition violations are reported to the callee. They indicate bugs in the callee. 
-The callee can catch and handle them if such bugs are expected.
-
-Class invariants are established at object creation. If they are violated by the creation 
-procedure or after the execution of a procedure used in a qualified call, they indicate a bug 
-in the callee and can be handled like postcondition violations. Otherwise, they indicate more 
-complex issue involving object dependencies. It could be handled by the caller, but most likely 
-it would be next to impossible to restore correct object state.
-"""
 
 =======
 https://wiki.c2.com/?DesignByContract
@@ -180,8 +150,6 @@ https://stackoverflow.com/questions/8155850/how-to-test-whether-a-set-is-reflexi
 https://math.stackexchange.com/questions/2164422/how-to-find-binary-representation-of-sets
 
 ======
-
-Contracts are part of specification and not implementation.
 
 Relationship between specification and verification?
 

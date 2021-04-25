@@ -148,7 +148,8 @@ class Stack<T> implements StackType<T> {
 }
 ```
 
-A contract is defined independently from a class. Its has the following form:
+A contract specifies the semantics of a class and is defined independently from it
+the same way that an interface is. Its has the following form:
 
 ```ts
 const fooContract = new Contract<Foo>({
@@ -363,10 +364,12 @@ class Point2D {
 
 ## Invariants
 
-The `invariant` declaration describes and enforces the semantics of a class.
+A class is not just a collection of methods it has semantics that
+bind them together and the `invariant` declaration describes and enforces these relationships.
 This assertion is checked after the associated class is constructed, before and
 after every method execution, and before and after every accessor usage (get/set).
-If this evaluates to false during class usage an `AssertionError` will be thrown.
+If this evaluates to false during class usage an `AssertionError` will be thrown in the library code
+as it indicates a bug in the class where it has the [opportunity](#rescue) to handle it.
 True assertions do not throw an error. An example of this is given below using a Stack:
 
 ```typescript
@@ -424,12 +427,16 @@ The result is that the invariant of `Sub` is strengthened, meaning that the asse
 
 Effectively meaning that `self.value` can only be `10`
 
+Only public features have to honor the `invariant`. During execution it can be broken as long as it is restored before exiting.
+
 ## Demands
 
 The `demands` declaration describes and enforces an assertion that must be true
 before its associated feature can execute. In other words before a client
 of your class can execute a method or accessor the defined precondition
-must first be met or an error will be raised [to the client](#the-order-of-assertions).
+must first be met or an error will be raised [to the caller](#the-order-of-assertions).
+This is because a failure to meet the precondition indicates a bug in the caller's code
+and not yours.
 
 ```typescript
 const stackContract = new Contract<StackType<any>>({
@@ -527,7 +534,8 @@ In the above example the precondition of `Sub.prototype.someMethod` is:
 
 ## Ensures
 
-The `ensures` declaration describes and enforces an assertion that must be true *after* its associated feature  executes. In other words after a client of your class executes a method or accessor the defined post-condition must be met or an error will be [raised to the library author](#the-order-of-assertions).
+The `ensures` declaration describes and enforces an assertion that must be true *after* its associated feature  executes. In other words after a client of your class executes a method or accessor the defined post-condition must be met or an error will be [raised to the library author](#the-order-of-assertions). This indicates a bug in the library code and not in the
+caller. The library code then has the [opportunity](#rescue) to capture and fix this error if it's expected.
 
 ```typescript
 const stackContract<Stack<any>> = new Contract({
