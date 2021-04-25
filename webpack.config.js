@@ -27,7 +27,6 @@ module.exports = {
   output: {
     filename: 'index.js',
     library: 'decoratorContracts',
-    libraryExport: '',
     libraryTarget: 'umd',
     globalObject: 'this',
     path: path.resolve(__dirname, 'dist'),
