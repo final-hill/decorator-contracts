@@ -348,4 +348,25 @@ describe('The \'override\' decorator must have a Contracted class in it\'s ances
             return new Fail();
         }).toThrow(MSG_NOT_CONTRACTED);
     });
+
+    test('override on base class', () => {
+        expect(() => {
+            @Contracted()
+            class Base {
+                toString(){}
+            }
+
+            return new Base();
+        }).toThrow('@override decorator missing on Base.prototype.toString');
+
+        expect(() => {
+            @Contracted()
+            class Base {
+                @override
+                toString(){}
+            }
+
+            return new Base();
+        }).not.toThrow();
+    });
 });

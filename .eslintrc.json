@@ -47,7 +47,7 @@
             { "selector": "function", "format": ["camelCase", "PascalCase"] },
             { "selector": "parameter", "format": ["camelCase", "PascalCase"], "leadingUnderscore": "allow" },
 
-            { "selector": "memberLike", "format": ["camelCase"] },
+            { "selector": "memberLike", "format": ["camelCase", "PascalCase"] },
             { "selector": "memberLike", "modifiers": ["private"], "format": ["camelCase"], "leadingUnderscore": "require"  },
 
             { "selector": "typeLike", "format": ["PascalCase"] },

@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.20.3
+
+* Fixed bug [#202](https://github.com/final-hill/decorator-contracts/issues/202)
+
 ## v0.20.2
 
 * Additional usability fix for [#197](https://github.com/final-hill/decorator-contracts/issues/197)
