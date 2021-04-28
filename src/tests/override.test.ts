@@ -63,7 +63,7 @@ describe('Using @override on a class member with no ancestor member is an error'
             }
 
             return Base;
-        }).toThrow(MSG_NOT_CONTRACTED);
+        }).toThrow(MSG_NO_MATCHING_FEATURE);
     });
 
     test('subclass with @override decorator', () => {
@@ -345,7 +345,7 @@ describe('The \'override\' decorator must have a Contracted class in it\'s ances
                 method(value: number): number { return value; }
             }
 
-            return new Fail();
+            return new Fail().method(7);
         }).toThrow(MSG_NOT_CONTRACTED);
     });
 
@@ -356,7 +356,7 @@ describe('The \'override\' decorator must have a Contracted class in it\'s ances
                 toString(){}
             }
 
-            return new Base();
+            return new Base().toString();
         }).toThrow('@override decorator missing on Base.prototype.toString');
 
         expect(() => {
@@ -366,7 +366,7 @@ describe('The \'override\' decorator must have a Contracted class in it\'s ances
                 toString(){}
             }
 
-            return new Base();
+            return new Base().toString();
         }).not.toThrow();
     });
 });

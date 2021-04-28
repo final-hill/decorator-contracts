@@ -48,7 +48,7 @@ function override(target: Record<PropertyKey, any>, propertyKey: PropertyKey, de
     return {
         enumerable: true,
         configurable: true,
-        writable: true,
+        ...(!feature.isAccessor ? {writable: true} : {}),
         ...(feature.hasGetter ? {get(){ assert((this.constructor as any)[isContracted], MSG_NOT_CONTRACTED); } } : {}),
         ...(feature.hasSetter ? {set(_){ assert((this.constructor as any)[isContracted], MSG_NOT_CONTRACTED); } } : {}),
         ...(feature.isMethod ? {value() {assert((this.constructor as any)[isContracted], MSG_NOT_CONTRACTED); } } : {})
