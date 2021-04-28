@@ -28,7 +28,6 @@ function override(target: Record<PropertyKey, any>, propertyKey: PropertyKey, de
     const registration = CLASS_REGISTRY.getOrCreate(Class),
         feature = registration.findFeature(propertyKey);
 
-    assert(Class[isContracted], MSG_NOT_CONTRACTED);
     assert(feature != null, MSG_MISSING_FEATURE);
 
     const ancFeature = feature.ancestorFeature;
@@ -43,7 +42,17 @@ function override(target: Record<PropertyKey, any>, propertyKey: PropertyKey, de
         assert(thisMethod.length == ancMethod.length, MSG_INVALID_ARG_LENGTH);
     }
 
-    return descriptor;
+    feature.overridenOriginalDescriptor = descriptor;
+
+    // method decorators are evaluated before class decorators
+    return {
+        enumerable: true,
+        configurable: true,
+        ...(!feature.isAccessor ? {writable: true} : {}),
+        ...(feature.hasGetter ? {get(){ assert((this.constructor as any)[isContracted], MSG_NOT_CONTRACTED); } } : {}),
+        ...(feature.hasSetter ? {set(_){ assert((this.constructor as any)[isContracted], MSG_NOT_CONTRACTED); } } : {}),
+        ...(feature.isMethod ? {value() {assert((this.constructor as any)[isContracted], MSG_NOT_CONTRACTED); } } : {})
+    };
 }
 
 export default override;
