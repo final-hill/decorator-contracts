@@ -9,10 +9,10 @@ import ClassRegistration from './ClassRegistration';
 
 class Feature {
     #descriptor: PropertyDescriptor;
-    #overridenOriginalDescriptor: PropertyDescriptor | undefined;
+    #overriddenOriginalDescriptor: PropertyDescriptor | undefined;
 
     /**
-     * Does the current feature have an @override declaration?
+     * Does the current feature have an `@override` declaration?
      */
     hasOverrides = false;
 
@@ -98,16 +98,16 @@ class Feature {
     /**
      * Returns the original feature descriptor which was replaced by the `override` decorator
      */
-    get overridenOriginalDescriptor(): PropertyDescriptor| undefined {
-        return this.#overridenOriginalDescriptor;
+    get overriddenOriginalDescriptor(): PropertyDescriptor| undefined {
+        return this.#overriddenOriginalDescriptor;
     }
 
     /**
      * Sets the feature descriptor. Used by the `override` decorator.
      * @param {PropertyDescriptor} value - The descriptor to save
      */
-    set overridenOriginalDescriptor(value: PropertyDescriptor | undefined) {
-        this.#overridenOriginalDescriptor = value;
+    set overriddenOriginalDescriptor(value: PropertyDescriptor | undefined) {
+        this.#overriddenOriginalDescriptor = value;
     }
 
     /**

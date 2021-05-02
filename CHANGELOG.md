@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.20.4
+
+* Improved error messaging with `@override` when feature is missing
+* Fixed source code typos
+
 ## v0.20.3
 
 * Fixed bug [#202](https://github.com/final-hill/decorator-contracts/issues/202)

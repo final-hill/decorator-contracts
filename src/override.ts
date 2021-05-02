@@ -28,7 +28,7 @@ function override(target: Record<PropertyKey, any>, propertyKey: PropertyKey, de
     const registration = CLASS_REGISTRY.getOrCreate(Class),
         feature = registration.findFeature(propertyKey);
 
-    assert(feature != null, MSG_MISSING_FEATURE);
+    assert(feature != null, `${MSG_MISSING_FEATURE}: ${registration.Class.name}.prototype.${String(propertyKey)}`);
 
     const ancFeature = feature.ancestorFeature;
 
@@ -42,7 +42,7 @@ function override(target: Record<PropertyKey, any>, propertyKey: PropertyKey, de
         assert(thisMethod.length == ancMethod.length, MSG_INVALID_ARG_LENGTH);
     }
 
-    feature.overridenOriginalDescriptor = descriptor;
+    feature.overriddenOriginalDescriptor = descriptor;
 
     // method decorators are evaluated before class decorators
     return {
