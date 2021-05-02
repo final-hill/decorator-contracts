@@ -7,8 +7,8 @@
 
 import AssertionError from './AssertionError';
 import {Contract, extend, invariant, Invariant, checkedMode, Rescue} from './Contract';
-import Contracted from './Contracted';
+import Contracted, {innerContract} from './Contracted';
 import override from './override';
 import assert from './assert';
 
-export {AssertionError, Contract, Contracted, Invariant, Rescue, invariant, extend, checkedMode, override, assert};
+export {AssertionError, Contract, Contracted, Invariant, Rescue, invariant, innerContract, extend, checkedMode, override, assert};

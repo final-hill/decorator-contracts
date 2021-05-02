@@ -10,7 +10,7 @@ import { assert, checkedMode, Contract } from './';
 import { MSG_NO_PROPERTIES, MSG_SINGLE_CONTRACT } from './Messages';
 
 const isContracted = Symbol('isContracted'),
-    innerContract = Symbol('Contract');
+    innerContract = Symbol('innerContract');
 
 /**
  * Checks the features of the provided object for properties.
@@ -92,5 +92,5 @@ function Contracted<
     };
 }
 
-export {isContracted};
+export {isContracted, innerContract};
 export default Contracted;

@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.20.5
+
+* Features named with a symbol now support `@override`
+
 ## v0.20.4
 
 * Improved error messaging with `@override` when feature is missing
