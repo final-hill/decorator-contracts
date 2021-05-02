@@ -370,3 +370,37 @@ describe('The \'override\' decorator must have a Contracted class in it\'s ances
         }).not.toThrow();
     });
 });
+
+describe('Features named with a symbol must support `@override`', () => {
+    test('Invalid declaration', () => {
+        expect(() => {
+            const method = Symbol('method');
+            class BadBase {
+                [method](value: number): number { return value; }
+            }
+
+            class Fail extends BadBase {
+                @override
+                [method](value: number): number { return value; }
+            }
+
+            return new Fail()[method](7);
+        }).toThrow(MSG_NOT_CONTRACTED);
+    });
+    test('Valid declaration', () => {
+        const method = Symbol('method');
+        @Contracted()
+        class Base {
+            [method](value: number): number { return value; }
+        }
+
+        class Okay extends Base {
+            @override
+            [method](value: number): number { return value; }
+        }
+
+        const okay = new Okay();
+
+        expect(okay[method](15)).toBe(15);
+    });
+});

@@ -6,7 +6,7 @@
  */
 
 import { MSG_SINGLE_RETRY } from '../Messages';
-import { assert, checkedMode, Contract } from '../';
+import { assert, checkedMode, Contract, innerContract } from '../';
 import { assertInvariants, assertDemands, CLASS_REGISTRY, Constructor, Feature, unChecked } from './';
 import assertEnsures from './assertEnsures';
 
@@ -20,7 +20,7 @@ import assertEnsures from './assertEnsures';
  * @returns {function(...args: any[]): any} - The original function augments with assertion checks
  */
 function checkedFeature(
-    featureName: string,
+    featureName: PropertyKey,
     fnOrig: (...args: any[]) => any,
     registration: ClassRegistration
 ) {
@@ -36,20 +36,18 @@ function checkedFeature(
 
         let result;
         try {
-            let old = Object.create(null);
+            const old = Object.create(null);
             unChecked(contract, () => {
-                old = registration.features.reduce((acc,{hasGetter, name}) => {
+                registration.features.forEach(({name, hasGetter}) => {
                     if(hasGetter) {
-                        Object.defineProperty(acc, name, {value: this[name]});
+                        Object.defineProperty(old, name, {value: this[name]});
                     }
-
-                    return acc;
-                }, old);
+                });
             });
             result = fnOrig.apply(this,args);
             assertEnsures(this, contract, className, featureName, old, args);
         } catch(error) {
-            const rescue = contract.assertions[featureName]?.rescue;
+            const rescue = Reflect.get(contract.assertions,featureName)?.rescue;
             if(rescue == null) {
                 assertInvariants(this, contract);
                 throw error;
@@ -77,14 +75,15 @@ function checkedFeature(
 
 class ClassRegistration {
     #features: Feature[];
-
     contract!: Contract<any>; // Assigned by the Contracted class via this.bindContract
     contractsChecked = false;
 
     constructor(readonly Class: Constructor<any>) {
-        this.#features = Object.entries(Object.getOwnPropertyDescriptors(this.Class.prototype))
-            .filter(([key]) => key != 'constructor')
-            .map(([key, descriptor]) => new Feature(this, key, descriptor));
+        const proto = this.Class.prototype;
+        this.#features =
+            Reflect.ownKeys(proto)
+            .filter(key => key != 'constructor' && key !== innerContract)
+            .map(key => new Feature(this, key, Object.getOwnPropertyDescriptor(proto,key)!));
     }
 
     /**
@@ -134,8 +133,7 @@ class ClassRegistration {
         }
         const proto = this.Class.prototype;
         this.features.forEach(feature => {
-            const name = String(feature.name),
-                {hasGetter, hasSetter, isMethod} = feature;
+            const {name,hasGetter, hasSetter, isMethod} = feature;
 
             Object.defineProperty(proto, name, {
                 enumerable: true,
