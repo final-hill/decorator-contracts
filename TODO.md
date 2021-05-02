@@ -187,3 +187,12 @@ Research paper:
 
 https://dry-rb.org/gems/dry-schema/1.5/
 https://www.microsoft.com/en-us/research/project/code-contracts/?from=http%3A%2F%2Fresearch.microsoft.com%2Fen-us%2Fprojects%2Fcontracts%2Ffaq.aspx
+
+https://www.pixelated-noise.com/blog/2020/09/10/what-spec-is/
+https://increment.com/testing/in-praise-of-property-based-testing/
+https://specflow.org/
+
+https://github.com/microsoft/TypeScript/blob/master/CONTRIBUTING.md
+
+https://www.eiffel.com/values/design-by-contract/introduction/
+https://www.eiffel.com/resources/presentations/
