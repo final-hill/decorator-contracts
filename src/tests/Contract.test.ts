@@ -145,3 +145,26 @@ describe('Only a single contract can be assigned to a class', () => {
         }).toThrow(MSG_SINGLE_CONTRACT);
     });
 });
+
+// https://github.com/final-hill/decorator-contracts/issues/193
+describe('An abstract class must support contract declarations', () => {
+    test('Concrete declaration', () => {
+        expect(() => {
+            const baseContract = new Contract<Base>({});
+            @Contracted(baseContract)
+            class Base {}
+
+            return Base;
+        }).toBeDefined();
+    });
+
+    test('Abstract declaration', () => {
+        expect(() => {
+            const baseContract = new Contract<Base>({});
+            @Contracted(baseContract)
+            abstract class Base {}
+
+            return Base;
+        }).toBeDefined();
+    });
+});

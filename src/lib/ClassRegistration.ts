@@ -7,7 +7,7 @@
 
 import { MSG_SINGLE_RETRY } from '../Messages';
 import { assert, checkedMode, Contract, innerContract } from '../';
-import { assertInvariants, assertDemands, CLASS_REGISTRY, Constructor, Feature, unChecked } from './';
+import { assertInvariants, assertDemands, CLASS_REGISTRY, ClassType, Feature, unChecked } from './';
 import assertEnsures from './assertEnsures';
 
 /**
@@ -78,7 +78,7 @@ class ClassRegistration {
     contract!: Contract<any>; // Assigned by the Contracted class via this.bindContract
     contractsChecked = false;
 
-    constructor(readonly Class: Constructor<any>) {
+    constructor(readonly Class: ClassType<any>) {
         const proto = this.Class.prototype;
         this.#features =
             Reflect.ownKeys(proto)
@@ -89,7 +89,7 @@ class ClassRegistration {
     /**
      * Returns a reference to the parent class
      */
-    get ParentClass(): Constructor<any> | null {
+    get ParentClass(): ClassType<any> | null {
         return Object.getPrototypeOf(this.Class.prototype)?.constructor;
     }
 

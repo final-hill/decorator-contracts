@@ -12,13 +12,13 @@ import unChecked from './unChecked';
 /**
  * Applies invariant assertions to the provided class instance
  *
- * @param {Record<PropertyKey, unknown>} ctx - The context class
+ * @param {U} ctx - The context class
  * @param {Contract<any>} contract - The contract
  * @param {string} className - The name of the class
  * @param {PropertyKey} featureName - The name of the feature
  * @param {any[]} args - The arguments of the feature to apply to the assertion
  */
-function assertDemands(ctx: Record<PropertyKey, unknown>, contract: Contract<any>, className: string, featureName: PropertyKey, args: any[]){
+function assertDemands<U>(ctx: U, contract: Contract<any>, className: string, featureName: PropertyKey, args: any[]){
     let result = true;
     const d: Demands<any, any> | undefined = Reflect.get(contract.assertions, featureName)?.demands,
         demandsError = `demands not met on ${className}.prototype.${String(featureName)}\r\n${d}`;

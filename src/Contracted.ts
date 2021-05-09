@@ -5,7 +5,7 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import { ClassRegistration, CLASS_REGISTRY, Constructor, Feature, takeWhile, assertInvariants } from './lib';
+import { ClassRegistration, CLASS_REGISTRY, ClassType, Feature, takeWhile, assertInvariants } from './lib';
 import { assert, checkedMode, Contract } from './';
 import { MSG_NO_PROPERTIES, MSG_SINGLE_CONTRACT } from './Messages';
 
@@ -16,11 +16,11 @@ const isContracted = Symbol('isContracted'),
  * Checks the features of the provided object for properties.
  * If any are found an exception is thrown
  * @param {ClassRegistration} registration - The ClassRegistration for the object
- * @param {Record<PropertyKey,unknown>} obj - The object to check
+ * @param {U} obj - The object to check
  * @throws {AssertionError} - Throws if a property is found
  * @returns {boolean} - The result of the test
  */
-function hasProperties(registration: ClassRegistration, obj: Record<PropertyKey, unknown>): boolean {
+function hasProperties<U>(registration: ClassRegistration, obj: U): boolean {
     return Object.entries(Object.getOwnPropertyDescriptors(obj))
         .some(([key, desc]) => new Feature(registration,key,desc).isProperty);
 }
@@ -38,16 +38,16 @@ function hasProperties(registration: ClassRegistration, obj: Record<PropertyKey,
  */
 function Contracted<
     T extends Contract<any> = Contract<any>,
-    U extends Constructor<any> = Constructor<any>
->(contract: T = new Contract() as T) {
-    return function(Base: U & {[isContracted]?: boolean}): U {
+    U extends ClassType<any> = ClassType<any>
+>(contract: T = new Contract() as T): ClassDecorator {
+    return function(Base: U) {
         assert(!Object.getOwnPropertySymbols(Base).includes(isContracted), MSG_SINGLE_CONTRACT);
 
         if(contract[checkedMode] === false) {
             return Base;
         }
 
-        class InnerContracted extends Base {
+        abstract class InnerContracted extends Base {
             // prevents multiple @Contracted decorators from being applied
             static readonly [isContracted] = true;
             // The closure variable can not be used directly as a subclass may override the contract
@@ -55,7 +55,7 @@ function Contracted<
             constructor(...args: any[]) {
                 super(...args);
 
-                const Class = this.constructor as Constructor<any>,
+                const Class = this.constructor as ClassType<any>,
                       classRegistration = CLASS_REGISTRY.getOrCreate(Class);
 
                 assert(!hasProperties(classRegistration,this), MSG_NO_PROPERTIES);
@@ -89,7 +89,7 @@ function Contracted<
         Object.freeze(Base);
 
         return InnerContracted;
-    };
+    } as ClassDecorator;
 }
 
 export {isContracted, innerContract};

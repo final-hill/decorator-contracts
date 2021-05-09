@@ -7,7 +7,7 @@
 
 import AssertionError from './AssertionError';
 import { ASSERTION_FAILED } from './Messages';
-import { Constructor } from './lib';
+import { ClassType } from './lib';
 
 /**
  * An assertion is an expression of a property that must be true at a particular
@@ -18,7 +18,7 @@ import { Constructor } from './lib';
  *
  * @param {boolean} condition - The condition to test
  * @param {string} message - A descriptive message to associate with the AssertionError
- * @param {Constructor<Error>} ErrorConstructor - The constructor of the Error to use
+ * @param {ClassType<Error>} ErrorConstructor - The constructor of the Error to use
  * @throws {Error} - When the condition is false
  * @see AssertionError
  * @throws {AssertionError} - Throws an AssertionError by default if the condition is false
@@ -31,7 +31,7 @@ import { Constructor } from './lib';
  * let name = "Tom"
  * assert(name.trim().length > 0, 'Name is required', TypeError)
  */
-export default function assert(condition: unknown, message = ASSERTION_FAILED, ErrorConstructor: Constructor<Error> = AssertionError): asserts condition {
+export default function assert(condition: unknown, message = ASSERTION_FAILED, ErrorConstructor: ClassType<Error> = AssertionError): asserts condition {
     if(Boolean(condition) == false) {
         throw new ErrorConstructor(message);
     }

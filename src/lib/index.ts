@@ -10,7 +10,7 @@ import assertEnsures from './assertEnsures';
 import assertInvariants from './assertInvariants';
 import CLASS_REGISTRY from './CLASS_REGISTRY';
 import ClassRegistration from './ClassRegistration';
-import {Constructor} from './Constructor';
+import {ClassType} from './ClassType';
 import deepFreeze from './deepFreeze';
 import Feature from './Feature';
 import takeWhile from './takeWhile';
@@ -24,7 +24,7 @@ export {
     assertInvariants,
     CLASS_REGISTRY,
     ClassRegistration,
-    Constructor,
+    ClassType,
     deepFreeze,
     Feature,
     fnTrue,
