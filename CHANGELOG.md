@@ -3,6 +3,8 @@
 ## v0.21.0
 
 * Audit fix of dependencies
+* Updated dependencies
+* Added support for contracting an abstract class
 
 ## v0.20.5
 
