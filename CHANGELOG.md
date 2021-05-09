@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.21.0
+
+* Audit fix of dependencies
+
 ## v0.20.5
 
 * Features named with a symbol now support `@override`
