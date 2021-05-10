@@ -142,6 +142,25 @@ describe('The subclasses of a contracted class must obey the invariants', () => 
             bar.value = -1;
         }).not.toThrow();
     });
+
+    test('Subcontract with private field', () => {
+        @Contracted()
+        class Base { }
+
+        const subContract = new Contract<Sub>({
+            [invariant](self) { return self.value >= 0; }
+        });
+
+        @Contracted(subContract)
+        class Sub extends Base {
+            #value = 0;
+            get value() { return this.#value; }
+        }
+
+        expect(() =>
+            new Sub()
+        ).not.toThrow();
+    });
 });
 
 /**
@@ -434,8 +453,8 @@ describe('Public properties must be forbidden', () => {
             @Contracted()
             class Foo {
                 #value = 10;
-                get value(){ return this.#value; }
-                set value(v){ this.#value = v; }
+                get value() { return this.#value; }
+                set value(v) { this.#value = v; }
             }
 
             return new Foo();
@@ -445,8 +464,8 @@ describe('Public properties must be forbidden', () => {
             @Contracted()
             class Foo {
                 val = 10;
-                get value(){ return this.val; }
-                set value(v){ this.val = v; }
+                get value() { return this.val; }
+                set value(v) { this.val = v; }
             }
 
             return new Foo();
@@ -465,7 +484,7 @@ describe('In checked mode the invariant is evaluated', () => {
             });
 
             @Contracted(fooContract)
-            class Foo {}
+            class Foo { }
 
             return new Foo();
         }).toThrow(AssertionError);
@@ -497,7 +516,7 @@ describe('In checked mode the invariant is evaluated', () => {
 
     test('Test getter/setter', () => {
         const fooContract = new Contract<Foo>({
-            [invariant](self){ return self.value >= 0;}
+            [invariant](self) { return self.value >= 0; }
         });
         @Contracted(fooContract)
         class Foo {
@@ -526,12 +545,12 @@ describe('In unchecked mode the invariant is not evaluated', () => {
         expect(() => {
             const fooContract = new Contract<Foo>({
                 [checkedMode]: false,
-                [invariant](self){
+                [invariant](self) {
                     return self instanceof Array;
                 }
             });
             @Contracted(fooContract)
-            class Foo {}
+            class Foo { }
 
             return new Foo();
         }).not.toThrow();
@@ -541,7 +560,7 @@ describe('In unchecked mode the invariant is not evaluated', () => {
         expect(() => {
             const fooContract = new Contract<Foo>({
                 [checkedMode]: false,
-                [invariant](self){
+                [invariant](self) {
                     return self.value === 42;
                 }
             });
@@ -568,22 +587,22 @@ describe('In unchecked mode the invariant is not evaluated', () => {
 /**
  * https://github.com/final-hill/decorator-contracts/issues/40
  */
-describe('A subclass with its own invariants must enforce all ancestor invariants',() => {
+describe('A subclass with its own invariants must enforce all ancestor invariants', () => {
     test('Checked Mode', () => {
         expect(() => {
             const baseContract = new Contract<Base>({
                 [invariant]: self => self instanceof Base && self != null
             }),
-            subContract = new Contract<Sub>({
-                [extend]: baseContract,
-                [invariant]: self => self instanceof Sub
-            });
+                subContract = new Contract<Sub>({
+                    [extend]: baseContract,
+                    [invariant]: self => self instanceof Sub
+                });
 
             @Contracted(baseContract)
-            class Base {}
+            class Base { }
 
             @Contracted(subContract)
-            class Sub extends Base {}
+            class Sub extends Base { }
 
             return new Sub();
         }).not.toThrow();
@@ -592,16 +611,16 @@ describe('A subclass with its own invariants must enforce all ancestor invariant
             const baseContract = new Contract<Base>({
                 [invariant]: self => self instanceof Array
             }),
-            subContract = new Contract<Sub>({
-                [extend]: baseContract,
-                [invariant]: self => self instanceof Sub
-            });
+                subContract = new Contract<Sub>({
+                    [extend]: baseContract,
+                    [invariant]: self => self instanceof Sub
+                });
 
             @Contracted(baseContract)
-            class Base {}
+            class Base { }
 
             @Contracted(subContract)
-            class Sub extends Base {}
+            class Sub extends Base { }
 
             return new Sub();
         }).toThrow(AssertionError);
@@ -610,16 +629,16 @@ describe('A subclass with its own invariants must enforce all ancestor invariant
             const baseContract = new Contract<Base>({
                 [invariant]: self => self instanceof Base
             }),
-            subContract = new Contract<Sub>({
-                [extend]: baseContract,
-                [invariant]: self => self instanceof Array
-            });
+                subContract = new Contract<Sub>({
+                    [extend]: baseContract,
+                    [invariant]: self => self instanceof Array
+                });
 
             @Contracted(baseContract)
-            class Base {}
+            class Base { }
 
             @Contracted(subContract)
-            class Sub extends Base {}
+            class Sub extends Base { }
 
             return new Base();
         }).not.toThrow();
@@ -631,17 +650,17 @@ describe('A subclass with its own invariants must enforce all ancestor invariant
                 [checkedMode]: false,
                 [invariant]: () => false
             }),
-            subContract = new Contract<Sub>({
-                [checkedMode]: false,
-                [extend]: baseContract,
-                [invariant]: () => false
-            });
+                subContract = new Contract<Sub>({
+                    [checkedMode]: false,
+                    [extend]: baseContract,
+                    [invariant]: () => false
+                });
 
             @Contracted(baseContract)
-            class Base {}
+            class Base { }
 
             @Contracted(subContract)
-            class Sub extends Base {}
+            class Sub extends Base { }
 
             return new Sub();
         }).not.toThrow(AssertionError);
@@ -653,17 +672,17 @@ describe('A subclass with its own invariants must enforce all ancestor invariant
                 [checkedMode]: false,
                 [invariant]: () => false
             }),
-            subContract = new Contract<Sub>({
-                [checkedMode]: true,
-                [extend]: baseContract,
-                [invariant]: () => true
-            });
+                subContract = new Contract<Sub>({
+                    [checkedMode]: true,
+                    [extend]: baseContract,
+                    [invariant]: () => true
+                });
 
             @Contracted(baseContract)
-            class Base {}
+            class Base { }
 
             @Contracted(subContract)
-            class Sub extends Base {}
+            class Sub extends Base { }
 
             return new Sub();
         }).not.toThrow(AssertionError);
@@ -675,17 +694,17 @@ describe('A subclass with its own invariants must enforce all ancestor invariant
                 [checkedMode]: true,
                 [invariant]: () => false
             }),
-            subContract = new Contract<Sub>({
-                [checkedMode]: false,
-                [extend]: baseContract,
-                [invariant]: () => true
-            });
+                subContract = new Contract<Sub>({
+                    [checkedMode]: false,
+                    [extend]: baseContract,
+                    [invariant]: () => true
+                });
 
             @Contracted(baseContract)
-            class Base {}
+            class Base { }
 
             @Contracted(subContract)
-            class Sub extends Base {}
+            class Sub extends Base { }
 
             return new Sub();
         }).toThrow(AssertionError);
@@ -694,17 +713,17 @@ describe('A subclass with its own invariants must enforce all ancestor invariant
                 [checkedMode]: true,
                 [invariant]: () => true
             }),
-            subContract = new Contract<Sub>({
-                [checkedMode]: false,
-                [extend]: baseContract,
-                [invariant]: () => false
-            });
+                subContract = new Contract<Sub>({
+                    [checkedMode]: false,
+                    [extend]: baseContract,
+                    [invariant]: () => false
+                });
 
             @Contracted(baseContract)
-            class Base {}
+            class Base { }
 
             @Contracted(subContract)
-            class Sub extends Base {}
+            class Sub extends Base { }
 
             return new Sub();
         }).not.toThrow(AssertionError);

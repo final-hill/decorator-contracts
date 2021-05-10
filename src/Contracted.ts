@@ -50,8 +50,12 @@ function Contracted<
         abstract class InnerContracted extends Base {
             // prevents multiple @Contracted decorators from being applied
             static readonly [isContracted] = true;
-            // The closure variable can not be used directly as a subclass may override the contract
-            get [innerContract]() { return contract; }
+            // FIXME: dirty hack. Possibly resolved by moving to contracts as classes
+            // The static getter is used by the construction invariant check
+            // The instance getter is used by the feature declarations
+            static get [innerContract](){ return contract; }
+            get [innerContract](){ return contract; }
+
             constructor(...args: any[]) {
                 super(...args);
 
@@ -77,7 +81,7 @@ function Contracted<
                     });
                 }
 
-                assertInvariants(this, classRegistration.contract);
+                assertInvariants(this, InnerContracted[innerContract]);
 
                 return this;
             }
