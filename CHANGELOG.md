@@ -5,6 +5,7 @@
 * Audit fix of dependencies
 * Updated dependencies
 * Added support for contracting an abstract class
+* Fixed bug [#210](https://github.com/final-hill/decorator-contracts/issues/210)
 
 ## v0.20.5
 
