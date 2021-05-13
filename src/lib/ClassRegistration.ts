@@ -44,7 +44,16 @@ function checkedFeature(
                     }
                 });
             });
+            const within: number = Reflect.get(contract.assertions, featureName)?.within,
+            // TODO:Not all environments support performance.now() as a global and conditional import is inconvenient
+                t0 = Date.now();
             result = fnOrig.apply(this,args);
+            const t1 = Date.now();
+            if(within) {
+                assert(t1 - t0 < within,
+                    `Timing constraint violated. Constraint: ${within}ms, actual: ${t1 - t0}ms`
+                );
+            }
             assertEnsures(this, contract, className, featureName, old, args);
         } catch(error) {
             const rescue = Reflect.get(contract.assertions,featureName)?.rescue;

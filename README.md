@@ -16,6 +16,7 @@
 - [Invariants](#invariants)
 - [Demands](#demands)
 - [Ensures](#ensures)
+- [Within](#within)
 - [Rescue](#rescue)
 - [The order of assertions](#the-order-of-assertions)
 - [Further Reading](#further-reading)
@@ -659,6 +660,37 @@ In the above example the post-condition of `Sub.prototype.method` is:
 `(-10 <= x && x <= 20) && (0 <= x && x <= 10)`
 
 Which effectively means that if the method returns `x === 10`
+
+## Within
+
+The `within` declaration provides a means of requiring the associated feature
+to complete execution within a time constraint.
+
+```typescript
+const timingContract = new Contract<Spinner>({
+    spinLock: {
+        within: 100
+    }
+});
+
+@Contracted(timingContract)
+class Spinner {
+    spinLock(delay: number) {
+        const t1 = Date.now();
+        while(Date.now() - t1 < delay) {
+            continue;
+        }
+
+        return 'Okay';
+    }
+}
+
+new Ticker().spinLock(50) === 'Okay';
+
+new Ticker().spinLock(500) // throws "Timing constraint violated...";
+```
+
+Currently `within` only supports synchronous features. async feature support is planned for a future version
 
 ## Rescue
 
