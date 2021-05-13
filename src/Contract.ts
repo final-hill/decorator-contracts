@@ -36,6 +36,7 @@ export interface FeatureOption<T extends AnyObject, F> {
     demands?: Demands<T,F>;
     ensures?: Ensures<T,F>;
     rescue?: Rescue<T,F>;
+    within?: number;
 }
 
 export class Contract<T extends AnyObject> {
@@ -58,7 +59,8 @@ export class Contract<T extends AnyObject> {
                 value: {
                     demands: featureOption.demands ?? fnTrue,
                     ensures: featureOption.ensures ?? fnTrue,
-                    rescue: featureOption.rescue
+                    rescue: featureOption.rescue,
+                    within: featureOption.within
                 }
             });
         });
