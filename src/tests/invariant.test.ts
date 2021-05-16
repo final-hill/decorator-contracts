@@ -144,10 +144,12 @@ describe('The subclasses of a contracted class must obey the invariants', () => 
     });
 
     test('Subcontract with private field', () => {
-        @Contracted()
+        const baseContract = new Contract<Base>({});
+        @Contracted(baseContract)
         class Base { }
 
         const subContract = new Contract<Sub>({
+            [extend]: baseContract,
             [invariant](self) { return self.value >= 0; }
         });
 

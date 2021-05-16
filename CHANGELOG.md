@@ -10,6 +10,7 @@
 * Updated documentation
 * Third party features are subject to a class's `invariant` when apply/call is used
 * A contracted feature can not be applied to objects of a different base class
+* Subcontract `extends` are now enforced
 
 ## v0.20.5
 
