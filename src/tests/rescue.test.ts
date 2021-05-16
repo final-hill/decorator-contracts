@@ -119,7 +119,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
             value: {
                 rescue(self, _error, _args, retry) {
                     self.value = 7;
-                    retry();
+                    retry(7);
                 }
             }
         });
@@ -183,7 +183,6 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
         const baseContract = new Contract<Base>({
             value: {
                 rescue(_self, _error, _args, retry) {
-                    // @ts-ignore: typings not perfect with accessors
                     retry(0);
                 }
             }
@@ -354,7 +353,7 @@ describe('If a `rescue` is executed and the `retry` argument is not called then 
         expect(base.throwRescue(true)).toBe(true);
     });
 
-    test('Unrescued error', () => {
+    test('Un-rescued error', () => {
         expect(() => base.throwFail()).toThrow('I am error');
     });
 });

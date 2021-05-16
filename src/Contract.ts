@@ -20,7 +20,12 @@ type Properties<T extends AnyObject> = Pick<T, NonFunctionPropertyNames<T>>;
 export type Invariant<T extends AnyObject> = (self: T) => boolean;
 export type Demands<T extends AnyObject, F extends T[any]> = (self: T, ...args: Parameters<F>) => boolean;
 export type Ensures<T extends AnyObject, F extends T[any]> = (self: T, old: Properties<T>, ...args: Parameters<F>) => boolean;
-export type Rescue<T extends AnyObject, F extends T[any]> = (self: T, error: Error, args: Parameters<F>, retry: (...args: Parameters<F>) => void) => void;
+export type Rescue<T extends AnyObject, F extends T[any]> = (
+    self: T,
+    error: Error,
+    args: F extends AnyFunc ? Parameters<F> : [F],
+    retry: F extends AnyFunc ? (...args: Parameters<F>) => any : (value: F) => void
+) => void;
 
 export type ContractOptions<
     T extends AnyObject
