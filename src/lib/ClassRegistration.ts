@@ -5,7 +5,7 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import { MSG_SINGLE_RETRY } from '../Messages';
+import { MSG_INVALID_CONTEXT, MSG_SINGLE_RETRY } from '../Messages';
 import { assert, checkedMode, Contract, innerContract } from '../';
 import { assertInvariants, assertDemands, CLASS_REGISTRY, ClassType, Feature, unChecked } from './';
 import assertEnsures from './assertEnsures';
@@ -31,6 +31,7 @@ function checkedFeature(
             return fnOrig.apply(this,args);
         }
 
+        assert(this instanceof Class, MSG_INVALID_CONTEXT);
         assertInvariants(this, contract);
         assertDemands(this, contract, className, featureName, args);
 
