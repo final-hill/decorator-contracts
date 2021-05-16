@@ -5,7 +5,7 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import { MSG_SINGLE_CONTRACT } from '../Messages';
+import { MSG_BAD_SUBCONTRACT, MSG_SINGLE_CONTRACT } from '../Messages';
 import {Contracted, checkedMode, Contract, extend} from '../';
 
 interface StackType<T> {
@@ -120,11 +120,13 @@ describe('A contract must be independently definable', () => {
 
 // https://github.com/final-hill/decorator-contracts/issues/181
 describe('Only a single contract can be assigned to a class', () => {
-    const fooContract = new Contract(),
-          barContract = new Contract();
-
     test('Good declaration', () => {
         expect(() => {
+            const fooContract = new Contract<Foo>(),
+            barContract = new Contract<Bar>({
+                [extend]: fooContract
+            });
+
             @Contracted(fooContract)
             class Foo {}
 
@@ -137,6 +139,8 @@ describe('Only a single contract can be assigned to a class', () => {
 
     test('Bad Declaration', () => {
         expect(() => {
+            const fooContract = new Contract(),
+                barContract = new Contract();
             @Contracted(fooContract)
             @Contracted(barContract)
             class Foo {}
@@ -166,5 +170,40 @@ describe('An abstract class must support contract declarations', () => {
 
             return Base;
         }).toBeDefined();
+    });
+});
+
+// https://github.com/final-hill/decorator-contracts/issues/187
+describe('A subclass can only be contracted by a subcontract of the base class contract', () => {
+    test('Good', () => {
+        expect(() => {
+            const fooContract = new Contract<Foo>({});
+
+            @Contracted(fooContract)
+            class Foo {}
+
+            const barContract = new Contract<Bar>({
+                [extend]: fooContract
+            });
+
+            @Contracted(barContract)
+            class Bar {}
+
+            return Bar;
+        }).not.toThrow();
+    });
+
+    test('Bad - missing extends', () => {
+        const fooContract = new Contract<Foo>({});
+
+        @Contracted(fooContract)
+        class Foo {}
+
+        expect(() => {
+            const badContract =  new Contract<Bar>({});
+            @Contracted(badContract)
+            class Bar extends Foo {}
+        }).toThrow(MSG_BAD_SUBCONTRACT);
+
     });
 });

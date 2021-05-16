@@ -6,8 +6,8 @@
  */
 
 import { ClassRegistration, CLASS_REGISTRY, ClassType, Feature, takeWhile, assertInvariants } from './lib';
-import { assert, checkedMode, Contract } from './';
-import { MSG_NO_PROPERTIES, MSG_SINGLE_CONTRACT } from './Messages';
+import { assert, checkedMode, Contract, extend } from './';
+import { MSG_BAD_SUBCONTRACT, MSG_NO_PROPERTIES, MSG_SINGLE_CONTRACT } from './Messages';
 
 const isContracted = Symbol('isContracted'),
     innerContract = Symbol('innerContract');
@@ -40,12 +40,19 @@ function Contracted<
     T extends Contract<any> = Contract<any>,
     U extends ClassType<any> = ClassType<any>
 >(contract: T = new Contract() as T): ClassDecorator {
-    return function(Base: U) {
+    return function(Base: U & {[innerContract]?: Contract<any>}) {
         assert(!Object.getOwnPropertySymbols(Base).includes(isContracted), MSG_SINGLE_CONTRACT);
 
         if(contract[checkedMode] === false) {
             return Base;
         }
+
+        const baseContract = Base[innerContract];
+        assert(
+            !baseContract ||
+            baseContract && contract[extend] instanceof baseContract.constructor,
+            MSG_BAD_SUBCONTRACT
+        );
 
         abstract class InnerContracted extends Base {
             // prevents multiple @Contracted decorators from being applied

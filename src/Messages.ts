@@ -16,3 +16,4 @@ export const MSG_MISSING_FEATURE = 'The requested feature is not registered';
 export const MSG_SINGLE_CONTRACT = 'Only a single @Contracted decorator is allowed per class';
 export const MSG_SINGLE_RETRY = 'retry can only be called once';
 export const MSG_INVALID_CONTEXT = 'A contracted feature can not be applied to objects of a different base class';
+export const MSG_BAD_SUBCONTRACT = 'A sub contract must extend a base contract';
