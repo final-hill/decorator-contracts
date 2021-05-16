@@ -456,7 +456,7 @@ describe('If an error is thrown in `demands` the error is raised to the caller',
 /**
  * https://github.com/final-hill/decorator-contracts/issues/66
  */
-describe('If an error is raised in a ensures then the associated rescue is executed', () => {
+describe('If an error is raised in an `ensures` then the associated rescue is executed', () => {
     const contractA = new Contract<A>({
         [invariant](self){ return self.value >= 0; },
         method: {

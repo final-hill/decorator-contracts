@@ -6,7 +6,7 @@
  */
 
 import { AssertionError, checkedMode, Contract, Contracted, extend, invariant, override } from '../';
-import { MSG_NO_PROPERTIES } from '../Messages';
+import { MSG_INVALID_CONTEXT, MSG_NO_PROPERTIES } from '../Messages';
 
 // https://github.com/final-hill/decorator-contracts/issues/30
 describe('The subclasses of a contracted class must obey the invariants', () => {
@@ -727,5 +727,91 @@ describe('A subclass with its own invariants must enforce all ancestor invariant
 
             return new Sub();
         }).not.toThrow(AssertionError);
+    });
+});
+
+// https://github.com/final-hill/decorator-contracts/issues/217
+describe('Third-party features applied to a contracted class are subject to its invariant', () => {
+    const fooContract: Contract<Foo> = new Contract<Foo>({
+        [checkedMode]: true,
+        [invariant]: self => self.value >= 0
+    });
+
+    @Contracted(fooContract)
+    class Foo {
+        #value = 0;
+
+        get value(): number { return this.#value; }
+        set value(value: number) { this.#value = value; }
+
+        inc(): void { this.value++; }
+        dec(): void { this.value--; }
+    }
+
+    class Bar {
+        #value = 0;
+
+        get value(): number { return this.#value; }
+        set value(value: number) { this.#value = value; }
+
+        inc(): void { this.value++; }
+        dec(): void { this.value--; }
+    }
+
+    test('okay', () => {
+        const foo = new Foo(),
+            bar = new Bar();
+        bar.inc.apply(foo);
+
+        expect(foo.value).toBe(1);
+    });
+
+    test('failure', () => {
+        expect(() => {
+            const foo = new Foo(),
+                bar = new Bar();
+            bar.dec.apply(foo);
+        }).toThrow(/^Invariant violated/);
+    });
+});
+
+// https://github.com/final-hill/decorator-contracts/issues/218
+describe('Contracted features can only be applied to objects of the same instance', () => {
+    const fooContract: Contract<Foo> = new Contract<Foo>({
+        [checkedMode]: true,
+        [invariant]: self => self.value >= 0
+    });
+
+    @Contracted(fooContract)
+    class Foo {
+        #value = 0;
+
+        get value(): number { return this.#value; }
+        set value(value: number) { this.#value = value; }
+
+        inc(): void { this.value++; }
+    }
+
+    class Bar {
+        #value = 0;
+
+        get value(): number { return this.#value; }
+        set value(value: number) { this.#value = value; }
+
+        inc(): void { this.value++; }
+    }
+
+    const foo = new Foo(),
+        bar = new Bar();
+
+    test('same instance okay', () => {
+        foo.inc.apply(foo);
+        expect(foo.value).toBe(1);
+    });
+
+    test('different instance error', () => {
+        expect(() => {
+           foo.inc.apply(bar);
+        }).toThrow(MSG_INVALID_CONTEXT);
     });
 });
