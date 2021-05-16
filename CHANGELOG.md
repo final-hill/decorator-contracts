@@ -7,6 +7,7 @@
 * Added support for contracting an abstract class
 * Fixed bug [#210](https://github.com/final-hill/decorator-contracts/issues/210) for supporting subcontract private fields
 * Added `within` feature for declaring timing requirements
+* Updated documentation
 
 ## v0.20.5
 

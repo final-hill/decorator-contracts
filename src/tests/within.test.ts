@@ -7,7 +7,8 @@
 
 import { Contract, Contracted } from '../';
 
-describe('`within` Declaration', () => {
+// https://github.com/final-hill/decorator-contracts/issues/209
+describe('Features should support a time constraint declaration', () => {
     test('synchronous test', () => {
         const timingContract = new Contract<Spinner>({
             spinLock: {

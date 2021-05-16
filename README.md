@@ -44,7 +44,7 @@ As a dependency run the command:
 
 You can also use a specific [version](https://www.npmjs.com/package/@final-hill/decorator-contracts):
 
-`npm install @final-hill/decorator-contracts@0.20.2`
+`npm install @final-hill/decorator-contracts@0.21.0`
 
 For use in a webpage:
 
@@ -52,7 +52,7 @@ For use in a webpage:
 
 With a specific [version](https://www.npmjs.com/package/@final-hill/decorator-contracts):
 
-`<script src="https://unpkg.com/@final-hill/decorator-contracts@0.20.2"></script>`
+`<script src="https://unpkg.com/@final-hill/decorator-contracts@0.21.0"></script>`
 
 ## Usage
 
