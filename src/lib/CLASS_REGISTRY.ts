@@ -9,7 +9,7 @@ import {ClassRegistration, ClassType} from './';
 
 /**
  * A WeakMap that tracks class registrations.
- * @see ClassRegistration
+ * @see {@link ClassRegistration}
  */
 class ClassRegistry extends WeakMap<ClassType<any>, ClassRegistration> {
     /**

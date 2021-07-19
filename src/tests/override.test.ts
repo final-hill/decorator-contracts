@@ -42,7 +42,7 @@ describe('The override decorator is a non-static member decorator only', () => {
 
             class Sub extends Base {
                 @override
-                method(): void {}
+                override method(): void {}
             }
 
             return Sub;
@@ -113,7 +113,7 @@ describe('using @override on a method with an ancestor with a different paramete
 
             class Sub extends Base {
                 @override
-                method(a: string): string {
+                override method(a: string): string {
                     return a;
                 }
             }
@@ -154,7 +154,7 @@ describe('using @override on a method with an ancestor with a different paramete
 
             class Sub extends Base {
                 @override
-                method(a: string, b: string): string {
+                override method(a: string, b: string): string {
                     return super.method(a, b);
                 }
             }
@@ -180,10 +180,10 @@ describe('A subclass with an overriding member missing @override is an error', (
 
             class Sub extends Base {
                 @override
-                method(): void {}
+                override method(): void {}
 
                 @override
-                get foo(): number { return 4; }
+                override get foo(): number { return 4; }
             }
 
             return new Sub();
@@ -198,7 +198,7 @@ describe('A subclass with an overriding member missing @override is an error', (
             }
 
             class Sub extends Base {
-                method(): void {}
+                override method(): void {}
             }
 
             return new Sub();
@@ -211,7 +211,7 @@ describe('A subclass with an overriding member missing @override is an error', (
             }
 
             class Sub extends Base {
-                get prop(): number { return 5; }
+                override get prop(): number { return 5; }
             }
 
             return new Sub();
@@ -235,7 +235,7 @@ describe('Only a single @override can be assigned to a member per class', () => 
             class Sub extends Base {
                 @override
                 @override
-                method(a: string, b: string): string {
+                override method(a: string, b: string): string {
                     return super.method(a, b);
                 }
             }
@@ -255,14 +255,14 @@ describe('Only a single @override can be assigned to a member per class', () => 
 
             class Sub extends Base {
                 @override
-                method(a: string, b: string): string {
+                override method(a: string, b: string): string {
                     return super.method(a, b);
                 }
             }
 
             class SubSub extends Sub {
                 @override
-                method(a: string, b: string): string {
+                override method(a: string, b: string): string {
                     return super.method(a, b);
                 }
             }
@@ -287,7 +287,7 @@ describe('Accessors must support @override', () => {
 
             class Sub extends Base {
                 @override
-                set value(x: number) {
+                override set value(x: number) {
                     super.value = x;
                 }
             }
@@ -326,7 +326,7 @@ describe('The \'override\' decorator must have a Contracted class in it\'s ances
 
         class Okay extends Base {
             @override
-            method(value: number): number { return value; }
+            override method(value: number): number { return value; }
         }
 
         const okay = new Okay();
@@ -342,7 +342,7 @@ describe('The \'override\' decorator must have a Contracted class in it\'s ances
 
             class Fail extends BadBase {
                 @override
-                method(value: number): number { return value; }
+                override method(value: number): number { return value; }
             }
 
             return new Fail().method(7);
@@ -381,7 +381,7 @@ describe('Features named with a symbol must support `@override`', () => {
 
             class Fail extends BadBase {
                 @override
-                [method](value: number): number { return value; }
+                override [method](value: number): number { return value; }
             }
 
             return new Fail()[method](7);
@@ -396,7 +396,7 @@ describe('Features named with a symbol must support `@override`', () => {
 
         class Okay extends Base {
             @override
-            [method](value: number): number { return value; }
+            override [method](value: number): number { return value; }
         }
 
         const okay = new Okay();

@@ -18,6 +18,7 @@ import unChecked from './unChecked';
  * @param {PropertyKey} featureName - The name of the feature
  * @param {U} old - The original properties before execution
  * @param {any[]} args - The arguments of the feature to apply to the assertion
+ * @throws {AssertionError}
  */
 function assertEnsures<U>(
     ctx: U,

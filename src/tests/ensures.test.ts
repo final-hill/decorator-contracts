@@ -70,7 +70,7 @@ describe('Overridden features are still subject to the ensures assertion ', () =
 
     class Sub extends Base {
         @override
-        dec(): void { this.value -= 2; }
+        override dec(): void { this.value -= 2; }
     }
 
     test('inc(); inc(); dec(); does not throw', () => {
@@ -205,7 +205,7 @@ describe('Postconditions cannot be weakened in a subtype', () => {
     @Contracted(weakerContract)
     class Weaker extends Base {
         @override
-        method(value: number): number { return value; }
+        override method(value: number): number { return value; }
     }
 
     test('Weaker postcondition', () => {
@@ -227,7 +227,7 @@ describe('Postconditions cannot be weakened in a subtype', () => {
     @Contracted(strongerContract)
     class Stronger extends Base {
         @override
-        method(value: number): number { return value; }
+        override method(value: number): number { return value; }
     }
 
     test('Stronger postcondition', () => {

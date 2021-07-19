@@ -7,7 +7,7 @@
 
  /**
  * Apply Object.freeze recursively
- * @param {object} object -
+ * @param {object} object - The object to freeze
  */
 function deepFreeze(object: Record<PropertyKey, any>): void {
     // Freeze properties before freezing self

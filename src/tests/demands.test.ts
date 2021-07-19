@@ -74,7 +74,7 @@ describe('Overridden features are still subject to the demands assertion', () =>
 
     class Sub extends Base {
         @override
-        dec(): void { this.value -= 2; }
+        override dec(): void { this.value -= 2; }
     }
 
     test('inc(); inc(); dec(); does not throw', () => {
@@ -96,7 +96,7 @@ describe('Overridden features are still subject to the demands assertion', () =>
 
     class SubSub extends Sub {
         @override
-        dec(): void { this.value -= 4; }
+        override dec(): void { this.value -= 4; }
     }
 
     test('inc(); inc(); inc(); inc(): dec(); does not throw', () => {
@@ -243,7 +243,7 @@ describe('`demands` assertions cannot be strengthened in a subtype', () => {
     @Contracted(weakerContract)
     class Weaker extends Base {
         @override
-        method(value: number): number { return value; }
+        override method(value: number): number { return value; }
     }
 
     test('Weaker precondition', () => {
@@ -266,7 +266,7 @@ describe('`demands` assertions cannot be strengthened in a subtype', () => {
     @Contracted(strongerContract)
     class Stronger extends Base {
         @override
-        method(value: number): number { return value; }
+        override method(value: number): number { return value; }
     }
 
     test('Stronger precondition', () => {

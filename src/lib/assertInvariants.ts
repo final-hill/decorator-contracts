@@ -13,6 +13,7 @@ import { assert, checkedMode, Contract, extend, invariant } from '../';
  *
  * @param {U} ctx - The context class
  * @param {Contract<any>} contract - The contract
+ * @throws {AssertionError}
  */
 function assertInvariants<U>(ctx: U, contract: Contract<any>) {
     if(contract[checkedMode]) {

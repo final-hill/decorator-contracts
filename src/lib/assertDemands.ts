@@ -17,6 +17,7 @@ import unChecked from './unChecked';
  * @param {string} className - The name of the class
  * @param {PropertyKey} featureName - The name of the feature
  * @param {any[]} args - The arguments of the feature to apply to the assertion
+ * @throws {AssertionError}
  */
 function assertDemands<U>(ctx: U, contract: Contract<any>, className: string, featureName: PropertyKey, args: any[]){
     let result = true;

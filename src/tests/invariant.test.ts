@@ -59,13 +59,13 @@ describe('The subclasses of a contracted class must obey the invariants', () => 
         // overriding members
         class Baz extends Foo {
             @override
-            get value(): number { return super.value; }
-            set value(value: number) { super.value = value; }
+            override get value(): number { return super.value; }
+            override set value(value: number) { super.value = value; }
 
             @override
-            inc(): void { super.value++; }
+            override inc(): void { super.value++; }
             @override
-            dec(): void { super.value--; }
+            override dec(): void { super.value--; }
         }
 
         expect(() => {
