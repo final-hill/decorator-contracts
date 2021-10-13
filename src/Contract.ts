@@ -37,7 +37,7 @@ export type ContractOptions<
     [K in keyof T]?: FeatureOption<T, T[K]>
 };
 
-export interface FeatureOption<T extends AnyObject, F> {
+export interface FeatureOption<T extends AnyObject, F extends T[any]> {
     demands?: Demands<T,F>;
     ensures?: Ensures<T,F>;
     rescue?: Rescue<T,F>;
