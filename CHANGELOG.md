@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.21.2
+
+* Audit fix of dependencies
+* Updated dependencies
+* Upgraded implementation to TypeScript 4.4.4
+
 ## v0.21.1
 
 * Audit fix of dependencies
