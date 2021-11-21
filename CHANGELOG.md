@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.22.0
+
+* Added `implies` function
+* Added topic tags to github repo
+* Updated `package.json` keywords
+
 ## v0.21.2
 
 * Audit fix of dependencies

@@ -11,6 +11,7 @@
 - [Usage](#usage)
 - [Checked Mode](#checked-mode)
 - [Assertions](#assertions)
+- [Implies](#implies)
 - [Overrides](#overrides)
 - [Encapsulation](#encapsulation)
 - [Invariants](#invariants)
@@ -44,15 +45,15 @@ As a dependency run the command:
 
 You can also use a specific [version](https://www.npmjs.com/package/@final-hill/decorator-contracts):
 
-`npm install @final-hill/decorator-contracts@0.21.0`
+`npm install @final-hill/decorator-contracts@0.22.0`
 
 For use in a webpage:
 
 `<script src="https://unpkg.com/@final-hill/decorator-contracts"></script>`
 
-With a specific [version](https://www.npmjs.com/package/@final-hill/decorator-contracts):
+With a specific [version](https://www.npmjs.com/package/@final-hill/decorator-contracts@0.22.0):
 
-`<script src="https://unpkg.com/@final-hill/decorator-contracts@0.21.0"></script>`
+`<script src="https://unpkg.com/@final-hill/decorator-contracts@0.22.0"></script>`
 
 ## Usage
 
@@ -245,6 +246,31 @@ str.toUpperCase(); // str is now a string
 **`assert` should not be used for validating arguments**
 
 Use the `demands` declaration for this purpose.
+
+## Implies
+
+When defining predicates it is a common use case to encode
+[material implication](https://en.wikipedia.org/wiki/Material_conditional).
+
+The truth table is as follows:
+
+| *p* | *q* | *p* &rarr; *q* |
+|-----|-----|----------------|
+|  T   |   T   |  T          |
+|  T   |   F   |  F          |
+|  F   |   T   |  T          |
+|  F   |   F   |  T          |
+
+An example of usage is the encoding of `sunny weather is a precondition of visiting the beach`:
+
+```ts
+implies(
+    weather.isSunny,
+    person.visitsBeach
+)
+```
+
+This is logically equivalent to: `!p || q`
 
 ## Overrides
 
