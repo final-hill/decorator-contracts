@@ -10,5 +10,9 @@ import {Contract, extend, invariant, Invariant, checkedMode, Rescue} from './Con
 import Contracted, {innerContract} from './Contracted';
 import override from './override';
 import assert from './assert';
+import implies from './implies';
 
-export {AssertionError, Contract, Contracted, Invariant, Rescue, invariant, innerContract, extend, checkedMode, override, assert};
+export {
+    AssertionError, Contract, Contracted, Invariant, Rescue, implies,
+    invariant, innerContract, extend, checkedMode, override, assert
+};
