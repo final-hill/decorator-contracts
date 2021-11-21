@@ -3,6 +3,7 @@
 ## v0.22.0
 
 * Added `implies` function
+* Added `iff` function
 * Added topic tags to github repo
 * Updated `package.json` keywords
 

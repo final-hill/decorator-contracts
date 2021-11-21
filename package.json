@@ -43,6 +43,7 @@
     },
     "keywords": [
         "assertion",
+        "biconditional",
         "behavioral-subtyping",
         "code-contracts",
         "decorators",
@@ -50,6 +51,7 @@
         "design-by-contract",
         "encapsulation",
         "exception-handling",
+        "if-and-only-if",
         "invariant",
         "liskov-substitution-principle",
         "LSP",
