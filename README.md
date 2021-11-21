@@ -12,6 +12,7 @@
 - [Checked Mode](#checked-mode)
 - [Assertions](#assertions)
 - [Implies](#implies)
+- [Iff](#iff)
 - [Overrides](#overrides)
 - [Encapsulation](#encapsulation)
 - [Invariants](#invariants)
@@ -271,6 +272,31 @@ implies(
 ```
 
 This is logically equivalent to: `!p || q`
+
+## Iff
+
+When defining predicates it is a common use case to encode [if and only if](https://en.wikipedia.org/wiki/Logical_biconditional).
+Also referred to as a biconditional.
+
+The truth table is as follows:
+
+| *p* | *q* | *p* &harr; *q* |
+|-----|-----|----------------|
+|  T   |   T   |  T          |
+|  T   |   F   |  F          |
+|  F   |   T   |  F          |
+|  F   |   F   |  T          |
+
+An example of usage is the encoding of `You can ride the train if and only if you have a ticket`:
+
+```ts
+iff(
+    person.hasTicket,
+    person.ridesTrain
+)
+```
+
+This is logically equivalent to: `implies(p,q) && implies(q,p)`
 
 ## Overrides
 
