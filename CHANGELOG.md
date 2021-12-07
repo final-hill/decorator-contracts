@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.23.0
+
+* Fixed bug in README Stack example
+* Updated README instructions on webpage installation
+
 ## v0.22.0
 
 * Added `implies` function
