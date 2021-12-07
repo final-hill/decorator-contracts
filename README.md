@@ -46,15 +46,15 @@ As a dependency run the command:
 
 You can also use a specific [version](https://www.npmjs.com/package/@final-hill/decorator-contracts):
 
-`npm install @final-hill/decorator-contracts@0.22.0`
+`npm install @final-hill/decorator-contracts@0.23.0`
 
 For use in a webpage:
 
-`<script src="https://unpkg.com/@final-hill/decorator-contracts"></script>`
+`<script src="https://cdn.skypack.dev/@final-hill/decorator-contracts"></script>`
 
 With a specific [version](https://www.npmjs.com/package/@final-hill/decorator-contracts@0.22.0):
 
-`<script src="https://unpkg.com/@final-hill/decorator-contracts@0.22.0"></script>`
+`<script src="https://cdn.skypack.dev/@final-hill/decorator-contracts@0.23.0"></script>`
 
 ## Usage
 
@@ -92,7 +92,7 @@ const stackContract = new Contract<StackType<any>>({
         demands(self){ return !self.isFull(); },
         ensures(self, old, item) {
             return !self.isEmpty() &&
-                self.top === item &&
+                self.top() === item &&
                 self.size === old.size + 1;
         }
     },
