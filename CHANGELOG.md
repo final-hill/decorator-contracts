@@ -4,6 +4,10 @@
 
 * Fixed bug in README Stack example
 * Updated README instructions on webpage installation
+* Updated dependencies
+* Updated headers for 2022
+* Linting fixes
+* Added better error messaging for `@override` issues
 
 ## v0.22.0
 

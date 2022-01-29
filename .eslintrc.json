@@ -269,7 +269,8 @@
                 "accessibility": "no-public"
             }
         ],
-        "@typescript-eslint/member-ordering": "error",
+        // buggy: https://github.com/typescript-eslint/typescript-eslint/issues/2409
+        "@typescript-eslint/member-ordering": "off",
         "@typescript-eslint/no-param-reassign": "off",
         "@typescript-eslint/prefer-for-of": "error",
         "@typescript-eslint/prefer-function-type": "error",
@@ -347,7 +348,7 @@
         "header/header": [2, "block", [
             "!",
             " * @license",
-            " * Copyright (C) 2021 Final Hill LLC",
+            " * Copyright (C) 2022 Final Hill LLC",
             " * SPDX-License-Identifier: AGPL-3.0-only",
             " * @see <https://spdx.org/licenses/AGPL-3.0-only.html>",
             " "

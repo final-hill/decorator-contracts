@@ -1,6 +1,6 @@
 /*!
  * @license
- * Copyright (C) 2021 Final Hill LLC
+ * Copyright (C) 2022 Final Hill LLC
  * SPDX-License-Identifier: AGPL-3.0-only
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
@@ -56,6 +56,14 @@ class Stack<T> implements StackType<T> {
         this.#limit = limit;
     }
 
+    get limit() {
+        return this.#limit;
+    }
+
+    get size(): number {
+        return this.#size;
+    }
+
     clear(): void {
         this.#implementation = [];
         this.#size = 0;
@@ -69,10 +77,6 @@ class Stack<T> implements StackType<T> {
         return this.#implementation.length == this.limit;
     }
 
-    get limit() {
-        return this.#limit;
-    }
-
     pop(): T {
         this.#size--;
 
@@ -82,10 +86,6 @@ class Stack<T> implements StackType<T> {
     push(item: T): void {
         this.#size++;
         this.#implementation.push(item);
-    }
-
-    get size(): number {
-        return this.#size;
     }
 
     top(): T {

@@ -1,6 +1,6 @@
 /*!
  * @license
- * Copyright (C) 2021 Final Hill LLC
+ * Copyright (C) 2022 Final Hill LLC
  * SPDX-License-Identifier: AGPL-3.0-only
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
@@ -63,7 +63,7 @@ describe('Using @override on a class member with no ancestor member is an error'
             }
 
             return Base;
-        }).toThrow(MSG_NO_MATCHING_FEATURE);
+        }).toThrow(`${MSG_NO_MATCHING_FEATURE} 'Base.prototype.method'`);
     });
 
     test('subclass with @override decorator', () => {
@@ -173,17 +173,17 @@ describe('A subclass with an overriding member missing @override is an error', (
         expect(() => {
             @Contracted()
             class Base {
-                method(): void {}
-
                 get foo(): number { return 3; }
+
+                method(): void {}
             }
 
             class Sub extends Base {
                 @override
-                override method(): void {}
+                override get foo(): number { return 4; }
 
                 @override
-                override get foo(): number { return 4; }
+                override method(): void {}
             }
 
             return new Sub();

@@ -1,6 +1,6 @@
 /*!
  * @license
- * Copyright (C) 2021 Final Hill LLC
+ * Copyright (C) 2022 Final Hill LLC
  * SPDX-License-Identifier: AGPL-3.0-only
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
@@ -25,21 +25,6 @@ class Feature {
      */
     get ancestorFeature(): Feature | null {
         return this.classRegistration.ancestryFeatures().filter(feature => feature.name === this.name)[0];
-    }
-
-    /**
-     * Returns a reference to the descriptor
-     */
-    get descriptor() {
-        return this.#descriptor;
-    }
-
-    /**
-     * Updates the descriptor
-     * @param {PropertyDescriptor} desc - The new descriptor
-     */
-    set descriptor(desc: PropertyDescriptor) {
-        this.#descriptor = desc;
     }
 
     /**
@@ -96,21 +81,6 @@ class Feature {
     }
 
     /**
-     * Returns the original feature descriptor which was replaced by the `override` decorator
-     */
-    get overriddenOriginalDescriptor(): PropertyDescriptor| undefined {
-        return this.#overriddenOriginalDescriptor;
-    }
-
-    /**
-     * Sets the feature descriptor. Used by the `override` decorator.
-     * @param {PropertyDescriptor} value - The descriptor to save
-     */
-    set overriddenOriginalDescriptor(value: PropertyDescriptor | undefined) {
-        this.#overriddenOriginalDescriptor = value;
-    }
-
-    /**
      * Returns a reference to the setter if it exists
      */
     get setter() {
@@ -124,6 +94,26 @@ class Feature {
      */
     get value(): any {
         return this.#descriptor.value;
+    }
+
+    /**
+     * The original feature descriptor which was replaced by the `override` decorator
+     */
+    get overriddenOriginalDescriptor(): PropertyDescriptor| undefined {
+        return this.#overriddenOriginalDescriptor;
+    }
+    set overriddenOriginalDescriptor(value: PropertyDescriptor | undefined) {
+        this.#overriddenOriginalDescriptor = value;
+    }
+
+    /**
+     * Returns a reference to the descriptor
+     */
+    get descriptor() {
+        return this.#descriptor;
+    }
+    set descriptor(desc: PropertyDescriptor) {
+        this.#descriptor = desc;
     }
 }
 
