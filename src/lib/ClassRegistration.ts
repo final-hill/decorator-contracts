@@ -1,6 +1,6 @@
 /*!
  * @license
- * Copyright (C) 2021 Final Hill LLC
+ * Copyright (C) 2022 Final Hill LLC
  * SPDX-License-Identifier: AGPL-3.0-only
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
@@ -97,6 +97,15 @@ class ClassRegistration {
     }
 
     /**
+     * Returns the features associated with the registered class.
+     *
+     * @returns {Set<Feature>} The set of features
+     */
+    get features(): Feature[] {
+        return [...this.#features];
+    }
+
+    /**
      * Returns a reference to the parent class
      */
     get ParentClass(): ClassType<any> | null {
@@ -179,15 +188,6 @@ class ClassRegistration {
     findFeature(propertyKey: PropertyKey): Feature | undefined {
         return this.features.find(({name}) => name === propertyKey) ??
             this.parentRegistration?.findFeature(propertyKey);
-    }
-
-    /**
-     * Returns the features associated with the registered class.
-     *
-     * @returns {Set<Feature>} The set of features
-     */
-    get features(): Feature[] {
-        return [...this.#features];
     }
 }
 

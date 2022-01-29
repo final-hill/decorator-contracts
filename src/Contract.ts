@@ -1,6 +1,6 @@
 /*!
  * @license
- * Copyright (C) 2021 Final Hill LLC
+ * Copyright (C) 2022 Final Hill LLC
  * SPDX-License-Identifier: AGPL-3.0-only
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
@@ -49,9 +49,6 @@ export class Contract<T extends AnyObject> {
     [checkedMode]: boolean;
     readonly [extend]?: Contract<T>;
     readonly assertions: ContractOptions<T> = Object.create(null);
-    get [invariant](): Invariant<T> {
-        return this.#invariant;
-    }
 
     constructor(assertions: Partial<ContractOptions<T>> = Object.create(null)) {
         this[extend] = assertions[extend];
@@ -71,6 +68,10 @@ export class Contract<T extends AnyObject> {
         });
 
         deepFreeze(this.assertions);
+    }
+
+    get [invariant](): Invariant<T> {
+        return this.#invariant;
     }
 }
 

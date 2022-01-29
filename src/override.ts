@@ -1,6 +1,6 @@
 /*!
  * @license
- * Copyright (C) 2021 Final Hill LLC
+ * Copyright (C) 2022 Final Hill LLC
  * SPDX-License-Identifier: AGPL-3.0-only
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
@@ -32,7 +32,10 @@ function override(target: Record<PropertyKey, any>, propertyKey: PropertyKey, de
 
     const ancFeature = feature.ancestorFeature;
 
-    assert(ancFeature != null && feature.memberType === ancFeature.memberType, MSG_NO_MATCHING_FEATURE);
+    assert(
+        ancFeature != null && feature.memberType === ancFeature.memberType,
+        `${MSG_NO_MATCHING_FEATURE} '${registration.Class.name}.prototype.${String(propertyKey)}'`
+    );
     assert(!feature.hasOverrides, MSG_DUPLICATE_OVERRIDE);
     feature.hasOverrides = true;
 

@@ -1,6 +1,6 @@
 /*!
  * @license
- * Copyright (C) 2021 Final Hill LLC
+ * Copyright (C) 2022 Final Hill LLC
  * SPDX-License-Identifier: AGPL-3.0-only
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
@@ -57,11 +57,6 @@ function Contracted<
         abstract class InnerContracted extends Base {
             // prevents multiple @Contracted decorators from being applied
             static readonly [isContracted] = true;
-            // FIXME: dirty hack. Possibly resolved by moving to contracts as classes
-            // The static getter is used by the construction invariant check
-            // The instance getter is used by the feature declarations
-            static get [innerContract](){ return contract; }
-            get [innerContract](){ return contract; }
 
             constructor(...args: any[]) {
                 super(...args);
@@ -92,6 +87,12 @@ function Contracted<
 
                 return this;
             }
+
+            // FIXME: dirty hack. Possibly resolved by moving to contracts as classes
+            // The static getter is used by the construction invariant check
+            // The instance getter is used by the feature declarations
+            static get [innerContract](){ return contract; }
+            get [innerContract](){ return contract; }
         }
 
         const classRegistration = CLASS_REGISTRY.getOrCreate(InnerContracted);
