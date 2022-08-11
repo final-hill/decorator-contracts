@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.23.1
+
+* Updated dependencies
+* Refactored code to leverage new TypeScript features
+
 ## v0.23.0
 
 * Fixed bug in README Stack example
