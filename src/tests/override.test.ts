@@ -404,3 +404,36 @@ describe('Features named with a symbol must support `@override`', () => {
         expect(okay[method](15)).toBe(15);
     });
 });
+
+describe('The Template Method Pattern should function with @override', () => {
+    test('Template Method instance', () => {
+        let result = 'error';
+        @Contracted()
+        class A {
+            constructor() {
+                this.method();
+            }
+
+            method() {
+                result = 'A';
+            }
+        }
+
+
+        class B extends A {
+            @override
+            override method() {
+                result = 'B';
+            }
+        }
+
+        const a = new A(),
+              b = new B();
+
+        expect(a).toBeDefined();
+        expect(result).toBe('A');
+
+        expect(b).toBeDefined();
+        expect(result).toBe('B');
+    });
+});
