@@ -1,5 +1,9 @@
 # Changelog
 
+## vNext
+
+* Updated debugger settings to leverage modern VSCode
+
 ## v0.23.1
 
 * Updated dependencies
