@@ -25,13 +25,16 @@ function checkedFeature(
     registration: ClassRegistration
 ) {
     return function innerCheckedFeature(this: any, ...args: any[]) {
-        const {contract, Class} = registration,
-            className = Class.name;
-        if(!contract[checkedMode]) {
-            return fnOrig.apply(this,args);
-        }
+        const { Class } = registration;
 
         assert(this instanceof Class, MSG_INVALID_CONTEXT);
+
+        const contract = Reflect.get(this, innerContract),
+            className = Class.name;
+        if (!contract[checkedMode]) {
+            return fnOrig.apply(this, args);
+        }
+
         assertInvariants(this, contract);
         assertDemands(this, contract, className, featureName, args);
 
@@ -39,26 +42,26 @@ function checkedFeature(
         try {
             const old = Object.create(null);
             unChecked(contract, () => {
-                registration.features.forEach(({name, hasGetter}) => {
-                    if(hasGetter) {
-                        Object.defineProperty(old, name, {value: this[name]});
+                registration.features.forEach(({ name, hasGetter }) => {
+                    if (hasGetter) {
+                        Object.defineProperty(old, name, { value: this[name] });
                     }
                 });
             });
             const within: number = Reflect.get(contract.assertions, featureName)?.within,
-            // TODO:Not all environments support performance.now() as a global and conditional import is inconvenient
+                // TODO:Not all environments currently support performance.now() as a global and conditional import is inconvenient
                 t0 = Date.now();
-            result = fnOrig.apply(this,args);
+            result = fnOrig.apply(this, args);
             const t1 = Date.now();
-            if(within) {
+            if (within) {
                 assert(t1 - t0 < within,
                     `Timing constraint violated. Constraint: ${within}ms, actual: ${t1 - t0}ms`
                 );
             }
             assertEnsures(this, contract, className, featureName, old, args);
-        } catch(error) {
-            const rescue = Reflect.get(contract.assertions,featureName)?.rescue;
-            if(rescue == null) {
+        } catch (error) {
+            const rescue = Reflect.get(contract.assertions, featureName)?.rescue;
+            if (rescue == null) {
                 assertInvariants(this, contract);
                 throw error;
             }
@@ -71,7 +74,7 @@ function checkedFeature(
                     result = innerCheckedFeature.call(this, ...args);
                 });
             });
-            if(!hasRetried) {
+            if (!hasRetried) {
                 assertInvariants(this, contract);
                 throw error;
             }
@@ -92,8 +95,8 @@ class ClassRegistration {
         const proto = this.Class.prototype;
         this.#features =
             Reflect.ownKeys(proto)
-            .filter(key => key != 'constructor' && key !== innerContract)
-            .map(key => new Feature(this, key, Object.getOwnPropertyDescriptor(proto,key)!));
+                .filter(key => key != 'constructor' && key !== innerContract)
+                .map(key => new Feature(this, key, Object.getOwnPropertyDescriptor(proto, key)!));
     }
 
     /**
@@ -126,12 +129,12 @@ class ClassRegistration {
      * @returns {ClassRegistration[]} - The ancestor class registrations
      */
     ancestry(): ClassRegistration[] {
-        if(this.ParentClass == null) {
+        if (this.ParentClass == null) {
             return [];
         } else {
             const parentRegistry = CLASS_REGISTRY.getOrCreate(this.ParentClass);
 
-            return [parentRegistry,...parentRegistry.ancestry()];
+            return [parentRegistry, ...parentRegistry.ancestry()];
         }
     }
 
@@ -142,23 +145,23 @@ class ClassRegistration {
      * @returns {Feature[]} - The feature names
      */
     ancestryFeatures(): Feature[] {
-        return this.ancestry().flatMap(({features}) => features);
+        return this.ancestry().flatMap(({ features }) => features);
     }
 
     bindContract<T extends Contract<any>>(contract: T) {
         this.contract = contract;
-        if(!contract[checkedMode]) {
+        if (!contract[checkedMode]) {
             return;
         }
         const proto = this.Class.prototype;
         this.features.forEach(feature => {
-            const {name,hasGetter, hasSetter, isMethod} = feature;
+            const { name, hasGetter, hasSetter, isMethod } = feature;
 
             Object.defineProperty(proto, name, {
                 enumerable: true,
-                ...(hasGetter ? {get: checkedFeature(name, feature.getter!, this) } : {}),
-                ...(hasSetter ? {set: checkedFeature(name, feature.setter!, this) } : {}),
-                ...(isMethod ? {value: checkedFeature(name, feature.value, this) } : {})
+                ...(hasGetter ? { get: checkedFeature(name, feature.getter!, this) } : {}),
+                ...(hasSetter ? { set: checkedFeature(name, feature.setter!, this) } : {}),
+                ...(isMethod ? { value: checkedFeature(name, feature.value, this) } : {})
             });
 
             feature.descriptor = Object.getOwnPropertyDescriptor(proto, name)!;
@@ -170,10 +173,10 @@ class ClassRegistration {
      * @throws {AssertionError} - Throws if the verification fails
      */
     checkOverrides(): void {
-        const ancestryFeatureNames = new Set(this.ancestryFeatures().map(({name}) => name));
-        this.features.forEach(({name, hasOverrides}) => {
+        const ancestryFeatureNames = new Set(this.ancestryFeatures().map(({ name }) => name));
+        this.features.forEach(({ name, hasOverrides }) => {
             const str = `${this.Class.name}.prototype.${String(name)}`;
-            assert(!hasOverrides || ancestryFeatureNames.has(name),`Unnecessary @override declaration on ${str}`);
+            assert(!hasOverrides || ancestryFeatureNames.has(name), `Unnecessary @override declaration on ${str}`);
             assert(hasOverrides || !ancestryFeatureNames.has(name), `@override decorator missing on ${str}`);
         });
     }
@@ -186,7 +189,7 @@ class ClassRegistration {
      * @returns {Feature | undefined} - The feature if it exists else otherwise
      */
     findFeature(propertyKey: PropertyKey): Feature | undefined {
-        return this.features.find(({name}) => name === propertyKey) ??
+        return this.features.find(({ name }) => name === propertyKey) ??
             this.parentRegistration?.findFeature(propertyKey);
     }
 }

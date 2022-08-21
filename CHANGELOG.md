@@ -1,8 +1,11 @@
 # Changelog
 
-## vNext
+## v0.24.0
 
 * Updated debugger settings to leverage modern VSCode
+* Fixed a subtle issue with subcontracting resolution (breaking change) ([#236](https://github.com/final-hill/decorator-contracts/issues/236))
+* Updated VSCode debug settings to support the modern IDE
+* Updated npm dependencies
 
 ## v0.23.1
 
