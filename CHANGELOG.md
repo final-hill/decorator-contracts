@@ -3,7 +3,8 @@
 ## v0.24.1
 
 * Bugfix of generated type declaration (#238)
-* Updated README to reflect current features (#)
+* Updated README to reflect current features (#239)
+* Updated README to use mermaid diagram
 
 ## v0.24.0
 
