@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.24.1
+
+* Bugfix of generated type declaration (#238)
+* Updated README to reflect current features (#)
+
 ## v0.24.0
 
 * Updated debugger settings to leverage modern VSCode
