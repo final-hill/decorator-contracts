@@ -46,15 +46,15 @@ As a dependency run the command:
 
 You can also use a specific [version](https://www.npmjs.com/package/@final-hill/decorator-contracts):
 
-`npm install @final-hill/decorator-contracts@0.23.0`
+`npm install @final-hill/decorator-contracts@0.24.1`
 
 For use in a webpage:
 
 `<script src="https://cdn.skypack.dev/@final-hill/decorator-contracts"></script>`
 
-With a specific [version](https://www.npmjs.com/package/@final-hill/decorator-contracts@0.22.0):
+With a specific [version](https://www.npmjs.com/package/@final-hill/decorator-contracts@0.24.1):
 
-`<script src="https://cdn.skypack.dev/@final-hill/decorator-contracts@0.23.0"></script>`
+`<script src="https://cdn.skypack.dev/@final-hill/decorator-contracts@0.24.1"></script>`
 
 ## Usage
 
@@ -375,7 +375,7 @@ Note that the current class or one of its ancestors must have `@Contracted(...)`
 When assigned, candidate overrides are identified and an
 error is raised if an associated `@override` is missing for that feature.
 
-Static methods including the constructor can not be assigned an `@override`
+Static methods including the constructor cannot be assigned an `@override`
 decorator. In the future this may be enabled for non-constructor static methods
 but the implications are not clear at present.
 
@@ -502,7 +502,8 @@ const stackContract = new Contract<StackType<any>>({
     }
 })
 
-class Stack<T> extends Contracted(stackContract) implements StackType<T> {
+@Contracted(stackContract)
+class Stack<T> implements StackType<T> {
     ...
     pop(): T {
         return this.#implementation.pop();
@@ -517,7 +518,7 @@ In the above example the precondition of executing `pop`
 on a stack is that it is not empty. If this assertion fails
 an `AssertionError` is raised.
 
-Static features, including the constructor, can not be assigned a `demands`
+Static features, including the constructor, cannot be assigned a `demands`
 assertion. In the future this may be enabled for non-constructor static methods
 but the implications are not clear at present.
 
@@ -546,6 +547,7 @@ const baseContract = new Contract<Base>({
 })
 
 const subContract = new Contract<Sub>({
+    [extend]: baseContract,
     someMethod: {
         demands(){ ... }
     }
@@ -569,6 +571,7 @@ class Base {
 }
 
 const subContract = new Contract<Sub>({
+    [extend]: baseContract,
     someMethod: {
         demands(_self, x: number){ return -10 <= x && x <= 20 }
     }
@@ -609,7 +612,7 @@ class Stack<T> {
 
 In the above example the post-condition of executing push on a stack is that it is not empty. If this assertion fails an `AssertionError` is raised.
 
-Static features, including the constructor, can not be assigned an `ensures` declaration. In the future this may be enabled for non-constructor static methods but the implications are not clear at present.
+Static features, including the constructor, cannot be assigned an `ensures` declaration. In the future this may be enabled for non-constructor static methods but the implications are not clear at present.
 
 In addition to the `self` argument there is also an `old` argument which provides access to the values of any getters of the instance before its associated member was executed.
 
@@ -675,13 +678,14 @@ const baseContract = new Contract<Base>({
 })
 
 const subContract = new Contract<Sub>({
+    [extend]: baseContract,
     someMethod: {
         ensures(){ ... }
     }
 })
 ```
 
-This subcontracted `ensures` declaration can not weaken the `ensures` of the base contract. What this means is that the new post-condition will be and-ed with its ancestors. If all of the `ensures` are true then the obligation is considered fulfilled by the author of the feature otherwise an `AssertionError` is raised.
+This subcontracted `ensures` declaration cannot weaken the `ensures` of the base contract. What this means is that the new post-condition will be and-ed with its ancestors. If all of the `ensures` are true then the obligation is considered fulfilled by the author of the feature otherwise an `AssertionError` is raised.
 
 ```typescript
 const baseContract = new Contract<Base>({
@@ -696,6 +700,7 @@ class Base {
 }
 
 const subContract = new Contract<Sub>({
+    [extend]: baseContract,
     method: {
         ensures(_self, _old, x: number){ return -10 <= x && x <= 20 }
     }
@@ -799,8 +804,8 @@ const studentRepositoryContract = new Contract<StudentRepository>({
 @Contracted(studentRepositoryContract)
 class StudentRepository {
     ...
-    getStudent(id: string): Student {
-        const data = fetch(`/repos/students/${id}`).then(response => response.json())
+    async getStudent(id: string): Student {
+        const data = await fetch(`/repos/students/${id}`).then(response => response.json())
 
         return new Student(data)
     }
@@ -854,18 +859,18 @@ class AjaxRequest {
     get attempts(): number { return this.#attempts }
     set attempts(value: number) { this.#attempts = value }
 
-    get(url){
+    get(url) {
         if(this.#attempts == 0)
             return this.getFetch(url)
         else if(this.#attempts == 1)
             return this.getXhr(url)
     }
 
-    getFetch(url) {
+    async getFetch(url) {
         return await fetch(url)
     }
 
-    getXhr(url) {
+    async getXhr(url) {
         return await new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
             xhr.open('GET', url);
@@ -912,7 +917,7 @@ If an error is thrown in the `invariant` then it is raised to the caller.
 
 If an error is thrown in the `demands` then the error is raised to the caller.
 In this case the `invariant` is not checked because the feature body has not
-been entered and the assertion can not modify the state of the class without
+been entered and the assertion cannot modify the state of the class without
 calling another method which is governed by its own contracts.
 
 If an error is thrown by the feature body or the `ensures` then
@@ -922,21 +927,38 @@ starts from the beginning.
 If `rescue` throws an error or does not call `retry` then the
 `invariant` is checked before the error is raised to the caller.
 
-```ts
-        (error) <-----------------+
-                    ^ (throws)    | (throws)
-                    |             |
-obj.feature(...) -> @invariant -> @demands -> { feature body } --+
-                    ^                         |                  |
-                    |                         | (throws)         |
-                    | (retry)                 |                  | (return)
-                    +------------ @rescue <---+------+           |
-                                  |                  |           |
-                                  | (throws|return)  |           |
-        (error) <--- @invariant <-+                  |           |
-                                                     | (throws)  |
-                                                     |           |
-       (return) <-- @invariant <---------------- @ensures <------+
+```mermaid
+flowchart LR
+
+Feature(("obj.feature(...)")) 
+Invariant["@invariant"]
+Invariant2["@invariant"]
+Invariant3["@invariant"]
+Demands["@demands"]
+Ensures["@ensures"]
+Rescue["@rescue"]
+Error(("Error"))
+Body["{feature body}"]
+Result(("Result"))
+
+Feature --> Invariant
+Invariant -->|throws| Error
+Invariant --> Demands
+Demands -->|throws| Error
+Demands --> Body
+Body -->|throws| Rescue
+Rescue -->|retry| Invariant
+Body -->|returns| Ensures
+Ensures -->|throws| Rescue
+Ensures --> Invariant3
+Invariant3 --> Result
+Rescue --> |throws| Invariant2
+Rescue --> |returns| Invariant2
+Invariant2 --> Error
+
+style Error fill:red
+style Result fill:green
+style Rescue fill:darkorange
 ```
 
 ## Further Reading
