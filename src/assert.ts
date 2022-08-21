@@ -7,7 +7,7 @@
 
 import AssertionError from './AssertionError';
 import { ASSERTION_FAILED } from './Messages';
-import type { Constructor } from 'lib/ClassType';
+import { Constructor } from './';
 
 /**
  * An assertion is an expression of a property that must be true at a particular
@@ -32,7 +32,7 @@ import type { Constructor } from 'lib/ClassType';
  * assert(name.trim().length > 0, 'Name is required', TypeError)
  */
 export default function assert(condition: unknown, message = ASSERTION_FAILED, ErrorConstructor: Constructor<Error> = AssertionError): asserts condition {
-    if(Boolean(condition) == false) {
+    if (Boolean(condition) == false) {
         throw new ErrorConstructor(message);
     }
 }

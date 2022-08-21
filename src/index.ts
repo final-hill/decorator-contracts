@@ -6,13 +6,11 @@
  */
 
 import AssertionError from './AssertionError';
-import {Contract, extend, invariant, Invariant, checkedMode, Rescue} from './Contract';
-import Contracted, {innerContract} from './Contracted';
+import Contracted, { innerContract } from './Contracted';
 import override from './override';
 import assert from './assert';
 import implies from './implies';
 
-export {
-    AssertionError, Contract, Contracted, Invariant, Rescue, implies,
-    invariant, innerContract, extend, checkedMode, override, assert
-};
+export { AssertionError, Contracted, implies, innerContract, override, assert };
+export { Contract, extend, invariant, Invariant, checkedMode, Rescue } from './Contract';
+export { Constructor, AbstractConstructor, ClassType } from './lib/ClassType';
