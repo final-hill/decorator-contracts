@@ -19,22 +19,22 @@ import unChecked from './unChecked';
  * @param {any[]} args - The arguments of the feature to apply to the assertion
  * @throws {AssertionError}
  */
-function assertDemands<U>(ctx: U, contract: Contract<any>, className: string, featureName: PropertyKey, args: any[]){
+function assertDemands<U extends object>(ctx: U, contract: Contract<U>, className: string, featureName: PropertyKey, args: any[]) {
     let result = true;
     const d: Demands<any, any> | undefined = Reflect.get(contract.assertions, featureName)?.demands,
         demandsError = `demands not met on ${className}.prototype.${String(featureName)}\r\n${d}`;
-    if(contract[checkedMode]) {
-        if(d) {
+    if (contract[checkedMode]) {
+        if (d) {
             unChecked(contract, () =>
-                result = d.call(ctx,ctx, ...args)
+                result = d.call(ctx, ctx, ...args)
             );
         }
     }
 
-    if(contract[extend] && !result) {
-        assertDemands(ctx,contract[extend]!, className, featureName, args);
+    if (contract[extend] && !result) {
+        assertDemands(ctx, contract[extend], className, featureName, args);
     } else {
-        assert(result,demandsError);
+        assert(result, demandsError);
     }
 }
 

@@ -16,15 +16,15 @@ import { assert, checkedMode, Contract, extend, invariant } from '../';
  * @throws {AssertionError}
  */
 function assertInvariants<U>(ctx: U, contract: Contract<any>) {
-    if(contract[checkedMode]) {
-        unChecked(contract,() => {
+    if (contract[checkedMode]) {
+        unChecked(contract, () => {
             const iv = contract[invariant];
-            assert(iv.call(ctx, ctx),`Invariant violated. ${iv.toString()}`);
+            assert(iv.call(ctx, ctx), `Invariant violated. ${iv.toString()}`);
         });
     }
 
-    if(contract[extend]) {
-        assertInvariants(ctx,contract[extend]!);
+    if (contract[extend]) {
+        assertInvariants(ctx, contract[extend]!);
     }
 }
 

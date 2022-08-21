@@ -22,7 +22,7 @@ const isContracted = Symbol('isContracted'),
  */
 function hasProperties<U>(registration: ClassRegistration, obj: U): boolean {
     return Object.entries(Object.getOwnPropertyDescriptors(obj))
-        .some(([key, desc]) => new Feature(registration,key,desc).isProperty);
+        .some(([key, desc]) => new Feature(registration, key, desc).isProperty);
 }
 
 /**
@@ -40,10 +40,10 @@ function Contracted<
     T extends Contract<any> = Contract<any>,
     U extends ClassType<any> = ClassType<any>
 >(contract: T = new Contract() as T): ClassDecorator {
-    return function(Base: U & {[innerContract]?: Contract<any>}) {
+    return function (Base: U & { [innerContract]?: Contract<any> }) {
         assert(!Object.getOwnPropertySymbols(Base).includes(isContracted), MSG_SINGLE_CONTRACT);
 
-        if(contract[checkedMode] === false) {
+        if (contract[checkedMode] === false) {
             return Base;
         }
 
@@ -62,15 +62,15 @@ function Contracted<
                 super(...args);
 
                 const Class = this.constructor as ClassType<any>,
-                      classRegistration = CLASS_REGISTRY.getOrCreate(Class);
+                    classRegistration = CLASS_REGISTRY.getOrCreate(Class);
 
-                assert(!hasProperties(classRegistration,this), MSG_NO_PROPERTIES);
+                assert(!hasProperties(classRegistration, this), MSG_NO_PROPERTIES);
 
-                if(!classRegistration.contractsChecked) {
+                if (!classRegistration.contractsChecked) {
                     let ancRegistrations = classRegistration.ancestry().reverse();
                     // top-down check overrides and pre-existing properties
                     [...ancRegistrations, classRegistration].forEach(ancRegistration => {
-                        if(!ancRegistration.contractsChecked) {
+                        if (!ancRegistration.contractsChecked) {
                             ancRegistration.checkOverrides();
                             ancRegistration.contractsChecked = true;
                         }
@@ -79,7 +79,7 @@ function Contracted<
                     // bottom-up to closest Contracted class bind contracts
                     ancRegistrations = takeWhile(ancRegistrations.reverse(), (cr => cr.Class !== Base));
                     [classRegistration, ...ancRegistrations, CLASS_REGISTRY.get(Base)!].forEach(registration => {
-                        registration.bindContract(this[innerContract]);
+                        registration.bindContract(InnerContracted[innerContract]);
                     });
                 }
 
@@ -91,8 +91,8 @@ function Contracted<
             // FIXME: dirty hack. Possibly resolved by moving to contracts as classes
             // The static getter is used by the construction invariant check
             // The instance getter is used by the feature declarations
-            static get [innerContract](){ return contract; }
-            get [innerContract](){ return contract; }
+            static get [innerContract]() { return contract; }
+            get [innerContract]() { return contract; }
         }
 
         const classRegistration = CLASS_REGISTRY.getOrCreate(InnerContracted);
@@ -104,5 +104,5 @@ function Contracted<
     } as ClassDecorator;
 }
 
-export {isContracted, innerContract};
+export { isContracted, innerContract };
 export default Contracted;
