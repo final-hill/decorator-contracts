@@ -906,9 +906,7 @@ where you can lexically determine where the handling occurs and optionally perfo
 
 When `obj.feature` is called the happy path is:
 
-```ts
-invariant -> demands -> { feature body } -> ensures -> invariant
-```
+![image](./docs/happy-path.png)
 
 If an error is thrown and there is no `rescue` defined then the `invariant`
 is checked before the error is raised to the caller.
@@ -927,39 +925,7 @@ starts from the beginning.
 If `rescue` throws an error or does not call `retry` then the
 `invariant` is checked before the error is raised to the caller.
 
-```mermaid
-flowchart LR
-
-Feature(("obj.feature(...)")) 
-Invariant["@invariant"]
-Invariant2["@invariant"]
-Invariant3["@invariant"]
-Demands["@demands"]
-Ensures["@ensures"]
-Rescue["@rescue"]
-Error(("Error"))
-Body["{feature body}"]
-Result(("Result"))
-
-Feature --> Invariant
-Invariant -->|throws| Error
-Invariant --> Demands
-Demands -->|throws| Error
-Demands --> Body
-Body -->|throws| Rescue
-Rescue -->|retry| Invariant
-Body -->|returns| Ensures
-Ensures -->|throws| Rescue
-Ensures --> Invariant3
-Invariant3 --> Result
-Rescue --> |throws| Invariant2
-Rescue --> |returns| Invariant2
-Invariant2 --> Error
-
-style Error fill:red
-style Result fill:green
-style Rescue fill:darkorange
-```
+![image](./docs/order-of-assertions.png)
 
 ## Further Reading
 

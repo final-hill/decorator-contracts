@@ -5,17 +5,17 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import {deepFreeze, fnTrue} from './lib';
+import { deepFreeze, fnTrue } from './lib';
 
 const checkedMode = Symbol('checkedMode'),
-      invariant = Symbol('invariant'),
-      extend = Symbol('extend');
+    invariant = Symbol('invariant'),
+    extend = Symbol('extend');
 
 type AnyObject = Record<PropertyKey, any>;
 type AnyFunc = (...args: any[]) => any;
 
 type NonFunctionPropertyNames<T extends AnyObject> = { [K in keyof T]: T[K] extends AnyFunc ? never : K }[keyof T];
-type Properties<T extends AnyObject> = Pick<T, NonFunctionPropertyNames<T>>;
+export type Properties<T extends AnyObject> = Pick<T, NonFunctionPropertyNames<T>>;
 
 export type Invariant<T extends AnyObject> = (self: T) => boolean;
 export type Demands<T extends AnyObject, F extends T[any]> = (self: T, ...args: Parameters<F>) => boolean;
@@ -34,13 +34,13 @@ export type ContractOptions<
     [invariant]: Invariant<T>;
     [checkedMode]: boolean;
 } & {
-    [K in keyof T]?: FeatureOption<T, T[K]>
-};
+        [K in keyof T]?: FeatureOption<T, T[K]>
+    };
 
 export interface FeatureOption<T extends AnyObject, F extends T[any]> {
-    demands?: Demands<T,F>;
-    ensures?: Ensures<T,F>;
-    rescue?: Rescue<T,F>;
+    demands?: Demands<T, F>;
+    ensures?: Ensures<T, F>;
+    rescue?: Rescue<T, F>;
     within?: number;
 }
 
@@ -57,7 +57,7 @@ export class Contract<T extends AnyObject> {
 
         Object.keys(assertions).forEach(propertyKey => {
             const featureOption = assertions[propertyKey]!;
-            Object.defineProperty(this.assertions,propertyKey, {
+            Object.defineProperty(this.assertions, propertyKey, {
                 value: {
                     demands: featureOption.demands ?? fnTrue,
                     ensures: featureOption.ensures ?? fnTrue,
@@ -75,4 +75,4 @@ export class Contract<T extends AnyObject> {
     }
 }
 
-export {checkedMode, extend, invariant};
+export { checkedMode, extend, invariant };
