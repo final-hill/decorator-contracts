@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.24.2
+
+* Updated README to use images instead of mermaid diagrams
+* Updated dependencies
+
 ## v0.24.1
 
 * Bugfix of generated type declaration (#238)
