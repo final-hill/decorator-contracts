@@ -25,12 +25,12 @@ function checkedFeature(
     registration: ClassRegistration
 ) {
     return function innerCheckedFeature(this: any, ...args: any[]) {
-        const { Class } = registration;
-
-        assert(this instanceof Class, MSG_INVALID_CONTEXT);
-
-        const contract = Reflect.get(this, innerContract),
+        const { Class } = registration,
             className = Class.name;
+
+        assert(this instanceof Class, `${MSG_INVALID_CONTEXT}. Expected: this instanceof ${className}. this: ${this.constructor.name}`);
+
+        const contract = Reflect.get(this, innerContract);
         if (!contract[checkedMode]) {
             return fnOrig.apply(this, args);
         }

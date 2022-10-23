@@ -4,6 +4,8 @@
 
 * Updated README to use images instead of mermaid diagrams
 * Updated dependencies
+* Improved error messaging of MSG_INVALID_CONTEXT
+* Grammar + spelling fix of `CHANGELOG.md`
 
 ## v0.24.1
 
@@ -36,7 +38,7 @@
 
 * Added `implies` function
 * Added `iff` function
-* Added topic tags to github repo
+* Added topic tags to GitHub repo
 * Updated `package.json` keywords
 
 ## v0.21.2
@@ -92,23 +94,23 @@
 * BREAKING CHANGE: contracts now managed separate from the class
 * Rewrote README to reflect the new architecture
 * Updated dependencies
-* Merged jest.config.js into package.json
+* Merged `jest.config.js` into `package.json`
 * Updated linting rules
 * Moved unit tests to separate folder
 * Public property definitions are now illegal
-* Fixed package.json debug command
+* Fixed `package.json` debug command
 * Bugfix of invariant inheritance
 
 ## v0.19.0
 
 * Updated README to include unpkg reference
 * Enabled sourcemaps
-* npm audit fix
+* `npm audit fix`
 * Updated dependencies
 * Linting fixes
-* Updated contact info in README and package.json
+* Updated contact info in README and `package.json`
 * BREAKING CHANGE: Decorators now accept arrow functions instead of traditional functions. The first parameter is `self`.
-* BREAKING CHANGE: @ensures now provides `old` as a parameter to access instance property values before feature execution
+* BREAKING CHANGE: `@ensures` now provides `old` as a parameter to access instance property values before feature execution
 
 ## v0.18.1
 
@@ -116,10 +118,10 @@
 
 ## v0.18.0
 
-* Fixed missing PredicateType issue
+* Fixed missing `PredicateType` issue
 * Reorganized README
 * Added NPM badges to README
-* Added package.json reference to github issues
+* Added `package.json` reference to GitHub issues
 * Added licensing info to README
 * Removed extraneous build dependency
 
@@ -141,31 +143,31 @@
 
 ## v0.17.0
 
-* Migrated repository from Azure Devops to GitHub
-* Migrated Azure Devops CI/CD workflows to GitHub actions
+* Migrated repository from Azure DevOps to GitHub
+* Migrated Azure DevOps CI/CD workflows to GitHub actions
 * Created CHANGELOG.md and removed related build script
 * Replaced `#{YEAR}#` token with literal year. Removed related build script
 * Removed VSCode Azure DevOps suggested extensions
 * Changed license to AGPL-3.0-only
-* Updated repository url to point to GitHub url
-* Changed library namespace: `@thenewobjective` -> `@final-hill`
+* Updated repository URL to point to GitHub URL
+* Changed library namespace: `@thenewobjective` → `@final-hill`
 * Updated README Dependencies table
-* Updated @rescue documentation
+* Updated `@rescue` documentation
 * Replaced build versioning with explicit versioning
-* Enabled @rescue inheritance
+* Enabled `@rescue` inheritance
 * Created CONTRIBUTING.md
 
 ## v0.16.0
 
-* If an exception is thrown in a class feature without a @rescue defined, then the exception is raised to its caller after the @invariant is checked
-* If an error is thrown in @demands, the error is raised to the caller
-* If an error is raised in a @ensures then the associated @rescue is executed
+* If an exception is thrown in a class feature without a `@rescue` defined, then the exception is raised to its caller after the `@invariant` is checked
+* If an error is thrown in `@demands`, the error is raised to the caller
+* If an error is raised in a `@ensures` then the associated `@rescue` is executed
 * Updated README examples
 * Updated implementation to consolidate error messages
 
 ## v0.15.0
 
-* Switched from tslint to eslint
+* Switched from `tslint` to `eslint`
 * Updated assertions to support assertion types from TypeScript 3.7
 * Removed Babel dependency
 * Refactoring improvements
@@ -175,12 +177,12 @@
 
 * Updated YAML scripts to reference new Azure vm image
 * Refactored Unit Tests
-* Refactored implementation to prefer 'const' declarations
+* Refactored implementation to prefer `const` declarations
 * Refactored README examples
-* Refactored RescueType to separate file
+* Refactored `RescueType` to separate file
 * Refactored Rescue Decorator
-* @rescue now preserves the invariant after execution
-* If a @rescue is executed and the retry argument is not called, then an error is thrown
+* `@rescue` now preserves the invariant after execution
+* If a `@rescue` is executed and the retry argument is not called, then an error is thrown
 
 ## v0.13.0
 
@@ -192,58 +194,58 @@
 * Refactored codebase to utilize new TypeScript features
 * Added Introduction to README
 * Updated package keywords
-* @invariant changed to accept functions directly instead of a record factory
-* Multiple @invariant declarations can be assigned to a class
+* `@invariant` changed to accept functions directly instead of a record factory
+* Multiple `@invariant` declarations can be assigned to a class
 
 ## v0.11.0
 
-* Renamed @requires to @demands
-* npm audit fixes
-* Multiple @demands can be assigned to a class feature
-* Implementation of @ensures decorator
+* Renamed `@requires` to `@demands`
+* `npm audit fix`
+* Multiple `@demands` can be assigned to a class feature
+* Implementation of `@ensures` decorator
 * Reorganized README
 
 ## v0.10.0
 
 * Significant refactoring and efficiency improvements
-* @requires can not be strengthened in a subtype
+* `@requires` can not be strengthened in a subtype
 
 ## v0.9.0
 
 * Refactoring and efficiency improvements
-* @override requires @invariant declaration in class ancestry
+* `@override` requires `@invariant` declaration in class ancestry
 * Updated Jest configuration for reporting and VSCode debug support
 * Cleanup of documentation
-* Added checkMode support to @rescue
+* Added `checkMode` support to `@rescue`
 * Added Babel compilation
-* @requires now works with inheritance
+* `@requires` now works with inheritance
 
 ## v0.8.0
 
-* Implementation of @rescue decorator
-* Renamed debugMode to checkMode
+* Implementation of `@rescue` decorator
+* Renamed `debugMode` to `checkMode`
 * Refactoring and efficiency improvements
-* @requires restricted to instance class features
+* `@requires` restricted to instance class features
 * Added linting rule to validate file license header
 * Updated TypeScript to 3.7.2
 
 ## v0.7.0
 
-* @invariant restricted to only one declaration per class
-* @override now supports accessors
-* Updated package.json metadata for discoverability
+* `@invariant` restricted to only one declaration per class
+* `@override` now supports accessors
+* Updated `package.json` metadata for discoverability
 * Added Further Reading section to README
 
 ## v0.6.0
 
-* @invariant signature changed to accept a function that returns a record of assertions
-* @override restricted to instance class features
-* @override extended with additional checks to support Substitutability
+* `@invariant` signature changed to accept a function that returns a record of assertions
+* `@override` restricted to instance class features
+* `@override` extended with additional checks to support Substitutability
 * Added linting checks to the project
 
 ## v0.5.0
 
-* @override decorator implemented
+* `@override` decorator implemented
 
 ## v0.4.0
 
@@ -252,12 +254,12 @@
 ## v0.3.0
 
 * Table of Contents added to README
-* @invariant supports no arguments
+* `@invariant` supports no arguments
 
 ## v0.2.0
 
 * Added assertion documentation to README
-* Assertions support debugMode flag
+* Assertions support `debugMode` flag
 * Assertions return a boolean
 * Assertions support throwing custom error types
 
@@ -265,16 +267,16 @@
 
 * Added installation instructions to README
 * Enabled project debugging
-* @invariant can accept multiple assertions
-* @invariant supports message : assertion pairs
-* Ancestor @invariant enforced in subclasses
-* Subclasses support additional @invariant declarations
-* Added built-types to tasks.json
+* `@invariant` can accept multiple assertions
+* `@invariant` supports message : assertion pairs
+* Ancestor `@invariant` enforced in subclasses
+* Subclasses support additional `@invariant` declarations
+* Added built-types to `tasks.json`
 * Refactoring and typing improvements
 
 ## v0.0.2
 
-Updated package.json namespace to @thenewobjective prefix
+Updated `package.json` namespace to `@thenewobjective` prefix
 
 ## v0.0.1
 
@@ -283,5 +285,5 @@ Updated package.json namespace to @thenewobjective prefix
 * Initial Branch configuration
 * Initial Release configuration
 * Build tokenization
-* Initial @invariant implementation
+* Initial `@invariant` implementation
 * Initial Documentation
