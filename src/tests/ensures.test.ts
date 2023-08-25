@@ -1,6 +1,6 @@
 /*!
  * @license
- * Copyright (C) 2022 Final Hill LLC
+ * Copyright (C) 2023 Final Hill LLC
  * SPDX-License-Identifier: AGPL-3.0-only
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
@@ -62,7 +62,7 @@ describe('Overridden features are still subject to the ensures assertion ', () =
         #value = 0;
 
         get value(): number { return this.#value; }
-        set value(value: number){ this.#value = value; }
+        set value(value: number) { this.#value = value; }
 
         dec(): void { this.value--; }
         inc(): void { this.value++; }
@@ -142,13 +142,13 @@ describe('`ensures` assertions are enabled in checkedMode and disabled otherwise
     test('The associated assertion is evaluated when checkMode = true', () => {
         const fooContract = new Contract<Foo>({
             method: {
-                ensures(){ return false; }
+                ensures() { return false; }
             }
         });
 
         @Contracted(fooContract)
         class Foo {
-            method(): void {}
+            method(): void { }
         }
 
         expect(() => new Foo().method()).toThrow();
@@ -158,13 +158,13 @@ describe('`ensures` assertions are enabled in checkedMode and disabled otherwise
         const fooContract = new Contract<Foo>({
             [checkedMode]: false,
             method: {
-                ensures(){ return false; }
+                ensures() { return false; }
             }
         });
 
         @Contracted(fooContract)
         class Foo {
-            method(): void {}
+            method(): void { }
         }
 
         expect(() => new Foo().method()).not.toThrow();
@@ -177,7 +177,7 @@ describe('`ensures` assertions are enabled in checkedMode and disabled otherwise
 describe('Postconditions cannot be weakened in a subtype', () => {
     const baseContract = new Contract<Base>({
         method: {
-            ensures(_self, _old, value){ return 10 <= value && value <= 30; }
+            ensures(_self, _old, value) { return 10 <= value && value <= 30; }
         }
     });
 
@@ -220,7 +220,7 @@ describe('Postconditions cannot be weakened in a subtype', () => {
     const strongerContract = new Contract<Stronger>({
         [extend]: baseContract,
         method: {
-            ensures(_self, _old, value: number){ return 15 <= value && value <= 20; }
+            ensures(_self, _old, value: number) { return 15 <= value && value <= 20; }
         }
     });
 
@@ -244,11 +244,11 @@ describe('Postconditions cannot be weakened in a subtype', () => {
 /**
  * https://github.com/final-hill/decorator-contracts/issues/98
  */
- describe('ensures has access to the properties of the instance class before its associated member was executed', () => {
+describe('ensures has access to the properties of the instance class before its associated member was executed', () => {
     test('Stack Size', () => {
         const stackContract = new Contract<Stack<any>>({
             pop: {
-                ensures(self,old){ return self.size == old.size - 1; }
+                ensures(self, old) { return self.size == old.size - 1; }
             },
             push: {
                 ensures(self, old) { return self.size == old.size + 1; }
@@ -260,7 +260,7 @@ describe('Postconditions cannot be weakened in a subtype', () => {
             #implementation: T[] = [];
             #size = 0;
 
-            get size(){ return this.#size; }
+            get size() { return this.#size; }
 
             pop(): T {
                 const result = this.#implementation.pop()!;

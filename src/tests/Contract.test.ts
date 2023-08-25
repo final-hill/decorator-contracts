@@ -1,12 +1,12 @@
 /*!
  * @license
- * Copyright (C) 2022 Final Hill LLC
+ * Copyright (C) 2023 Final Hill LLC
  * SPDX-License-Identifier: AGPL-3.0-only
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
 import { MSG_BAD_SUBCONTRACT, MSG_SINGLE_CONTRACT } from '../Messages';
-import {Contracted, checkedMode, Contract, extend} from '../';
+import { Contracted, checkedMode, Contract, extend } from '../';
 
 interface StackType<T> {
     readonly limit: number;
@@ -50,7 +50,7 @@ describe('A contract must be independently definable', () => {
 
         stackContract = new Contract<StackType<any>>({
             pop: {
-                demands(){ return true; }
+                demands() { return true; }
             }
         });
         expect(stackContract.assertions.pop!.demands).toBeInstanceOf(Function);
@@ -70,7 +70,7 @@ describe('A contract must be independently definable', () => {
 
         stackContract = new Contract<StackType<any>>({
             pop: {
-                ensures(){ return true; }
+                ensures() { return true; }
             }
         });
 
@@ -87,7 +87,7 @@ describe('A contract must be independently definable', () => {
 
         stackContract = new Contract<StackType<any>>({
             push: {
-                rescue(_self, _error, _args, _retry) {}
+                rescue(_self, _error, _args, _retry) { }
             },
             pop: {
                 // @ts-expect-error
@@ -110,9 +110,9 @@ describe('A contract must be independently definable', () => {
         const stackContract = new Contract<StackType<any>>({
             [checkedMode]: true
         }),
-        subContract = new Contract<StackType<any>>({
-            [extend]: stackContract
-        });
+            subContract = new Contract<StackType<any>>({
+                [extend]: stackContract
+            });
 
         expect(subContract[extend]).toBeDefined();
     });
@@ -123,15 +123,15 @@ describe('Only a single contract can be assigned to a class', () => {
     test('Good declaration', () => {
         expect(() => {
             const fooContract = new Contract<Foo>(),
-            barContract = new Contract<Bar>({
-                [extend]: fooContract
-            });
+                barContract = new Contract<Bar>({
+                    [extend]: fooContract
+                });
 
             @Contracted(fooContract)
-            class Foo {}
+            class Foo { }
 
             @Contracted(barContract)
-            class Bar extends Foo{}
+            class Bar extends Foo { }
 
             return new Bar();
         }).not.toThrow();
@@ -143,7 +143,7 @@ describe('Only a single contract can be assigned to a class', () => {
                 barContract = new Contract();
             @Contracted(fooContract)
             @Contracted(barContract)
-            class Foo {}
+            class Foo { }
 
             return new Foo();
         }).toThrow(MSG_SINGLE_CONTRACT);
@@ -156,7 +156,7 @@ describe('An abstract class must support contract declarations', () => {
         expect(() => {
             const baseContract = new Contract<Base>({});
             @Contracted(baseContract)
-            class Base {}
+            class Base { }
 
             return Base;
         }).toBeDefined();
@@ -166,7 +166,7 @@ describe('An abstract class must support contract declarations', () => {
         expect(() => {
             const baseContract = new Contract<Base>({});
             @Contracted(baseContract)
-            abstract class Base {}
+            abstract class Base { }
 
             return Base;
         }).toBeDefined();
@@ -180,14 +180,14 @@ describe('A subclass can only be contracted by a subcontract of the base class c
             const fooContract = new Contract<Foo>({});
 
             @Contracted(fooContract)
-            class Foo {}
+            class Foo { }
 
             const barContract = new Contract<Bar>({
                 [extend]: fooContract
             });
 
             @Contracted(barContract)
-            class Bar {}
+            class Bar { }
 
             return Bar;
         }).not.toThrow();
@@ -197,12 +197,12 @@ describe('A subclass can only be contracted by a subcontract of the base class c
         const fooContract = new Contract<Foo>({});
 
         @Contracted(fooContract)
-        class Foo {}
+        class Foo { }
 
         expect(() => {
-            const badContract =  new Contract<Bar>({});
+            const badContract = new Contract<Bar>({});
             @Contracted(badContract)
-            class Bar extends Foo {}
+            class Bar extends Foo { }
         }).toThrow(MSG_BAD_SUBCONTRACT);
 
     });

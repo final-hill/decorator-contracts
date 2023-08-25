@@ -1,6 +1,6 @@
 /*!
  * @license
- * Copyright (C) 2022 Final Hill LLC
+ * Copyright (C) 2023 Final Hill LLC
  * SPDX-License-Identifier: AGPL-3.0-only
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
@@ -18,9 +18,9 @@ describe('Material Implication tests', () => {
             F    T      T
             F    F      T
         */
-        expect(implies(true,true)).toBe(true);
-        expect(implies(true,false)).toBe(false);
-        expect(implies(false,true)).toBe(true);
-        expect(implies(false,false)).toBe(true);
+        expect(implies(true, true)).toBe(true);
+        expect(implies(true, false)).toBe(false);
+        expect(implies(false, true)).toBe(true);
+        expect(implies(false, false)).toBe(true);
     });
 });

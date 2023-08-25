@@ -34,27 +34,103 @@
         ],
         "consistent-return": [
             "error",
-            { "treatUndefinedAsUnspecified": true }
+            {
+                "treatUndefinedAsUnspecified": true
+            }
         ],
-        "@typescript-eslint/naming-convention": ["error",
-            { "selector": "default", "format": ["camelCase"] },
-
-            { "selector": "variableLike", "format": ["camelCase"] },
-            { "selector": "accessor", "format": ["camelCase", "UPPER_CASE", "PascalCase"] },
-            { "selector": "variable", "format": ["camelCase", "UPPER_CASE", "PascalCase"] },
-            { "selector": "parameterProperty", "format": ["camelCase", "UPPER_CASE", "PascalCase"] },
-
-            { "selector": "function", "format": ["camelCase", "PascalCase"] },
-            { "selector": "parameter", "format": ["camelCase", "PascalCase"], "leadingUnderscore": "allow" },
-
-            { "selector": "memberLike", "format": ["camelCase", "PascalCase"] },
-            { "selector": "memberLike", "modifiers": ["private"], "format": ["camelCase"], "leadingUnderscore": "require"  },
-
-            { "selector": "typeLike", "format": ["PascalCase"] },
-            { "selector": "typeParameter", "format": ["PascalCase"] },
-
-            { "selector": "interface", "format": ["PascalCase"], "custom": { "regex": "^I[A-Z]", "match": false } }
-          ],
+        "@typescript-eslint/naming-convention": [
+            "error",
+            {
+                "selector": "default",
+                "format": [
+                    "camelCase"
+                ]
+            },
+            {
+                "selector": "variableLike",
+                "format": [
+                    "camelCase"
+                ]
+            },
+            {
+                "selector": "accessor",
+                "format": [
+                    "camelCase",
+                    "UPPER_CASE",
+                    "PascalCase"
+                ]
+            },
+            {
+                "selector": "variable",
+                "format": [
+                    "camelCase",
+                    "UPPER_CASE",
+                    "PascalCase"
+                ]
+            },
+            {
+                "selector": "parameterProperty",
+                "format": [
+                    "camelCase",
+                    "UPPER_CASE",
+                    "PascalCase"
+                ]
+            },
+            {
+                "selector": "function",
+                "format": [
+                    "camelCase",
+                    "PascalCase"
+                ]
+            },
+            {
+                "selector": "parameter",
+                "format": [
+                    "camelCase",
+                    "PascalCase"
+                ],
+                "leadingUnderscore": "allow"
+            },
+            {
+                "selector": "memberLike",
+                "format": [
+                    "camelCase",
+                    "PascalCase"
+                ]
+            },
+            {
+                "selector": "memberLike",
+                "modifiers": [
+                    "private"
+                ],
+                "format": [
+                    "camelCase"
+                ],
+                "leadingUnderscore": "require"
+            },
+            {
+                "selector": "typeLike",
+                "format": [
+                    "PascalCase"
+                ]
+            },
+            {
+                "selector": "typeParameter",
+                "format": [
+                    "PascalCase"
+                ]
+            },
+            {
+                "selector": "interface",
+                "format": [
+                    "PascalCase"
+                ],
+                "custom": {
+                    "regex": "^I[A-Z]",
+                    "match": false
+                }
+            }
+        ],
         "@typescript-eslint/consistent-type-assertions": "error",
         "@typescript-eslint/member-delimiter-style": "error",
         "no-array-constructor": [
@@ -246,15 +322,18 @@
         "require-yield": [
             "error"
         ],
-        "require-jsdoc": ["error", {
-            "require": {
-                "FunctionDeclaration": true,
-                "MethodDefinition": false,
-                "ClassDeclaration": false,
-                "ArrowFunctionExpression": false,
-                "FunctionExpression": false
+        "require-jsdoc": [
+            "error",
+            {
+                "require": {
+                    "FunctionDeclaration": true,
+                    "MethodDefinition": false,
+                    "ClassDeclaration": false,
+                    "ArrowFunctionExpression": false,
+                    "FunctionExpression": false
+                }
             }
-        }],
+        ],
         "use-isnan": [
             "error"
         ],
@@ -342,20 +421,33 @@
             "never"
         ],
         "yoda": "off",
-        "valid-jsdoc": ["error", {
-            "requireReturn": false
-        }],
-        "header/header": [2, "block", [
-            "!",
-            " * @license",
-            " * Copyright (C) 2022 Final Hill LLC",
-            " * SPDX-License-Identifier: AGPL-3.0-only",
-            " * @see <https://spdx.org/licenses/AGPL-3.0-only.html>",
-            " "
-        ]]
+        "valid-jsdoc": [
+            "error",
+            {
+                "requireReturn": false
+            }
+        ],
+        "header/header": [
+            2,
+            "block",
+            [
+                "!",
+                " * @license",
+                " * Copyright (C) 2023 Final Hill LLC",
+                " * SPDX-License-Identifier: AGPL-3.0-only",
+                " * @see <https://spdx.org/licenses/AGPL-3.0-only.html>",
+                " "
+            ]
+        ]
     },
     "settings": {
-        "import/parsers": { "@typescript-eslint/parser": [".ts"] },
-        "import/resolver": { "eslint-import-resolver-typescript": true }
+        "import/parsers": {
+            "@typescript-eslint/parser": [
+                ".ts"
+            ]
+        },
+        "import/resolver": {
+            "eslint-import-resolver-typescript": true
+        }
     }
 }

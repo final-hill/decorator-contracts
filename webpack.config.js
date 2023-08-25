@@ -1,6 +1,6 @@
 /*!
  * @license
- * Copyright (C) 2021 Final Hill LLC
+ * Copyright (C) 2023 Final Hill LLC
  * SPDX-License-Identifier: AGPL-3.0-only
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
@@ -21,7 +21,7 @@ module.exports = {
     ],
   },
   resolve: {
-    extensions: [ '.ts' ],
+    extensions: ['.ts'],
   },
   // https://github.com/riversun/making-library-with-webpack
   output: {

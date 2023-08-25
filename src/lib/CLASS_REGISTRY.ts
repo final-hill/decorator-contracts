@@ -1,11 +1,11 @@
 /*!
  * @license
- * Copyright (C) 2022 Final Hill LLC
+ * Copyright (C) 2023 Final Hill LLC
  * SPDX-License-Identifier: AGPL-3.0-only
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import {ClassRegistration, ClassType} from './';
+import { ClassRegistration, ClassType } from './';
 
 /**
  * A WeakMap that tracks class registrations.
@@ -20,7 +20,7 @@ class ClassRegistry extends WeakMap<ClassType<any>, ClassRegistration> {
      * @returns {ClassRegistration} - The ClassRegistration
      */
     getOrCreate(Class: ClassType<any>): ClassRegistration {
-        if(this.has(Class)) {
+        if (this.has(Class)) {
             return this.get(Class)!;
         } else {
             this.set(Class, new ClassRegistration(Class));

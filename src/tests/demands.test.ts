@@ -1,6 +1,6 @@
 /*!
  * @license
- * Copyright (C) 2022 Final Hill LLC
+ * Copyright (C) 2023 Final Hill LLC
  * SPDX-License-Identifier: AGPL-3.0-only
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
@@ -66,7 +66,7 @@ describe('Overridden features are still subject to the demands assertion', () =>
         #value = 0;
 
         get value(): number { return this.#value; }
-        set value(value: number){ this.#value = value; }
+        set value(value: number) { this.#value = value; }
 
         dec(): void { this.value--; }
         inc(): void { this.value++; }
@@ -132,13 +132,13 @@ describe('The `demands` assertion is evaluated before its associated feature is 
         #value = 0;
 
         get value(): number { return this.#value; }
-        set value(value: number){ this.#value = value; }
+        set value(value: number) { this.#value = value; }
     }
 
     test('true "demands" check does not throw', () => {
         const barContract = new Contract<Bar>({
             method: {
-                demands(self){ return self.value >= 0; }
+                demands(self) { return self.value >= 0; }
             }
         });
 
@@ -157,7 +157,7 @@ describe('The `demands` assertion is evaluated before its associated feature is 
     test('false "demands" check throws', () => {
         const barContract = new Contract<Bar>({
             method: {
-                demands(){ return false; }
+                demands() { return false; }
             }
         });
 
@@ -181,13 +181,13 @@ describe('`demands` assertions are enabled in `checkedMode` and disabled otherwi
     test('The associated assertion is evaluated when checkMode = true', () => {
         const fooContract = new Contract<Foo>({
             method: {
-                demands(){ return false; }
+                demands() { return false; }
             }
         });
 
         @Contracted(fooContract)
         class Foo {
-            method(): void {}
+            method(): void { }
         }
 
         expect(() => new Foo().method()).toThrow();
@@ -197,13 +197,13 @@ describe('`demands` assertions are enabled in `checkedMode` and disabled otherwi
         const fooContract = new Contract<Foo>({
             [checkedMode]: false,
             method: {
-                demands(){ return false; }
+                demands() { return false; }
             }
         });
 
         @Contracted(fooContract)
         class Foo {
-            method(): void {}
+            method(): void { }
         }
 
         expect(() => new Foo().method()).not.toThrow();
@@ -259,7 +259,7 @@ describe('`demands` assertions cannot be strengthened in a subtype', () => {
     const strongerContract = new Contract<Stronger>({
         [extend]: baseContract,
         method: {
-            demands(_, value){ return 15 <= value && value <= 20; }
+            demands(_, value) { return 15 <= value && value <= 20; }
         }
     });
 

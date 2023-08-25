@@ -1,10 +1,9 @@
 /*!
  * @license
- * Copyright (C) 2022 Final Hill LLC
+ * Copyright (C) 2023 Final Hill LLC
  * SPDX-License-Identifier: AGPL-3.0-only
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
-
 
 import { MSG_SINGLE_RETRY } from '../Messages';
 import { checkedMode, Contract, Contracted, invariant } from '../';
@@ -14,12 +13,12 @@ import { checkedMode, Contract, Contracted, invariant } from '../';
  */
 describe('The `rescue` declaration must preserve the invariant after execution', () => {
     const baseContract = new Contract<Base>({
-        [invariant](self){ return self.value > 0; },
+        [invariant](self) { return self.value > 0; },
         method1: {
-            rescue(self){ self.value = 5; }
+            rescue(self) { self.value = 5; }
         },
         method2: {
-            rescue(self){ self.value = -1; }
+            rescue(self) { self.value = -1; }
         }
     });
 
@@ -51,7 +50,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
     test('rescuing non-error method returns normal', () => {
         const baseContract = new Contract<Base>({
             method: {
-                rescue(){}
+                rescue() { }
             }
         });
 
@@ -67,14 +66,14 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
     test('rescue of method with an error then retrying returns ok', () => {
         const baseContract = new Contract<Base>({
             method: {
-                rescue(_self, _error: any, _args: any[], retry: any){ retry(3); }
+                rescue(_self, _error: any, _args: any[], retry: any) { retry(3); }
             }
         });
 
         @Contracted(baseContract)
         class Base {
             method(value: number): number {
-                if(value <= 0) {
+                if (value <= 0) {
                     throw new Error('value must be greater than 0');
                 } else {
                     return value;
@@ -88,7 +87,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
     test('rescue of method with an error then rethrow throws to caller', () => {
         const baseContract = new Contract<Base>({
             method: {
-                rescue(){ throw new Error('Rescue throw'); }
+                rescue() { throw new Error('Rescue throw'); }
             }
         });
 
@@ -104,7 +103,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
 
     test('rescuing non-error getter returns normal', () => {
         const baseContract = new Contract<Base>({
-            value: { rescue(){ } }
+            value: { rescue() { } }
         });
 
         @Contracted(baseContract)
@@ -130,7 +129,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
             #value = 0;
 
             get value(): number {
-                if(this.#value == 0) {
+                if (this.#value == 0) {
                     throw new Error('Bad State');
                 } else {
                     return this.#value;
@@ -195,7 +194,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
 
             get value(): number { return this.#value; }
             set value(value: number) {
-                if(Number.isNaN(value)) {
+                if (Number.isNaN(value)) {
                     throw new Error('NaN not allowed');
                 }
                 this.#value = value;
@@ -233,7 +232,7 @@ describe('The rescue declarations are enabled in checkedMode and disabled otherw
         expect(() => {
             const baseContract = new Contract<Base>({
                 throws: {
-                    rescue(){ throw new Error('I am still an Error'); }
+                    rescue() { throw new Error('I am still an Error'); }
                 }
             });
 
@@ -254,7 +253,7 @@ describe('The rescue declarations are enabled in checkedMode and disabled otherw
             const baseContract = new Contract<Base>({
                 [checkedMode]: false,
                 throws: {
-                    rescue(){ throw new Error('I am still an Error'); }
+                    rescue() { throw new Error('I am still an Error'); }
                 }
             });
 
@@ -276,14 +275,14 @@ describe('The `retry` argument of the `rescue` declaration can only be called on
     test('rescue of method with an error then retrying returns ok', () => {
         const baseContract = new Contract<Base>({
             method: {
-                rescue(_self, _error: any, _args: any[], retry: any){ retry(3); }
+                rescue(_self, _error: any, _args: any[], retry: any) { retry(3); }
             }
         });
 
         @Contracted(baseContract)
         class Base {
             method(value: number): number {
-                if(value <= 0) {
+                if (value <= 0) {
                     throw new Error('value must be greater than 0');
                 } else {
                     return value;
@@ -297,17 +296,17 @@ describe('The `retry` argument of the `rescue` declaration can only be called on
     test('rescue of method with an error then retrying twice throws', () => {
         const baseContract = new Contract<Base>({
             method: {
-                rescue(_self, _error: any, _args: any[], retry: any){
+                rescue(_self, _error: any, _args: any[], retry: any) {
                     retry(3);
                     retry(3);
-                 }
+                }
             }
         });
 
         @Contracted(baseContract)
         class Base {
             method(value: number): number {
-                if(value <= 0) {
+                if (value <= 0) {
                     throw new Error('value must be greater than 0');
                 } else {
                     return value;
@@ -330,14 +329,14 @@ describe('If a `rescue` is executed and the `retry` argument is not called then 
             }
         },
         throwFail: {
-            rescue(){ /* Do nothing */ }
+            rescue() { /* Do nothing */ }
         }
     });
 
     @Contracted(baseContract)
     class Base {
         throwRescue(trigger: boolean): boolean {
-            if(trigger) {
+            if (trigger) {
                 throw new Error('I am error');
             } else {
                 return true;
@@ -379,7 +378,7 @@ describe('If an exception is thrown in a class feature without a `rescue` define
     });
 
     const contractB = new Contract<B>({
-        [invariant](self){ return self.value > 0; }
+        [invariant](self) { return self.value > 0; }
     });
 
     @Contracted(contractB)
@@ -413,19 +412,19 @@ describe('If an exception is thrown in a class feature without a `rescue` define
  */
 describe('If an error is thrown in `demands` the error is raised to the caller', () => {
     const contractA = new Contract<A>({
-        [invariant](self){ return self.value > 0; },
+        [invariant](self) { return self.value > 0; },
         method: {
-            rescue(_self, _error, args, _retry){
-                if(args[0] === -2) { throw new Error('Rescue Error'); }
+            rescue(_self, _error, args, _retry) {
+                if (args[0] === -2) { throw new Error('Rescue Error'); }
             },
-            demands(_self, value){ return value >= 0; }
+            demands(_self, value) { return value >= 0; }
         },
         methodEmpty: {
-            demands(){ return false; },
-            rescue(){ throw new Error('Rescue Error'); }
+            demands() { return false; },
+            rescue() { throw new Error('Rescue Error'); }
         },
         methodError: {
-            demands(){ return true; },
+            demands() { return true; },
             rescue() { throw new Error('Rescue Error'); }
         }
     });
@@ -458,19 +457,19 @@ describe('If an error is thrown in `demands` the error is raised to the caller',
  */
 describe('If an error is raised in an `ensures` then the associated rescue is executed', () => {
     const contractA = new Contract<A>({
-        [invariant](self){ return self.value >= 0; },
+        [invariant](self) { return self.value >= 0; },
         method: {
-            ensures(self){ return self.value > 0; },
-            rescue(_self, _error, args, _retry){
-                if(args[0] === -2) { throw new Error('Rescue Error'); }
+            ensures(self) { return self.value > 0; },
+            rescue(_self, _error, args, _retry) {
+                if (args[0] === -2) { throw new Error('Rescue Error'); }
             }
         },
         methodEmpty: {
-            ensures(){ return false; }
+            ensures() { return false; }
         },
         methodError: {
-            ensures(){ return true; },
-            rescue(){ throw new Error('Rescue Error'); }
+            ensures() { return true; },
+            rescue() { throw new Error('Rescue Error'); }
         }
     });
 

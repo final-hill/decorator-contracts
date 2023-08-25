@@ -1,6 +1,6 @@
 /*!
  * @license
- * Copyright (C) 2022 Final Hill LLC
+ * Copyright (C) 2023 Final Hill LLC
  * SPDX-License-Identifier: AGPL-3.0-only
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
@@ -16,7 +16,7 @@ describe('The override decorator is a non-static member decorator only', () => {
         expect(() => {
             // @ts-ignore: Ignoring type error for JS test
             @override
-            class Base {}
+            class Base { }
 
             return Base;
         }).toThrow();
@@ -26,7 +26,7 @@ describe('The override decorator is a non-static member decorator only', () => {
         expect(() => {
             class Base {
                 @override
-                static method(): void {}
+                static method(): void { }
             }
 
             return Base;
@@ -37,12 +37,12 @@ describe('The override decorator is a non-static member decorator only', () => {
         expect(() => {
             @Contracted()
             class Base {
-                method(): void {}
+                method(): void { }
             }
 
             class Sub extends Base {
                 @override
-                override method(): void {}
+                override method(): void { }
             }
 
             return Sub;
@@ -59,7 +59,7 @@ describe('Using @override on a class member with no ancestor member is an error'
             @Contracted()
             class Base {
                 @override
-                method(): void {}
+                method(): void { }
             }
 
             return Base;
@@ -69,11 +69,11 @@ describe('Using @override on a class member with no ancestor member is an error'
     test('subclass with @override decorator', () => {
         expect(() => {
             @Contracted()
-            class Base {}
+            class Base { }
 
             class Sub extends Base {
                 @override
-                method(): void {}
+                method(): void { }
             }
 
             return Sub;
@@ -90,7 +90,7 @@ describe('Using @override on a class member with no ancestor member is an error'
             class Sub extends Base {
                 @override
                 // @ts-ignore: Ignoring type error for JS check
-                method(): void {}
+                method(): void { }
             }
 
             return Sub;
@@ -175,7 +175,7 @@ describe('A subclass with an overriding member missing @override is an error', (
             class Base {
                 get foo(): number { return 3; }
 
-                method(): void {}
+                method(): void { }
             }
 
             class Sub extends Base {
@@ -183,7 +183,7 @@ describe('A subclass with an overriding member missing @override is an error', (
                 override get foo(): number { return 4; }
 
                 @override
-                override method(): void {}
+                override method(): void { }
             }
 
             return new Sub();
@@ -194,11 +194,11 @@ describe('A subclass with an overriding member missing @override is an error', (
         expect(() => {
             @Contracted()
             class Base {
-                method(): void {}
+                method(): void { }
             }
 
             class Sub extends Base {
-                override method(): void {}
+                override method(): void { }
             }
 
             return new Sub();
@@ -353,7 +353,7 @@ describe('The \'override\' decorator must have a Contracted class in it\'s ances
         expect(() => {
             @Contracted()
             class Base {
-                toString(){}
+                toString() { }
             }
 
             return new Base().toString();
@@ -363,7 +363,7 @@ describe('The \'override\' decorator must have a Contracted class in it\'s ances
             @Contracted()
             class Base {
                 @override
-                toString(){}
+                toString() { }
             }
 
             return new Base().toString();
@@ -381,7 +381,7 @@ describe('Features named with a symbol must support `@override`', () => {
 
             class Fail extends BadBase {
                 @override
-                override [method](value: number): number { return value; }
+                override[method](value: number): number { return value; }
             }
 
             return new Fail()[method](7);
@@ -396,7 +396,7 @@ describe('Features named with a symbol must support `@override`', () => {
 
         class Okay extends Base {
             @override
-            override [method](value: number): number { return value; }
+            override[method](value: number): number { return value; }
         }
 
         const okay = new Okay();

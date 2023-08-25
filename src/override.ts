@@ -1,6 +1,6 @@
 /*!
  * @license
- * Copyright (C) 2022 Final Hill LLC
+ * Copyright (C) 2023 Final Hill LLC
  * SPDX-License-Identifier: AGPL-3.0-only
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
@@ -21,7 +21,7 @@ import { isContracted } from './Contracted';
  */
 function override(target: Record<PropertyKey, any>, propertyKey: PropertyKey, descriptor: PropertyDescriptor): PropertyDescriptor {
     const Class = (target as any).constructor,
-          isStatic = typeof target == 'function';
+        isStatic = typeof target == 'function';
 
     assert(!isStatic, MSG_NO_STATIC, TypeError);
 
@@ -39,7 +39,7 @@ function override(target: Record<PropertyKey, any>, propertyKey: PropertyKey, de
     assert(!feature.hasOverrides, MSG_DUPLICATE_OVERRIDE);
     feature.hasOverrides = true;
 
-    if(feature.isMethod) {
+    if (feature.isMethod) {
         const thisMethod: (...args: any[]) => any = feature.value,
             ancMethod: (...args: any[]) => any = ancFeature.value;
         assert(thisMethod.length == ancMethod.length, MSG_INVALID_ARG_LENGTH);
@@ -51,10 +51,10 @@ function override(target: Record<PropertyKey, any>, propertyKey: PropertyKey, de
     return {
         enumerable: true,
         configurable: true,
-        ...(!feature.isAccessor ? {writable: true} : {}),
-        ...(feature.hasGetter ? {get(){ assert((this.constructor as any)[isContracted], MSG_NOT_CONTRACTED); } } : {}),
-        ...(feature.hasSetter ? {set(_){ assert((this.constructor as any)[isContracted], MSG_NOT_CONTRACTED); } } : {}),
-        ...(feature.isMethod ? {value() {assert((this.constructor as any)[isContracted], MSG_NOT_CONTRACTED); } } : {})
+        ...(!feature.isAccessor ? { writable: true } : {}),
+        ...(feature.hasGetter ? { get() { assert((this.constructor as any)[isContracted], MSG_NOT_CONTRACTED); } } : {}),
+        ...(feature.hasSetter ? { set(_) { assert((this.constructor as any)[isContracted], MSG_NOT_CONTRACTED); } } : {}),
+        ...(feature.isMethod ? { value() { assert((this.constructor as any)[isContracted], MSG_NOT_CONTRACTED); } } : {})
     };
 }
 
