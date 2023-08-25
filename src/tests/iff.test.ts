@@ -1,6 +1,6 @@
 /*!
  * @license
- * Copyright (C) 2022 Final Hill LLC
+ * Copyright (C) 2023 Final Hill LLC
  * SPDX-License-Identifier: AGPL-3.0-only
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
@@ -18,9 +18,9 @@ describe('Biconditional tests', () => {
             F    T      F
             F    F      T
         */
-        expect(iff(true,true)).toBe(true);
-        expect(iff(true,false)).toBe(false);
-        expect(iff(false,true)).toBe(false);
-        expect(iff(false,false)).toBe(true);
+        expect(iff(true, true)).toBe(true);
+        expect(iff(true, false)).toBe(false);
+        expect(iff(false, true)).toBe(false);
+        expect(iff(false, false)).toBe(true);
     });
 });

@@ -1,11 +1,11 @@
 /*!
  * @license
- * Copyright (C) 2022 Final Hill LLC
+ * Copyright (C) 2023 Final Hill LLC
  * SPDX-License-Identifier: AGPL-3.0-only
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import {Contract, Contracted, invariant} from '../';
+import { Contract, Contracted, invariant } from '../';
 
 interface StackType<T> {
     readonly limit: number;
@@ -26,13 +26,13 @@ const stackContract = new Contract<StackType<any>>({
     },
     pop: {
         demands(self) { return !self.isEmpty(); },
-        ensures(self,old) {
+        ensures(self, old) {
             return !self.isFull() &&
-                   self.size == old.size - 1;
+                self.size == old.size - 1;
         }
     },
     push: {
-        demands(self){ return !self.isFull(); },
+        demands(self) { return !self.isFull(); },
         ensures(self, old, item) {
             return !self.isEmpty() &&
                 self.top === item &&

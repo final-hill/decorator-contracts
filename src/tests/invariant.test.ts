@@ -1,6 +1,6 @@
 /*!
  * @license
- * Copyright (C) 2022 Final Hill LLC
+ * Copyright (C) 2023 Final Hill LLC
  * SPDX-License-Identifier: AGPL-3.0-only
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
@@ -813,7 +813,7 @@ describe('Contracted features can only be applied to objects of the same instanc
 
     test('different instance error', () => {
         expect(() => {
-           foo.inc.apply(bar);
+            foo.inc.apply(bar);
         }).toThrow(MSG_INVALID_CONTEXT);
     });
 });

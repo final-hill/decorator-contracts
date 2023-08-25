@@ -1,6 +1,6 @@
 /*!
  * @license
- * Copyright (C) 2022 Final Hill LLC
+ * Copyright (C) 2023 Final Hill LLC
  * SPDX-License-Identifier: AGPL-3.0-only
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
@@ -16,7 +16,7 @@ class Feature {
      */
     hasOverrides = false;
 
-    constructor(readonly classRegistration: ClassRegistration, readonly name: PropertyKey, descriptor: PropertyDescriptor){
+    constructor(readonly classRegistration: ClassRegistration, readonly name: PropertyKey, descriptor: PropertyDescriptor) {
         this.#descriptor = descriptor;
     }
 
@@ -53,7 +53,7 @@ class Feature {
      */
     get isProperty(): boolean {
         return typeof this.#descriptor.value != 'function' &&
-                typeof this.#descriptor.value != 'undefined';
+            typeof this.#descriptor.value != 'undefined';
     }
 
     /**
@@ -99,7 +99,7 @@ class Feature {
     /**
      * The original feature descriptor which was replaced by the `override` decorator
      */
-    get overriddenOriginalDescriptor(): PropertyDescriptor| undefined {
+    get overriddenOriginalDescriptor(): PropertyDescriptor | undefined {
         return this.#overriddenOriginalDescriptor;
     }
     set overriddenOriginalDescriptor(value: PropertyDescriptor | undefined) {
