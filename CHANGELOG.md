@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.25.0
+
+* Updated dependencies
+
 ## v0.24.2
 
 * Updated README to use images instead of mermaid diagrams
