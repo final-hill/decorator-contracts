@@ -46,15 +46,15 @@ As a dependency run the command:
 
 You can also use a specific [version](https://www.npmjs.com/package/@final-hill/decorator-contracts):
 
-`npm install @final-hill/decorator-contracts@0.24.1`
+`npm install @final-hill/decorator-contracts@0.25.0`
 
 For use in a webpage:
 
 `<script src="https://cdn.skypack.dev/@final-hill/decorator-contracts"></script>`
 
-With a specific [version](https://www.npmjs.com/package/@final-hill/decorator-contracts@0.24.1):
+With a specific [version](https://www.npmjs.com/package/@final-hill/decorator-contracts@0.25.0):
 
-`<script src="https://cdn.skypack.dev/@final-hill/decorator-contracts@0.24.1"></script>`
+`<script src="https://cdn.skypack.dev/@final-hill/decorator-contracts@0.25.0"></script>`
 
 ## Usage
 

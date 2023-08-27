@@ -51,40 +51,7 @@ export default {
       extensions: ['.mts', '.mjs', '.js', '.ts', '.json'],
       exclude: ['node_modules', 'dist', 'coverage'],
       fix: true,
-      overrideConfigFile: path.resolve(dirName, '.eslintrc.json'),
-
-      overrideConfig: {
-        env: {
-          browser: true,
-          node: true,
-          jest: true,
-          es2022: true
-        },
-        extends: [
-          'eslint:recommended',
-          'plugin:@typescript-eslint/eslint-recommended'
-        ],
-        ignorePatterns: [
-          'node_modules',
-          'dist',
-          '.cache',
-          'coverage'
-        ],
-        parser: '@typescript-eslint/parser',
-        parserOptions: {
-          sourceType: 'module',
-          project: [
-            './tsconfig.json'
-          ]
-        },
-        plugins: [
-          '@typescript-eslint',
-          'header'
-        ],
-        rules: {
-
-        }
-      }
+      overrideConfigFile: path.resolve(dirName, '.eslintrc.json')
     })
   ]
 };
