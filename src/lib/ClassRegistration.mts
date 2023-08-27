@@ -167,19 +167,6 @@ class ClassRegistration {
     }
 
     /**
-     * Checks the features of the registered class for missing override decorators
-     * @throws {AssertionError} - Throws if the verification fails
-     */
-    checkOverrides(): void {
-        const ancestryFeatureNames = new Set(this.ancestryFeatures().map(({ name }) => name));
-        this.features.forEach(({ name, hasOverrides }) => {
-            const str = `${this.Class.name}.prototype.${String(name)}`;
-            assert(!hasOverrides || ancestryFeatureNames.has(name), `Unnecessary @override declaration on ${str}`);
-            assert(hasOverrides || !ancestryFeatureNames.has(name), `@override decorator missing on ${str}`);
-        });
-    }
-
-    /**
      * Searches the current class and its ancestors for the nearest feature
      * matching the provided propertyKey.
      *

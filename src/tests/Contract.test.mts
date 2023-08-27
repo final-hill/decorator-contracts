@@ -21,7 +21,6 @@ interface StackType<T> {
 
 // https://github.com/final-hill/decorator-contracts/issues/171
 describe('A contract must be independently definable', () => {
-
     test('Well typed contract', () => {
         const stackContract = new Contract<StackType<any>>({
             pop: {},
@@ -204,6 +203,5 @@ describe('A subclass can only be contracted by a subcontract of the base class c
             @Contracted(badContract)
             class Bar extends Foo { }
         }).toThrow(MSG_BAD_SUBCONTRACT);
-
     });
 });

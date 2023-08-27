@@ -5,7 +5,7 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import { AssertionError, checkedMode, Contract, Contracted, extend, invariant, override } from '../index.mjs';
+import { AssertionError, checkedMode, Contract, Contracted, extend, invariant } from '../index.mjs';
 import { MSG_INVALID_CONTEXT, MSG_NO_PROPERTIES } from '../Messages.mjs';
 
 // https://github.com/final-hill/decorator-contracts/issues/30
@@ -17,10 +17,7 @@ describe('The subclasses of a contracted class must obey the invariants', () => 
 
     @Contracted(fooContract)
     class Foo {
-        #value = 0;
-
-        get value(): number { return this.#value; }
-        set value(value: number) { this.#value = value; }
+        accessor value = 0;
 
         inc(): void { this.value++; }
         dec(): void { this.value--; }
@@ -58,13 +55,10 @@ describe('The subclasses of a contracted class must obey the invariants', () => 
 
         // overriding members
         class Baz extends Foo {
-            @override
             override get value(): number { return super.value; }
             override set value(value: number) { super.value = value; }
 
-            @override
             override inc(): void { super.value++; }
-            @override
             override dec(): void { super.value--; }
         }
 
@@ -104,10 +98,7 @@ describe('The subclasses of a contracted class must obey the invariants', () => 
 
         @Contracted(fooContract)
         class Foo {
-            #value = 0;
-
-            get value(): number { return this.#value; }
-            set value(value: number) { this.#value = value; }
+            accessor value = 0;
 
             inc(): void { this.value++; }
             dec(): void { this.value--; }
@@ -201,9 +192,7 @@ describe('A truthy invariant does not throw an exception when evaluated', () => 
 
             @Contracted(enabledContract)
             class Foo {
-                #value = 0;
-                get value(): number { return this.#value; }
-                set value(v) { this.#value = v; }
+                accessor value = 0;
 
                 dec(): void { this.value--; }
                 inc(): void { this.value++; }
@@ -224,9 +213,7 @@ describe('A truthy invariant does not throw an exception when evaluated', () => 
 
             @Contracted(disabledContract)
             class Foo {
-                #value = 0;
-                get value(): number { return this.#value; }
-                set value(v) { this.#value = v; }
+                accessor value = 0;
 
                 dec(): void { this.value--; }
                 inc(): void { this.value++; }
@@ -280,9 +267,7 @@ describe('A falsy invariant throws an exception when evaluated', () => {
 
             @Contracted(fooContract)
             class Foo {
-                #value = 37;
-                get value(): number { return this.#value; }
-                set value(v) { this.#value = v; }
+                accessor value = 37;
 
                 dec(): void { this.value--; }
                 inc(): void { this.value++; }
@@ -305,9 +290,7 @@ describe('A falsy invariant throws an exception when evaluated', () => {
 
             @Contracted(fooContract)
             class Foo {
-                #value = 37;
-                get value(): number { return this.#value; }
-                set value(v) { this.#value = v; }
+                accessor value = 37;
 
                 dec(): void { this.value--; }
                 inc(): void { this.value++; }
@@ -391,9 +374,7 @@ describe('An invariant is evaluated before and after every method call on the as
 
         @Contracted(fooContract)
         class Foo {
-            #value = 0;
-            get value(): number { return this.#value; }
-            set value(v) { this.#value = v; }
+            accessor value = 0;
 
             inc(): void { this.value++; }
             dec(): void { this.value--; }
@@ -422,9 +403,7 @@ describe('An invariant is evaluated before and after every method call on the as
 
         @Contracted(fooContract)
         class Foo {
-            #value = 0;
-            get value(): number { return this.#value; }
-            set value(v) { this.#value = v; }
+            accessor value = 0;
 
             inc(): void { this.value++; }
             dec(): void { this.value--; }
@@ -454,9 +433,7 @@ describe('Public properties must be forbidden', () => {
         expect(() => {
             @Contracted()
             class Foo {
-                #value = 10;
-                get value() { return this.#value; }
-                set value(v) { this.#value = v; }
+                accessor value = 10;
             }
 
             return new Foo();
@@ -500,9 +477,7 @@ describe('In checked mode the invariant is evaluated', () => {
 
             @Contracted(fooContract)
             class Foo {
-                #value = 37;
-                get value(): number { return this.#value; }
-                set value(v) { this.#value = v; }
+                accessor value = 37;
 
                 dec(): void { this.value--; }
                 inc(): void { this.value++; }
@@ -522,9 +497,7 @@ describe('In checked mode the invariant is evaluated', () => {
         });
         @Contracted(fooContract)
         class Foo {
-            #value = 0;
-            get value(): number { return this.#value; }
-            set value(value: number) { this.#value = value; }
+            accessor value = 0;
         }
 
         const foo = new Foo();
@@ -569,9 +542,7 @@ describe('In unchecked mode the invariant is not evaluated', () => {
 
             @Contracted(fooContract)
             class Foo {
-                #value = 0;
-                get value(): number { return this.#value; }
-                set value(v) { this.#value = v; }
+                accessor value = 0;
 
                 dec(): void { this.value--; }
                 inc(): void { this.value++; }
@@ -741,20 +712,14 @@ describe('Third-party features applied to a contracted class are subject to its 
 
     @Contracted(fooContract)
     class Foo {
-        #value = 0;
-
-        get value(): number { return this.#value; }
-        set value(value: number) { this.#value = value; }
+        accessor value = 0;
 
         inc(): void { this.value++; }
         dec(): void { this.value--; }
     }
 
     class Bar {
-        #value = 0;
-
-        get value(): number { return this.#value; }
-        set value(value: number) { this.#value = value; }
+        accessor value = 0;
 
         inc(): void { this.value++; }
         dec(): void { this.value--; }
@@ -786,19 +751,13 @@ describe('Contracted features can only be applied to objects of the same instanc
 
     @Contracted(fooContract)
     class Foo {
-        #value = 0;
-
-        get value(): number { return this.#value; }
-        set value(value: number) { this.#value = value; }
+        accessor value = 0;
 
         inc(): void { this.value++; }
     }
 
     class Bar {
-        #value = 0;
-
-        get value(): number { return this.#value; }
-        set value(value: number) { this.#value = value; }
+        accessor value = 0;
 
         inc(): void { this.value++; }
     }

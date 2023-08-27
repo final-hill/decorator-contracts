@@ -9,12 +9,6 @@ import ClassRegistration from './ClassRegistration.mjs';
 
 class Feature {
     #descriptor: PropertyDescriptor;
-    #overriddenOriginalDescriptor: PropertyDescriptor | undefined;
-
-    /**
-     * Does the current feature have an `@override` declaration?
-     */
-    hasOverrides = false;
 
     constructor(readonly classRegistration: ClassRegistration, readonly name: PropertyKey, descriptor: PropertyDescriptor) {
         this.#descriptor = descriptor;
@@ -94,16 +88,6 @@ class Feature {
      */
     get value(): any {
         return this.#descriptor.value;
-    }
-
-    /**
-     * The original feature descriptor which was replaced by the `override` decorator
-     */
-    get overriddenOriginalDescriptor(): PropertyDescriptor | undefined {
-        return this.#overriddenOriginalDescriptor;
-    }
-    set overriddenOriginalDescriptor(value: PropertyDescriptor | undefined) {
-        this.#overriddenOriginalDescriptor = value;
     }
 
     /**

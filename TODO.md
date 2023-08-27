@@ -1,21 +1,8 @@
 Prevent delete
 
-============
-
-@override needs to test input for use in non-TS environments. assert(isFunction) and such
-
-does an @override member return a value as expected?
-
 ==========
 async method handling?
 <https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/catch>
-
-=============
-overrides
- writable | configurable | enumerable verification
-
-Does the typescript 4.3 override feature not cover these use cases? Therefore does not subsume this
-library feature?
 
 =========
  • <https://web.archive.org/web/20151205005155/https://blog.mozilla.org/dherman/2011/08/29/contracts-coffee/>
@@ -56,7 +43,7 @@ Unit testing is one thing, but a test plan is needed as well to show that the li
 Stack vs Queue interface
 
 ========
- 
+
 competitor/comparable
 <https://github.com/alexreardon/tiny-invariantcompare> with other contract libraries
  <https://en.wikipedia.org/wiki/Design_by_contract>

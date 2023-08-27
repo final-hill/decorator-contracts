@@ -66,17 +66,8 @@ function Contracted<
                 assert(!hasProperties(classRegistration, this), MSG_NO_PROPERTIES);
 
                 if (!classRegistration.contractsChecked) {
-                    let ancRegistrations = classRegistration.ancestry().reverse();
-                    // top-down check overrides and pre-existing properties
-                    [...ancRegistrations, classRegistration].forEach(ancRegistration => {
-                        if (!ancRegistration.contractsChecked) {
-                            ancRegistration.checkOverrides();
-                            ancRegistration.contractsChecked = true;
-                        }
-                    });
-
                     // bottom-up to closest Contracted class bind contracts
-                    ancRegistrations = takeWhile(ancRegistrations.reverse(), (cr => cr.Class !== Base));
+                    const ancRegistrations = takeWhile(classRegistration.ancestry(), (cr => cr.Class !== Base));
                     [classRegistration, ...ancRegistrations, CLASS_REGISTRY.get(Base)!].forEach(registration => {
                         registration.bindContract(InnerContracted[innerContract]);
                     });

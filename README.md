@@ -13,7 +13,6 @@
 - [Assertions](#assertions)
 - [Implies](#implies)
 - [Iff](#iff)
-- [Overrides](#overrides)
 - [Encapsulation](#encapsulation)
 - [Invariants](#invariants)
 - [Demands](#demands)
@@ -298,96 +297,6 @@ iff(
 
 This is logically equivalent to: `implies(p,q) && implies(q,p)`
 
-## Overrides
-
-Class features implemented in a base class can be overridden in a subclass. The
-subclass implementation can augment or entirely replace the one belonging
-to the base class. This can be done for a variety of reasons such as
-providing a more efficient implementation in the context of the subclass.
-Regardless of the reason the overridden member should be semantically
-consistent with the base class member. In other
-words it should follow [Liskov's Substitution Principle](https://en.wikipedia.org/wiki/Liskov_substitution_principle).
-To aid in the enforcement and documentation of this principle the library
-provides an `@override` decorator for class methods and accessors.
-
-A simple example is calculating the area of Convex Polygons. While a [general
-formula](https://en.wikipedia.org/wiki/Heron%27s_formula) exists to accomplish this
-more efficient and direct formulas exist for specific polygons such as a Right Triangle:
-
-```typescript
-type Side = number
-type Vertex = [number, number]
-
-function _triArea(v1: Vertex, v2: Vertex, v3: Vertex): number {
-    const {hypot,sqrt} = Math,
-        a = hypot((v1[0] - v2[0]), (v1[1] - v2[1])),
-        b = hypot((v2[0] - v3[0]), (v2[1] - v3[1])),
-        c = hypot((v3[0] - v1[0]), (v3[1] - v1[1])),
-        s = 0.5 * (a + b + c)
-
-    return sqrt(s*(s-a)*(s-b)*(s-c))
-}
-
-@Contracted()
-class ConvexShape {
-    #vertices: Vertex[]
-
-    constructor(...vertices: Vertex[]) {
-        this.#vertices = vertices
-    }
-
-    area(): number {
-        let [v1, v2, v3, ...vs] = this.#vertices
-        return this.#vertices.length >= 3 ?
-            _triArea(v1, v2, v3) + new ConvexShape(v1, v3, ...vs).area() :
-            0
-    }
-
-    get vertices(): Vertex[] { return this.#vertices.slice() }
-}
-
-class RightTriangle extends ConvexShape {
-    #base: Side
-    #height: Side
-    
-    constructor(base: Side, height: Side) {
-        super([0,0], [base,0], [base,height])
-        this.#base = base
-        this.#height = height
-    }
-
-    @override
-    area(): number { return this.#base * this.#height / 2 }
-
-    get base(): Side { return this.#base }
-    get height(): Side { return this.#height }
-}
-```
-
-Above you can see the `area()` method being overridden with the more
-efficient implementation. The `@override` decorator makes explicit
-that the method is replacing another implementation.
-
-This decorator does not only document and verify that the method is
-overridden; it will also verify that the parameter count matches.
-
-Note that the current class or one of its ancestors must have `@Contracted(...)` assigned.
-When assigned, candidate overrides are identified and an
-error is raised if an associated `@override` is missing for that feature.
-
-Static methods including the constructor cannot be assigned an `@override`
-decorator. In the future this may be enabled for non-constructor static methods
-but the implications are not clear at present.
-
-[TypeScript 4.3](https://devblogs.microsoft.com/typescript/announcing-typescript-4-3-beta/#override-and-the-noimplicitoverride-flag) has added an `override` keyword.
-This should be compatible but possibly redundant. The pro/cons are:
-
-| `override`                | `@override`                         |
-|---------------------------|-------------------------------------|
-| Compile Time              | Runtime                             |
-| TypeScript Only           | TypeScript and JavaScript           |
-| Enforces type constraints | Enforces parameter count constraint |
-
 ## Encapsulation
 
 To guarantee invariants remain valid for classes, public property definitions are forbidden.
@@ -526,8 +435,7 @@ If a class feature is overridden then the `demands` assertion still applies:
 
 ```typescript
 class MyStack<T> extends Stack<T> {
-    @overrides
-    pop(): { ... }
+    override pop(): { ... }
 }
 
 ...
@@ -579,8 +487,7 @@ const subContract = new Contract<Sub>({
 
 @Contracted(subContract)
 class Sub extends Base {
-    @override
-    someMethod(x: number){ ... }
+    override someMethod(x: number){ ... }
 }
 ```
 
@@ -642,8 +549,7 @@ If a class feature is overridden then the `ensures` assertion still applies:
 
 ```typescript
 class MyStack<T> extends Stack<T> {
-    @overrides
-    push(value: T): { ... }
+    override push(value: T): { ... }
 }
 
 ...
@@ -829,8 +735,7 @@ class Base {
 }
 
 class Sub extends Base {
-    @override
-    myMethod(){ ... throw new Error('BOOM!') ... }
+    override myMethod(){ ... throw new Error('BOOM!') ... }
 }
 ```
 
@@ -839,7 +744,7 @@ Another capability that the `rescue` declaration provides is
 to enable [Fault-Tolerance](https://en.wikipedia.org/wiki/Fault_tolerance)
 and [Redundancy](https://en.wikipedia.org/wiki/Redundancy_(engineering)).
 
-A dated example of this is performing ajax requests in mult-browser environments where `fetch` may not exist:
+A dated example of this is performing ajax requests in multi-browser environments where `fetch` may not exist:
 
 ```ts
 const ajaxRequestContract = new Contract<AjaxRequest>({
