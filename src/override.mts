@@ -6,7 +6,7 @@
  */
 
 import { assert } from './index.mjs';
-import { MSG_NO_STATIC, MSG_NO_MATCHING_FEATURE, MSG_DUPLICATE_OVERRIDE, MSG_INVALID_ARG_LENGTH, MSG_NOT_CONTRACTED, MSG_MISSING_FEATURE } from './Messages.mjs';
+import { Messages } from './Messages.mjs';
 import { CLASS_REGISTRY } from './lib/index.mjs';
 import { isContracted } from './Contracted.mjs';
 
@@ -23,26 +23,26 @@ function override(target: Record<PropertyKey, any>, propertyKey: PropertyKey, de
     const Class = (target as any).constructor,
         isStatic = typeof target == 'function';
 
-    assert(!isStatic, MSG_NO_STATIC, TypeError);
+    assert(!isStatic, Messages.MsgNoStatic, TypeError);
 
     const registration = CLASS_REGISTRY.getOrCreate(Class),
         feature = registration.findFeature(propertyKey);
 
-    assert(feature != null, `${MSG_MISSING_FEATURE}: ${registration.Class.name}.prototype.${String(propertyKey)}`);
+    assert(feature != null, `${Messages.MsgMissingFeature}: ${registration.Class.name}.prototype.${String(propertyKey)}`);
 
     const ancFeature = feature.ancestorFeature;
 
     assert(
         ancFeature != null && feature.memberType === ancFeature.memberType,
-        `${MSG_NO_MATCHING_FEATURE} '${registration.Class.name}.prototype.${String(propertyKey)}'`
+        `${Messages.MsgNoMatchingFeature} '${registration.Class.name}.prototype.${String(propertyKey)}'`
     );
-    assert(!feature.hasOverrides, MSG_DUPLICATE_OVERRIDE);
+    assert(!feature.hasOverrides, Messages.MsgDuplicateOverride);
     feature.hasOverrides = true;
 
     if (feature.isMethod) {
         const thisMethod: (...args: any[]) => any = feature.value,
             ancMethod: (...args: any[]) => any = ancFeature.value;
-        assert(thisMethod.length == ancMethod.length, MSG_INVALID_ARG_LENGTH);
+        assert(thisMethod.length == ancMethod.length, Messages.MsgInvalidArgLength);
     }
 
     feature.overriddenOriginalDescriptor = descriptor;
@@ -52,9 +52,9 @@ function override(target: Record<PropertyKey, any>, propertyKey: PropertyKey, de
         enumerable: true,
         configurable: true,
         ...(!feature.isAccessor ? { writable: true } : {}),
-        ...(feature.hasGetter ? { get() { assert((this.constructor as any)[isContracted], MSG_NOT_CONTRACTED); } } : {}),
-        ...(feature.hasSetter ? { set() { assert((this.constructor as any)[isContracted], MSG_NOT_CONTRACTED); } } : {}),
-        ...(feature.isMethod ? { value() { assert((this.constructor as any)[isContracted], MSG_NOT_CONTRACTED); } } : {})
+        ...(feature.hasGetter ? { get() { assert((this.constructor as any)[isContracted], Messages.MsgNotContracted); } } : {}),
+        ...(feature.hasSetter ? { set() { assert((this.constructor as any)[isContracted], Messages.MsgNotContracted); } } : {}),
+        ...(feature.isMethod ? { value() { assert((this.constructor as any)[isContracted], Messages.MsgNotContracted); } } : {})
     };
 }
 

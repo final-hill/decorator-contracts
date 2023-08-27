@@ -1,3 +1,5 @@
+# TODO
+
 Prevent delete
 
 ============
@@ -56,7 +58,7 @@ Unit testing is one thing, but a test plan is needed as well to show that the li
 Stack vs Queue interface
 
 ========
- 
+
 competitor/comparable
 <https://github.com/alexreardon/tiny-invariantcompare> with other contract libraries
  <https://en.wikipedia.org/wiki/Design_by_contract>

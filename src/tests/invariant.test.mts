@@ -6,7 +6,7 @@
  */
 
 import { AssertionError, checkedMode, Contract, Contracted, extend, invariant, override } from '../index.mjs';
-import { MSG_INVALID_CONTEXT, MSG_NO_PROPERTIES } from '../Messages.mjs';
+import { Messages } from '../Messages.mjs';
 
 // https://github.com/final-hill/decorator-contracts/issues/30
 describe('The subclasses of a contracted class must obey the invariants', () => {
@@ -471,7 +471,7 @@ describe('Public properties must be forbidden', () => {
             }
 
             return new Foo();
-        }).toThrow(MSG_NO_PROPERTIES);
+        }).toThrow(Messages.MsgNoProperties);
     });
 });
 
@@ -814,6 +814,6 @@ describe('Contracted features can only be applied to objects of the same instanc
     test('different instance error', () => {
         expect(() => {
             foo.inc.apply(bar);
-        }).toThrow(MSG_INVALID_CONTEXT);
+        }).toThrow(Messages.MsgInvalidContext);
     });
 });

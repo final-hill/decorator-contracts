@@ -5,7 +5,7 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import { MSG_INVALID_CONTEXT, MSG_SINGLE_RETRY } from '../Messages.mjs';
+import { Messages } from '../Messages.mjs';
 import { assert, checkedMode, Contract, innerContract } from '../index.mjs';
 import { assertInvariants, assertDemands, CLASS_REGISTRY, ClassType, Feature, unChecked } from './index.mjs';
 import assertEnsures from './assertEnsures.mjs';
@@ -28,7 +28,7 @@ function checkedFeature(
         const { Class } = registration,
             className = Class.name;
 
-        assert(this instanceof Class, `${MSG_INVALID_CONTEXT}. Expected: this instanceof ${className}. this: ${this.constructor.name}`);
+        assert(this instanceof Class, `${Messages.MsgInvalidContext}. Expected: this instanceof ${className}. this: ${this.constructor.name}`);
 
         const contract = Reflect.get(this, innerContract);
         if (!contract[checkedMode])
@@ -66,7 +66,7 @@ function checkedFeature(
             let hasRetried = false;
             unChecked(contract, () => {
                 rescue.call(this, this, error, [], (...args: any[]) => {
-                    assert(!hasRetried, MSG_SINGLE_RETRY);
+                    assert(!hasRetried, Messages.MsgSingleRetry);
                     hasRetried = true;
                     contract[checkedMode] = true;
                     result = innerCheckedFeature.call(this, ...args);

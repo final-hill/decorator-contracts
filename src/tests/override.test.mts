@@ -6,7 +6,7 @@
  */
 
 import { Contracted, override } from '../index.mjs';
-import { MSG_NO_MATCHING_FEATURE, MSG_INVALID_ARG_LENGTH, MSG_DUPLICATE_OVERRIDE, MSG_NO_STATIC, MSG_NOT_CONTRACTED } from '../Messages.mjs';
+import { Messages } from '../Messages.mjs';
 
 /**
  * https://github.com/final-hill/decorator-contracts/issues/44
@@ -30,7 +30,7 @@ describe('The override decorator is a non-static member decorator only', () => {
             }
 
             return Base;
-        }).toThrow(MSG_NO_STATIC);
+        }).toThrow(Messages.MsgNoStatic);
     });
 
     test('instance method decorator does not throw', () => {
@@ -63,7 +63,7 @@ describe('Using @override on a class member with no ancestor member is an error'
             }
 
             return Base;
-        }).toThrow(`${MSG_NO_MATCHING_FEATURE} 'Base.prototype.method'`);
+        }).toThrow(`${Messages.MsgNoMatchingFeature} 'Base.prototype.method'`);
     });
 
     test('subclass with @override decorator', () => {
@@ -77,7 +77,7 @@ describe('Using @override on a class member with no ancestor member is an error'
             }
 
             return Sub;
-        }).toThrow(MSG_NO_MATCHING_FEATURE);
+        }).toThrow(Messages.MsgNoMatchingFeature);
     });
 
     test('subclass with method overriding non-method', () => {
@@ -94,7 +94,7 @@ describe('Using @override on a class member with no ancestor member is an error'
             }
 
             return Sub;
-        }).toThrow(MSG_NO_MATCHING_FEATURE);
+        }).toThrow(Messages.MsgNoMatchingFeature);
     });
 });
 
@@ -119,7 +119,7 @@ describe('using @override on a method with an ancestor with a different paramete
             }
 
             return Sub;
-        }).toThrow(MSG_INVALID_ARG_LENGTH);
+        }).toThrow(Messages.MsgInvalidArgLength);
     });
 
     test('bad override 2', () => {
@@ -140,7 +140,7 @@ describe('using @override on a method with an ancestor with a different paramete
             }
 
             return Sub;
-        }).toThrow(MSG_INVALID_ARG_LENGTH);
+        }).toThrow(Messages.MsgInvalidArgLength);
     });
 
     test('good override', () => {
@@ -241,7 +241,7 @@ describe('Only a single @override can be assigned to a member per class', () => 
             }
 
             return Sub;
-        }).toThrow(MSG_DUPLICATE_OVERRIDE);
+        }).toThrow(Messages.MsgDuplicateOverride);
     });
 
     test('Three level @override', () => {
@@ -346,7 +346,7 @@ describe('The \'override\' decorator must have a Contracted class in it\'s ances
             }
 
             return new Fail().method(7);
-        }).toThrow(MSG_NOT_CONTRACTED);
+        }).toThrow(Messages.MsgNotContracted);
     });
 
     test('override on base class', () => {
@@ -385,7 +385,7 @@ describe('Features named with a symbol must support `@override`', () => {
             }
 
             return new Fail()[method](7);
-        }).toThrow(MSG_NOT_CONTRACTED);
+        }).toThrow(Messages.MsgNotContracted);
     });
     test('Valid declaration', () => {
         const method = Symbol('method');

@@ -7,7 +7,7 @@
 
 import { ClassRegistration, CLASS_REGISTRY, ClassType, Feature, takeWhile, assertInvariants } from './lib/index.mjs';
 import { assert, checkedMode, Contract, extend } from './index.mjs';
-import { MSG_BAD_SUBCONTRACT, MSG_NO_PROPERTIES, MSG_SINGLE_CONTRACT } from './Messages.mjs';
+import { Messages } from './Messages.mjs';
 
 const isContracted = Symbol('isContracted'),
     innerContract = Symbol('innerContract');
@@ -41,7 +41,7 @@ function Contracted<
     U extends ClassType<any> = ClassType<any>
 >(contract: T = new Contract() as T): ClassDecorator {
     return function (Base: U & { [innerContract]?: Contract<any> }) {
-        assert(!Object.getOwnPropertySymbols(Base).includes(isContracted), MSG_SINGLE_CONTRACT);
+        assert(!Object.getOwnPropertySymbols(Base).includes(isContracted), Messages.MsgSingleContract);
 
         if (contract[checkedMode] === false)
             return Base;
@@ -50,7 +50,7 @@ function Contracted<
         assert(
             !baseContract ||
             baseContract && contract[extend] instanceof baseContract.constructor,
-            MSG_BAD_SUBCONTRACT
+            Messages.MsgBadSubcontract
         );
 
         abstract class InnerContracted extends Base {
@@ -63,7 +63,7 @@ function Contracted<
                 const Class = this.constructor as ClassType<any>,
                     classRegistration = CLASS_REGISTRY.getOrCreate(Class);
 
-                assert(!hasProperties(classRegistration, this), MSG_NO_PROPERTIES);
+                assert(!hasProperties(classRegistration, this), Messages.MsgNoProperties);
 
                 if (!classRegistration.contractsChecked) {
                     let ancRegistrations = classRegistration.ancestry().reverse();

@@ -5,7 +5,7 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import { MSG_BAD_SUBCONTRACT, MSG_SINGLE_CONTRACT } from '../Messages.mjs';
+import { Messages } from '../Messages.mjs';
 import { Contracted, checkedMode, Contract, extend } from '../index.mjs';
 
 interface StackType<T> {
@@ -146,7 +146,7 @@ describe('Only a single contract can be assigned to a class', () => {
             class Foo { }
 
             return new Foo();
-        }).toThrow(MSG_SINGLE_CONTRACT);
+        }).toThrow(Messages.MsgSingleContract);
     });
 });
 
@@ -203,7 +203,6 @@ describe('A subclass can only be contracted by a subcontract of the base class c
             const badContract = new Contract<Bar>({});
             @Contracted(badContract)
             class Bar extends Foo { }
-        }).toThrow(MSG_BAD_SUBCONTRACT);
-
+        }).toThrow(Messages.MsgBadSubcontract);
     });
 });
