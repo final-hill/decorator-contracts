@@ -3,6 +3,10 @@
 ## v0.25.0
 
 * Updated dependencies
+* Updated header year to 2023
+* Project targets ES2022 to utilize the [new language feature](https://devblogs.microsoft.com/typescript/announcing-typescript-5-2/#decorator-metadata)
+* Converted project to utilize ESM
+* Simplified eslint configuration
 
 ## v0.24.2
 

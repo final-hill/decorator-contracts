@@ -3,9 +3,6 @@
         "source.fixAll.eslint": true
     },
     "editor.formatOnSave": true,
-    "files.associations": {
-        "**/azure/*.yml": "azure-pipelines"
-    },
     "typescript.tsdk": "node_modules\\typescript\\lib",
     "cSpell.ignorePaths": [
         "node_modules",
