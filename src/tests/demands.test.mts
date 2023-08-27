@@ -5,7 +5,7 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import { AssertionError, checkedMode, Contract, Contracted, extend, override } from '../index.mjs';
+import { AssertionError, checkedMode, Contract, Contracted, extend } from '../index.mjs';
 
 /**
  * https://github.com/final-hill/decorator-contracts/issues/70
@@ -29,10 +29,7 @@ describe('Demands assertions can be defined for a class feature', () => {
 
         @Contracted(fooContract)
         class Foo {
-            #value = 0;
-
-            get value(): number { return this.#value; }
-            set value(value: number) { this.#value = value; }
+            accessor value = 0;
 
             inc(): void { this.value += 2; }
             dec(): void { this.value -= 1; }
@@ -63,17 +60,13 @@ describe('Overridden features are still subject to the demands assertion', () =>
 
     @Contracted(baseContract)
     class Base {
-        #value = 0;
-
-        get value(): number { return this.#value; }
-        set value(value: number) { this.#value = value; }
+        accessor value = 0;
 
         dec(): void { this.value--; }
         inc(): void { this.value++; }
     }
 
     class Sub extends Base {
-        @override
         override dec(): void { this.value -= 2; }
     }
 
@@ -95,7 +88,6 @@ describe('Overridden features are still subject to the demands assertion', () =>
     });
 
     class SubSub extends Sub {
-        @override
         override dec(): void { this.value -= 4; }
     }
 
@@ -129,10 +121,7 @@ describe('Overridden features are still subject to the demands assertion', () =>
  */
 describe('The `demands` assertion is evaluated before its associated feature is called', () => {
     class Foo {
-        #value = 0;
-
-        get value(): number { return this.#value; }
-        set value(value: number) { this.#value = value; }
+        accessor value = 0;
     }
 
     test('true "demands" check does not throw', () => {
@@ -242,7 +231,6 @@ describe('`demands` assertions cannot be strengthened in a subtype', () => {
 
     @Contracted(weakerContract)
     class Weaker extends Base {
-        @override
         override method(value: number): number { return value; }
     }
 
@@ -265,7 +253,6 @@ describe('`demands` assertions cannot be strengthened in a subtype', () => {
 
     @Contracted(strongerContract)
     class Stronger extends Base {
-        @override
         override method(value: number): number { return value; }
     }
 

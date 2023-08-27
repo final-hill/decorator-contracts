@@ -21,7 +21,6 @@ interface StackType<T> {
 
 // https://github.com/final-hill/decorator-contracts/issues/171
 describe('A contract must be independently definable', () => {
-
     test('Well typed contract', () => {
         const stackContract = new Contract<StackType<any>>({
             pop: {},

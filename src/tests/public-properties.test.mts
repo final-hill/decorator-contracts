@@ -13,19 +13,13 @@ describe('Public properties must be forbidden', () => {
     test('No public properties okay', () => {
         @Contracted()
         class Point2D {
-            #x: number;
-            #y: number;
+            accessor x: number;
+            accessor y: number;
 
             constructor(x: number, y: number) {
-                this.#x = x;
-                this.#y = y;
+                this.x = x;
+                this.y = y;
             }
-
-            get x(): number { return this.#x; }
-            set x(value: number) { this.#x = value; }
-
-            get y(): number { return this.#y; }
-            set y(value: number) { this.#y = value; }
         }
 
         expect(() => new Point2D(12, 5)).not.toThrow();

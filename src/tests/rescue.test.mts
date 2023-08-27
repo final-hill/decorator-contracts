@@ -24,9 +24,7 @@ describe('The `rescue` declaration must preserve the invariant after execution',
 
     @Contracted(baseContract)
     class Base {
-        #value = 3;
-        get value(): number { return this.#value; }
-        set value(v: number) { this.#value = v; }
+        accessor value = 3;
 
         method1(): void { throw new Error('I am error'); }
         method2(): void { throw new Error('I am error'); }
@@ -167,10 +165,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
 
         @Contracted(baseContract)
         class Base {
-            #value = NaN;
-
-            get value(): number { return this.#value; }
-            set value(value: number) { this.#value = value; }
+            accessor value = NaN;
         }
         const base = new Base();
         base.value = 12;
@@ -378,18 +373,15 @@ describe('If an exception is thrown in a class feature without a `rescue` define
 
     @Contracted(contractB)
     class B {
-        #value = 1;
-
-        get value(): number { return this.#value; }
-        set value(v: number) { this.#value = v; }
+        accessor value = 1;
 
         method1(): void {
-            this.#value = 3;
+            this.value = 3;
             throw new Error('I am error');
         }
 
         method2(): void {
-            this.#value = -2;
+            this.value = -2;
             throw new Error('I am error');
         }
     }
@@ -426,12 +418,9 @@ describe('If an error is thrown in `demands` the error is raised to the caller',
 
     @Contracted(contractA)
     class A {
-        #value = 1;
+        accessor value = 1;
 
-        get value(): number { return this.#value; }
-        set value(v: number) { this.#value = v; }
-
-        method(value: number): void { this.#value = value; }
+        method(value: number): void { this.value = value; }
         methodEmpty(): void { }
         methodError(): void { throw new Error('Feature Error'); }
     }
@@ -470,12 +459,9 @@ describe('If an error is raised in an `ensures` then the associated rescue is ex
 
     @Contracted(contractA)
     class A {
-        #value = 1;
+        accessor value = 1;
 
-        get value(): number { return this.#value; }
-        set value(v: number) { this.#value = v; }
-
-        method(value: number): void { this.#value = value; }
+        method(value: number): void { this.value = value; }
         methodEmpty(): void { }
         methodError(): void { throw new Error('Feature Error'); }
     }

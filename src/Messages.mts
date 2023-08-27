@@ -7,10 +7,6 @@
 
 export enum Messages {
     AssertionFailed = 'Assertion failure',
-    MsgInvalidArgLength = 'An overridden method must have the same number of parameters as its ancestor method',
-    MsgNoStatic = 'Only instance members can be decorated, not static members',
-    MsgNoMatchingFeature = 'This feature does not override an ancestor feature.',
-    MsgDuplicateOverride = 'Only a single @override decorator can be assigned to a class member',
     MsgNoProperties = 'Public properties are forbidden',
     MsgNotContracted = 'The current class or one of its ancestors must declare @Contracted(...)',
     MsgMissingFeature = 'The requested feature is not registered',
