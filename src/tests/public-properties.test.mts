@@ -5,7 +5,7 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import { MSG_NO_PROPERTIES } from '../Messages.mjs';
+import { Messages } from '../Messages.mjs';
 import { Contracted } from '../index.mjs';
 
 // https://github.com/final-hill/decorator-contracts/issues/35
@@ -34,6 +34,6 @@ describe('Public properties must be forbidden', () => {
             ) { }
         }
 
-        expect(() => new Point2D(12, 5)).toThrow(MSG_NO_PROPERTIES);
+        expect(() => new Point2D(12, 5)).toThrow(Messages.MsgNoProperties);
     });
 });

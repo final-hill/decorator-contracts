@@ -39,21 +39,29 @@ using this. If you would like an exception to this license per section 7
 
 ## Library Installation
 
-As a dependency run the command:
+The latest version:
 
 `npm install @final-hill/decorator-contracts`
 
-You can also use a specific [version](https://www.npmjs.com/package/@final-hill/decorator-contracts):
+A specific version:
 
-`npm install @final-hill/decorator-contracts@0.24.1`
+`npm install @final-hill/decorator-contracts@x.x.x`
 
-For use in a webpage:
+For use in a browser (no build step) via [unpkg.com](https://unpkg.com/):
 
-`<script src="https://cdn.skypack.dev/@final-hill/decorator-contracts"></script>`
+```html
+<script type="importmap">
+{
+    "imports": {
+        "@final-hill/decorator-contracts": "https://unpkg.com/@final-hill/decorator-contracts"
+    }
+}
+</script>
+```
 
-With a specific [version](https://www.npmjs.com/package/@final-hill/decorator-contracts@0.24.1):
+Via [skypack.dev](https://www.skypack.dev/):
 
-`<script src="https://cdn.skypack.dev/@final-hill/decorator-contracts@0.24.1"></script>`
+`<script type="module" src="https://cdn.skypack.dev/@final-hill/decorator-contracts"></script>`
 
 ## Usage
 

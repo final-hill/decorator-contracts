@@ -22,7 +22,6 @@
         "noFallthroughCasesInSwitch": true,
         "baseUrl": "./src",
         "allowSyntheticDefaultImports": true,
-        "experimentalDecorators": true,
         "noImplicitOverride": true
     }
 }

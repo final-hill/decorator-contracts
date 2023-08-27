@@ -6,7 +6,7 @@
  */
 
 import AssertionError from './AssertionError.mjs';
-import { ASSERTION_FAILED } from './Messages.mjs';
+import { Messages } from './Messages.mjs';
 import { Constructor } from './index.mjs';
 
 /**
@@ -31,7 +31,7 @@ import { Constructor } from './index.mjs';
  * let name = "Tom"
  * assert(name.trim().length > 0, 'Name is required', TypeError)
  */
-export default function assert(condition: unknown, message = ASSERTION_FAILED, ErrorConstructor: Constructor<Error> = AssertionError): asserts condition {
+export default function assert(condition: unknown, message: string = Messages.AssertionFailed, ErrorConstructor: Constructor<Error> = AssertionError): asserts condition {
     if (Boolean(condition) == false)
         throw new ErrorConstructor(message);
 }

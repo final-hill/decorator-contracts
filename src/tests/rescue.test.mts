@@ -5,7 +5,7 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import { MSG_SINGLE_RETRY } from '../Messages.mjs';
+import { Messages } from '../Messages.mjs';
 import { checkedMode, Contract, Contracted, invariant } from '../index.mjs';
 
 /**
@@ -305,7 +305,7 @@ describe('The `retry` argument of the `rescue` declaration can only be called on
             }
         }
         const base = new Base();
-        expect(() => base.method(0)).toThrow(MSG_SINGLE_RETRY);
+        expect(() => base.method(0)).toThrow(Messages.MsgSingleRetry);
     });
 });
 

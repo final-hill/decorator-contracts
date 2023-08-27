@@ -13,7 +13,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [14.x]
+        node-version: [20.x]
 
     steps:
     - uses: actions/checkout@v2
@@ -35,7 +35,7 @@ jobs:
     - name: npm install, build, and test
       run: |
         npm install
-        npm run build-nofix
+        npm run build
         npm test
       env:
         CI: true

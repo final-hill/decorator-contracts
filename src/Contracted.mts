@@ -7,7 +7,7 @@
 
 import { ClassRegistration, CLASS_REGISTRY, ClassType, Feature, takeWhile, assertInvariants } from './lib/index.mjs';
 import { assert, checkedMode, Contract, extend } from './index.mjs';
-import { MSG_BAD_SUBCONTRACT, MSG_NO_PROPERTIES, MSG_SINGLE_CONTRACT } from './Messages.mjs';
+import { Messages } from './Messages.mjs';
 
 const isContracted = Symbol('isContracted'),
     innerContract = Symbol('innerContract');
@@ -39,21 +39,24 @@ function hasProperties<U>(registration: ClassRegistration, obj: U): boolean {
 function Contracted<
     T extends Contract<any> = Contract<any>,
     U extends ClassType<any> = ClassType<any>
->(contract: T = new Contract() as T): ClassDecorator {
-    return function (Base: U & { [innerContract]?: Contract<any> }) {
-        assert(!Object.getOwnPropertySymbols(Base).includes(isContracted), MSG_SINGLE_CONTRACT);
+>(contract: T = new Contract() as T) {
+    return function (Clazz: U & { [innerContract]?: Contract<any> }, ctx: ClassDecoratorContext<U>) {
+        if (ctx.kind !== 'class')
+            throw new TypeError(Messages.MsgNotContracted);
+
+        assert(!Object.getOwnPropertySymbols(Clazz).includes(isContracted), Messages.MsgSingleContract);
 
         if (contract[checkedMode] === false)
-            return Base;
+            return Clazz;
 
-        const baseContract = Base[innerContract];
+        const baseContract = Clazz[innerContract];
         assert(
             !baseContract ||
             baseContract && contract[extend] instanceof baseContract.constructor,
-            MSG_BAD_SUBCONTRACT
+            Messages.MsgBadSubcontract
         );
 
-        abstract class InnerContracted extends Base {
+        abstract class InnerContracted extends Clazz {
             // prevents multiple @Contracted decorators from being applied
             static readonly [isContracted] = true;
 
@@ -63,12 +66,12 @@ function Contracted<
                 const Class = this.constructor as ClassType<any>,
                     classRegistration = CLASS_REGISTRY.getOrCreate(Class);
 
-                assert(!hasProperties(classRegistration, this), MSG_NO_PROPERTIES);
+                assert(!hasProperties(classRegistration, this), Messages.MsgNoProperties);
 
                 if (!classRegistration.contractsChecked) {
                     // bottom-up to closest Contracted class bind contracts
-                    const ancRegistrations = takeWhile(classRegistration.ancestry(), (cr => cr.Class !== Base));
-                    [classRegistration, ...ancRegistrations, CLASS_REGISTRY.get(Base)!].forEach(registration => {
+                    const ancRegistrations = takeWhile(classRegistration.ancestry(), (cr => cr.Class !== Clazz));
+                    [classRegistration, ...ancRegistrations, CLASS_REGISTRY.get(Clazz)!].forEach(registration => {
                         registration.bindContract(InnerContracted[innerContract]);
                     });
                 }
@@ -88,10 +91,10 @@ function Contracted<
         const classRegistration = CLASS_REGISTRY.getOrCreate(InnerContracted);
         classRegistration.contractsChecked = false;
 
-        Object.freeze(Base);
+        Object.freeze(Clazz);
 
         return InnerContracted;
-    } as ClassDecorator;
+    };
 }
 
 export { isContracted, innerContract };

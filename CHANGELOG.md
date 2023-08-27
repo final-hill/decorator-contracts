@@ -4,7 +4,8 @@
 
 * Updated dependencies
 * Updated header year to 2023
-* Project targets ES2022 to utilize the [new language feature](https://devblogs.microsoft.com/typescript/announcing-typescript-5-2/#decorator-metadata)
+* Project targets ES2022 to utilize the [new decorator feature](https://devblogs.microsoft.com/typescript/announcing-typescript-5-2/#decorator-metadata)
+* Updated decorator implementation to track the standard
 * Converted project to utilize ESM
 * Simplified eslint configuration
 * Removed `@override` decorator in favor of [native](https://devblogs.microsoft.com/typescript/announcing-typescript-4-3-beta/#override-and-the-noimplicitoverride-flag) `override` keyword and `@override` [JSDoc tag](https://www.typescriptlang.org/docs/handbook/jsdoc-supported-types.html#override)
