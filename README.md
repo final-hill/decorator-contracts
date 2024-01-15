@@ -153,7 +153,7 @@ class Stack<T> implements StackType<T> {
     }
 
     top(): T {
-        return this.#implementation[this.#implementation.length - 1];
+        return this.#implementation.at(-1);
     }
 }
 ```
@@ -315,20 +315,14 @@ properties with accessors should be used instead. Example:
 ```ts
 @Contracted(pointContract)
 class Point2D {
-    #x: number
-    #y: number
+    accessor x: number
+    accessor y: number
 
     constructor(x: number, y: number) {
         super()
-        this.#x = x
-        this.#y = y
+        this.x = x
+        this.y = y
     }
-
-    get x(): number { return this.#x }
-    set x(value: number) { this.#x = value }
-
-    get y(): number { return this.#y }
-    set y(value: number) { this.#y = value }
 }
 ```
 
@@ -344,7 +338,7 @@ True assertions do not throw an error. An example of this is given below using a
 
 ```typescript
 const stackContract = new Contract<StackType<any>>({
-    [invariants](self) {
+    [invariant](self) {
         return self.isEmpty() == (self.size == 0) &&
                self.isFull() == (self.size == self.limit) &&
                self.size >= 0 && self.size <= self.limit
@@ -572,7 +566,7 @@ The remaining arguments of `ensures` reflect the arguments of the associated fea
 ```typescript
 const baseContract = new Contract<Base>({
     someMethod: {
-        ensures(_self, old, x: number){ return 0 <= x && x <= 10 }
+        ensures(_self, _old, x: number){ return 0 <= x && x <= 10 }
     }
 })
 
@@ -707,7 +701,7 @@ recursion. An example of `retry` usage:
 ```ts
 const studentRepositoryContract = new Contract<StudentRepository>({
     getStudent: {
-        rescue(self, error, [id], retry) {
+        rescue(_self, error, [id], retry) {
             console.error(error)
             console.log('Retrying with legacy id...')
             retry(`old-${id}`)
