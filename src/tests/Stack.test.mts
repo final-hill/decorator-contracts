@@ -6,6 +6,8 @@
  */
 
 import { Contract, Contracted, invariant } from '../index.mjs';
+import { describe, test } from 'node:test';
+import nodeAssert from 'node:assert/strict';
 
 interface StackType<T> {
     readonly limit: number;
@@ -95,13 +97,13 @@ class Stack<T> implements StackType<T> {
 
 describe('Testing Stack', () => {
     test('Creating stack', () => {
-        expect(() => new Stack(3)).not.toThrow();
-        expect(() => new Stack(-1)).toThrow();
+        nodeAssert.doesNotThrow(() => new Stack(3));
+        nodeAssert.throws(() => new Stack(-1));
     });
 
     test('popping empty stack throws', () => {
         const myStack = new Stack(3);
 
-        expect(() => myStack.pop()).toThrow(/^demands not met/);
+        nodeAssert.throws(() => myStack.pop(), /^demands not met/);
     });
 });

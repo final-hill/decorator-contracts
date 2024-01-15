@@ -5,6 +5,8 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
+import { describe, test } from 'node:test';
+import nodeAssert from 'node:assert/strict';
 import { Contract, Contracted } from '../index.mjs';
 
 // https://github.com/final-hill/decorator-contracts/issues/209
@@ -26,7 +28,7 @@ describe('Features should support a time constraint declaration', () => {
                 return 'Okay';
             }
         }
-        expect(new Spinner().spinLock(50)).toBe('Okay');
-        expect(() => new Spinner().spinLock(500)).toThrow(/^Timing constraint violated/);
+        nodeAssert.strictEqual(new Spinner().spinLock(50), 'Okay');
+        nodeAssert.throws(() => new Spinner().spinLock(500), /^Timing constraint violated/);
     });
 });

@@ -5,6 +5,8 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
+import { describe, test } from 'node:test';
+import nodeAssert from 'node:assert/strict';
 import { AssertionError, checkedMode, Contract, Contracted, extend, invariant } from '../index.mjs';
 import { Messages } from '../Messages.mjs';
 
@@ -25,33 +27,32 @@ describe('The subclasses of a contracted class must obey the invariants', () => 
 
     class Bar extends Foo { }
     test('Test subclassing in debug mode', () => {
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             const bar = new Bar();
             bar.inc();
             bar.dec();
-        }).not.toThrow();
+        });
 
-        expect(() => {
+        nodeAssert.throws(() => {
             const bar = new Bar();
             bar.dec();
-        }).toThrow(AssertionError);
+        }, AssertionError);
 
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             const bar = new Bar();
             bar.value = 3;
-        }).not.toThrow();
+        });
 
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             const bar = new Bar();
 
             return bar.value == 0;
-        }).not.toThrow();
+        });
 
-        expect(() => {
+        nodeAssert.throws(() => {
             const bar = new Bar();
             bar.value = -1;
-        }).toThrow(AssertionError);
-
+        }, AssertionError);
 
         // overriding members
         class Baz extends Foo {
@@ -62,32 +63,32 @@ describe('The subclasses of a contracted class must obey the invariants', () => 
             override dec(): void { super.value--; }
         }
 
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             const baz = new Baz();
             baz.inc();
             baz.dec();
-        }).not.toThrow();
+        });
 
-        expect(() => {
+        nodeAssert.throws(() => {
             const baz = new Baz();
             baz.dec();
-        }).toThrow(AssertionError);
+        }, AssertionError);
 
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             const baz = new Baz();
             baz.value = 3;
-        }).not.toThrow();
+        });
 
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             const baz = new Baz();
 
             return baz.value == 0;
-        }).not.toThrow();
+        });
 
-        expect(() => {
+        nodeAssert.throws(() => {
             const baz = new Baz();
             baz.value = -1;
-        }).toThrow(AssertionError);
+        }, AssertionError);
     });
 
     test('Test subclassing in prod mode', () => {
@@ -106,32 +107,32 @@ describe('The subclasses of a contracted class must obey the invariants', () => 
 
         class Bar extends Foo { }
 
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             const bar = new Bar();
             bar.inc();
             bar.dec();
-        }).not.toThrow();
+        });
 
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             const bar = new Bar();
             bar.dec();
-        }).not.toThrow();
+        });
 
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             const bar = new Bar();
             bar.value = 3;
-        }).not.toThrow();
+        });
 
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             const bar = new Bar();
 
             return bar.value == 0;
-        }).not.toThrow();
+        });
 
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             const bar = new Bar();
             bar.value = -1;
-        }).not.toThrow();
+        });
     });
 
     test('Subcontract with private field', () => {
@@ -150,9 +151,9 @@ describe('The subclasses of a contracted class must obey the invariants', () => 
             get value() { return this.#value; }
         }
 
-        expect(() =>
+        nodeAssert.doesNotThrow(() =>
             new Sub()
-        ).not.toThrow();
+        );
     });
 });
 
@@ -161,7 +162,7 @@ describe('The subclasses of a contracted class must obey the invariants', () => 
  */
 describe('A truthy invariant does not throw an exception when evaluated', () => {
     test('Construction does not throw', () => {
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             const enabledContract: Contract<Foo> = new Contract<Foo>({
                 [checkedMode]: true,
                 [invariant]: self => self instanceof Foo
@@ -170,8 +171,8 @@ describe('A truthy invariant does not throw an exception when evaluated', () => 
             class Foo { }
 
             return new Foo();
-        }).not.toThrow();
-        expect(() => {
+        });
+        nodeAssert.doesNotThrow(() => {
             const disabledContract: Contract<Foo> = new Contract<Foo>({
                 [checkedMode]: false,
                 [invariant]: self => self instanceof Foo
@@ -180,11 +181,11 @@ describe('A truthy invariant does not throw an exception when evaluated', () => 
             class Foo { }
 
             return new Foo();
-        }).not.toThrow();
+        });
     });
 
     test('Method does not throw', () => {
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             const enabledContract: Contract<Foo> = new Contract<Foo>({
                 [checkedMode]: true,
                 [invariant]: self => self.value >= 0
@@ -203,9 +204,9 @@ describe('A truthy invariant does not throw an exception when evaluated', () => 
             foo.dec();
 
             return foo;
-        }).not.toThrow();
+        });
 
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             const disabledContract: Contract<Foo> = new Contract<Foo>({
                 [checkedMode]: false,
                 [invariant]: self => self.value >= 0
@@ -224,7 +225,7 @@ describe('A truthy invariant does not throw an exception when evaluated', () => 
             foo.dec();
 
             return foo;
-        }).not.toThrow();
+        });
     });
 });
 
@@ -233,7 +234,7 @@ describe('A truthy invariant does not throw an exception when evaluated', () => 
  */
 describe('A falsy invariant throws an exception when evaluated', () => {
     test('Construction throws in checkMode', () => {
-        expect(() => {
+        nodeAssert.throws(() => {
             const badContract = new Contract<Foo>({
                 [invariant]: self => self instanceof Set
             });
@@ -242,11 +243,11 @@ describe('A falsy invariant throws an exception when evaluated', () => {
             class Foo { }
 
             return new Foo();
-        }).toThrow(AssertionError);
+        }, AssertionError);
     });
 
     test('Construction does not throw in unchecked mode', () => {
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             const badContract: Contract<Foo> = new Contract<Foo>({
                 [checkedMode]: false,
                 [invariant]: self => self instanceof Map
@@ -256,11 +257,11 @@ describe('A falsy invariant throws an exception when evaluated', () => {
             class Foo { }
 
             return new Foo();
-        }).not.toThrow();
+        });
     });
 
     test('Method throws in checkMode', () => {
-        expect(() => {
+        nodeAssert.throws(() => {
             const fooContract: Contract<Foo> = new Contract<Foo>({
                 [invariant]: self => self.value === 37
             });
@@ -278,11 +279,11 @@ describe('A falsy invariant throws an exception when evaluated', () => {
             foo.dec();
 
             return foo;
-        }).toThrow(AssertionError);
+        }, AssertionError);
     });
 
     test('Method does not throw in unchecked mode', () => {
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             const fooContract: Contract<Foo> = new Contract<Foo>({
                 [checkedMode]: false,
                 [invariant]: self => self.value === 37
@@ -301,7 +302,7 @@ describe('A falsy invariant throws an exception when evaluated', () => {
             foo.dec();
 
             return foo;
-        }).not.toThrow();
+        });
     });
 });
 
@@ -310,7 +311,7 @@ describe('A falsy invariant throws an exception when evaluated', () => {
  */
 describe('Invariants are evaluated after the associated class is constructed', () => {
     test('truthy construction does not throw in checked and unchecked mode', () => {
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             const enabledContract: Contract<Foo> = new Contract<Foo>({
                 [invariant]: self => self instanceof Foo
             });
@@ -319,9 +320,9 @@ describe('Invariants are evaluated after the associated class is constructed', (
             class Foo { }
 
             return new Foo();
-        }).not.toThrow();
+        });
 
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             const disabledContract: Contract<Foo> = new Contract<Foo>({
                 [checkedMode]: false,
                 [invariant]: self => self instanceof Foo
@@ -331,11 +332,11 @@ describe('Invariants are evaluated after the associated class is constructed', (
             class Foo { }
 
             return new Foo();
-        }).not.toThrow();
+        });
     });
 
     test('falsy construction throws in checked mode', () => {
-        expect(() => {
+        nodeAssert.throws(() => {
             const fooContract: Contract<Foo> = new Contract<Foo>({
                 [invariant]: self => self instanceof Array
             });
@@ -344,22 +345,21 @@ describe('Invariants are evaluated after the associated class is constructed', (
             class Foo { }
 
             return new Foo();
-        }).toThrow();
+        });
     });
 
     test('falsy construction does not throw in unchecked mode', () => {
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             const fooContract: Contract<Foo> = new Contract<Foo>({
                 [checkedMode]: false,
                 [invariant]: self => self instanceof Error
             });
 
-
             @Contracted(fooContract)
             class Foo { }
 
             return new Foo();
-        }).not.toThrow();
+        });
     });
 });
 
@@ -382,17 +382,17 @@ describe('An invariant is evaluated before and after every method call on the as
 
         const foo = new Foo();
 
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             foo.inc();
-        }).not.toThrow();
+        });
 
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             foo.dec();
-        }).not.toThrow();
+        });
 
-        expect(() => {
+        nodeAssert.throws(() => {
             foo.dec();
-        }).toThrow(AssertionError);
+        }, AssertionError);
     });
 
     test('Test method call in unchecked mode', () => {
@@ -411,17 +411,17 @@ describe('An invariant is evaluated before and after every method call on the as
 
         const foo = new Foo();
 
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             foo.inc();
-        }).not.toThrow();
+        });
 
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             foo.dec();
-        }).not.toThrow();
+        });
 
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             foo.dec();
-        }).not.toThrow();
+        });
     });
 });
 
@@ -430,16 +430,16 @@ describe('An invariant is evaluated before and after every method call on the as
  */
 describe('Public properties must be forbidden', () => {
     test('Class without public properties', () => {
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             @Contracted()
             class Foo {
                 accessor value = 10;
             }
 
             return new Foo();
-        }).not.toThrow();
+        });
 
-        expect(() => {
+        nodeAssert.throws(() => {
             @Contracted()
             class Foo {
                 val = 10;
@@ -448,7 +448,7 @@ describe('Public properties must be forbidden', () => {
             }
 
             return new Foo();
-        }).toThrow(Messages.MsgNoProperties);
+        }, Messages.MsgNoProperties);
     });
 });
 
@@ -457,7 +457,7 @@ describe('Public properties must be forbidden', () => {
  */
 describe('In checked mode the invariant is evaluated', () => {
     test('Construction throws in checkMode', () => {
-        expect(() => {
+        nodeAssert.throws(() => {
             const fooContract = new Contract<Foo>({
                 [invariant](self) { return self instanceof Array; }
             });
@@ -466,11 +466,11 @@ describe('In checked mode the invariant is evaluated', () => {
             class Foo { }
 
             return new Foo();
-        }).toThrow(AssertionError);
+        }, AssertionError);
     });
 
     test('Method throws in checkMode', () => {
-        expect(() => {
+        nodeAssert.throws(() => {
             const fooContract = new Contract<Foo>({
                 [invariant](self) { return self.value === 37; }
             });
@@ -488,7 +488,7 @@ describe('In checked mode the invariant is evaluated', () => {
             foo.dec();
 
             return foo;
-        }).toThrow(AssertionError);
+        }, AssertionError);
     });
 
     test('Test getter/setter', () => {
@@ -502,13 +502,13 @@ describe('In checked mode the invariant is evaluated', () => {
 
         const foo = new Foo();
 
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             foo.value = 3;
-        }).not.toThrow(AssertionError);
+        }, AssertionError);
 
-        expect(() => {
+        nodeAssert.throws(() => {
             foo.value = -1;
-        }).toThrow(AssertionError);
+        }, AssertionError);
     });
 });
 
@@ -517,7 +517,7 @@ describe('In checked mode the invariant is evaluated', () => {
  */
 describe('In unchecked mode the invariant is not evaluated', () => {
     test('Construction does not throw', () => {
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             const fooContract = new Contract<Foo>({
                 [checkedMode]: false,
                 [invariant](self) {
@@ -528,11 +528,11 @@ describe('In unchecked mode the invariant is not evaluated', () => {
             class Foo { }
 
             return new Foo();
-        }).not.toThrow();
+        });
     });
 
     test('Method does not throw', () => {
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             const fooContract = new Contract<Foo>({
                 [checkedMode]: false,
                 [invariant](self) {
@@ -553,7 +553,7 @@ describe('In unchecked mode the invariant is not evaluated', () => {
             foo.dec();
 
             return foo;
-        }).not.toThrow();
+        });
     });
 });
 
@@ -562,7 +562,7 @@ describe('In unchecked mode the invariant is not evaluated', () => {
  */
 describe('A subclass with its own invariants must enforce all ancestor invariants', () => {
     test('Checked Mode', () => {
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             const baseContract = new Contract<Base>({
                 [invariant]: self => self instanceof Base && self != null
             }),
@@ -578,9 +578,9 @@ describe('A subclass with its own invariants must enforce all ancestor invariant
             class Sub extends Base { }
 
             return new Sub();
-        }).not.toThrow();
+        });
 
-        expect(() => {
+        nodeAssert.throws(() => {
             const baseContract = new Contract<Base>({
                 [invariant]: self => self instanceof Array
             }),
@@ -596,9 +596,9 @@ describe('A subclass with its own invariants must enforce all ancestor invariant
             class Sub extends Base { }
 
             return new Sub();
-        }).toThrow(AssertionError);
+        }, AssertionError);
 
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             const baseContract = new Contract<Base>({
                 [invariant]: self => self instanceof Base
             }),
@@ -614,11 +614,11 @@ describe('A subclass with its own invariants must enforce all ancestor invariant
             class Sub extends Base { }
 
             return new Base();
-        }).not.toThrow();
+        });
     });
 
     test('Unchecked mode both contracts', () => {
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             const baseContract = new Contract<Base>({
                 [checkedMode]: false,
                 [invariant]: () => false
@@ -636,11 +636,11 @@ describe('A subclass with its own invariants must enforce all ancestor invariant
             class Sub extends Base { }
 
             return new Sub();
-        }).not.toThrow(AssertionError);
+        });
     });
 
     test('Unchecked mode base contract', () => {
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             const baseContract = new Contract<Base>({
                 [checkedMode]: false,
                 [invariant]: () => false
@@ -658,11 +658,11 @@ describe('A subclass with its own invariants must enforce all ancestor invariant
             class Sub extends Base { }
 
             return new Sub();
-        }).not.toThrow(AssertionError);
+        });
     });
 
     test('Unchecked mode sub contract', () => {
-        expect(() => {
+        nodeAssert.throws(() => {
             const baseContract = new Contract<Base>({
                 [checkedMode]: true,
                 [invariant]: () => false
@@ -680,8 +680,8 @@ describe('A subclass with its own invariants must enforce all ancestor invariant
             class Sub extends Base { }
 
             return new Sub();
-        }).toThrow(AssertionError);
-        expect(() => {
+        }, AssertionError);
+        nodeAssert.doesNotThrow(() => {
             const baseContract = new Contract<Base>({
                 [checkedMode]: true,
                 [invariant]: () => true
@@ -699,7 +699,7 @@ describe('A subclass with its own invariants must enforce all ancestor invariant
             class Sub extends Base { }
 
             return new Sub();
-        }).not.toThrow(AssertionError);
+        });
     });
 });
 
@@ -730,15 +730,15 @@ describe('Third-party features applied to a contracted class are subject to its 
             bar = new Bar();
         bar.inc.apply(foo);
 
-        expect(foo.value).toBe(1);
+        nodeAssert.strictEqual(foo.value, 1);
     });
 
     test('failure', () => {
-        expect(() => {
+        nodeAssert.throws(() => {
             const foo = new Foo(),
                 bar = new Bar();
             bar.dec.apply(foo);
-        }).toThrow(/^Invariant violated/);
+        }, /^Invariant violated/);
     });
 });
 
@@ -767,12 +767,12 @@ describe('Contracted features can only be applied to objects of the same instanc
 
     test('same instance okay', () => {
         foo.inc.apply(foo);
-        expect(foo.value).toBe(1);
+        nodeAssert.strictEqual(foo.value, 1);
     });
 
     test('different instance error', () => {
-        expect(() => {
+        nodeAssert.throws(() => {
             foo.inc.apply(bar);
-        }).toThrow(Messages.MsgInvalidContext);
+        }, Messages.MsgInvalidContext);
     });
 });

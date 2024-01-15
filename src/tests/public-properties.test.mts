@@ -5,6 +5,8 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
+import { describe, test } from 'node:test';
+import nodeAssert from 'node:assert/strict';
 import { Messages } from '../Messages.mjs';
 import { Contracted } from '../index.mjs';
 
@@ -22,7 +24,7 @@ describe('Public properties must be forbidden', () => {
             }
         }
 
-        expect(() => new Point2D(12, 5)).not.toThrow();
+        nodeAssert.doesNotThrow(() => new Point2D(12, 5));
     });
 
     test('Public properties throw', () => {
@@ -34,6 +36,6 @@ describe('Public properties must be forbidden', () => {
             ) { }
         }
 
-        expect(() => new Point2D(12, 5)).toThrow(Messages.MsgNoProperties);
+        nodeAssert.throws(() => new Point2D(12, 5), Messages.MsgNoProperties);
     });
 });

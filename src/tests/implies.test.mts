@@ -6,6 +6,8 @@
  */
 
 import implies from '../implies.mjs';
+import { describe, test } from 'node:test';
+import nodeAssert from 'node:assert/strict';
 
 // https://github.com/final-hill/decorator-contracts/issues/225
 describe('Material Implication tests', () => {
@@ -18,9 +20,9 @@ describe('Material Implication tests', () => {
             F    T      T
             F    F      T
         */
-        expect(implies(true, true)).toBe(true);
-        expect(implies(true, false)).toBe(false);
-        expect(implies(false, true)).toBe(true);
-        expect(implies(false, false)).toBe(true);
+        nodeAssert.strictEqual(implies(true, true), true);
+        nodeAssert.strictEqual(implies(true, false), false);
+        nodeAssert.strictEqual(implies(false, true), true);
+        nodeAssert.strictEqual(implies(false, false), true);
     });
 });
