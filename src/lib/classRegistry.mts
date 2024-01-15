@@ -22,7 +22,7 @@ class ClassRegistry extends WeakMap<ClassType<any>, ClassRegistration> {
     getOrCreate(Class: ClassType<any>): ClassRegistration {
         if (this.has(Class))
             return this.get(Class)!;
-         else {
+        else {
             this.set(Class, new ClassRegistration(Class));
 
             return this.get(Class)!;
@@ -30,6 +30,4 @@ class ClassRegistry extends WeakMap<ClassType<any>, ClassRegistration> {
     }
 }
 
-const CLASS_REGISTRY = new ClassRegistry();
-
-export default CLASS_REGISTRY;
+export default new ClassRegistry();

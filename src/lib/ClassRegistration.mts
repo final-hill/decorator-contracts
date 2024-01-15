@@ -7,7 +7,7 @@
 
 import { Messages } from '../Messages.mjs';
 import { assert, checkedMode, Contract, innerContract } from '../index.mjs';
-import { assertInvariants, assertDemands, CLASS_REGISTRY, ClassType, Feature, unChecked } from './index.mjs';
+import { assertInvariants, assertDemands, classRegistry, ClassType, Feature, unChecked } from './index.mjs';
 import assertEnsures from './assertEnsures.mjs';
 
 /**
@@ -117,7 +117,7 @@ class ClassRegistration {
      * Returns the classRegistration of the parent class
      */
     get parentRegistration(): ClassRegistration | null {
-        return this.ParentClass == null ? null : CLASS_REGISTRY.getOrCreate(this.ParentClass);
+        return this.ParentClass == null ? null : classRegistry.getOrCreate(this.ParentClass);
     }
 
     /**
@@ -130,7 +130,7 @@ class ClassRegistration {
         if (this.ParentClass == null)
             return [];
         else {
-            const parentRegistry = CLASS_REGISTRY.getOrCreate(this.ParentClass);
+            const parentRegistry = classRegistry.getOrCreate(this.ParentClass);
 
             return [parentRegistry, ...parentRegistry.ancestry()];
         }
