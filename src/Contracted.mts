@@ -1,11 +1,11 @@
 /*!
  * @license
- * Copyright (C) 2023 Final Hill LLC
+ * Copyright (C) 2024 Final Hill LLC
  * SPDX-License-Identifier: AGPL-3.0-only
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import { ClassRegistration, CLASS_REGISTRY, ClassType, Feature, takeWhile, assertInvariants } from './lib/index.mjs';
+import { ClassRegistration, classRegistry, ClassType, Feature, takeWhile, assertInvariants } from './lib/index.mjs';
 import { assert, checkedMode, Contract, extend } from './index.mjs';
 import { Messages } from './Messages.mjs';
 
@@ -64,14 +64,14 @@ function Contracted<
                 super(...args);
 
                 const Class = this.constructor as ClassType<any>,
-                    classRegistration = CLASS_REGISTRY.getOrCreate(Class);
+                    classRegistration = classRegistry.getOrCreate(Class);
 
                 assert(!hasProperties(classRegistration, this), Messages.MsgNoProperties);
 
                 if (!classRegistration.contractsChecked) {
                     // bottom-up to closest Contracted class bind contracts
                     const ancRegistrations = takeWhile(classRegistration.ancestry(), (cr => cr.Class !== Clazz));
-                    [classRegistration, ...ancRegistrations, CLASS_REGISTRY.get(Clazz)!].forEach(registration => {
+                    [classRegistration, ...ancRegistrations, classRegistry.get(Clazz)!].forEach(registration => {
                         registration.bindContract(InnerContracted[innerContract]);
                     });
                 }
@@ -88,7 +88,7 @@ function Contracted<
             get [innerContract]() { return contract; }
         }
 
-        const classRegistration = CLASS_REGISTRY.getOrCreate(InnerContracted);
+        const classRegistration = classRegistry.getOrCreate(InnerContracted);
         classRegistration.contractsChecked = false;
 
         Object.freeze(Clazz);
