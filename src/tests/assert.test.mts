@@ -37,6 +37,6 @@ describe('The assertion function must support assertion signatures from TypeScri
  */
 describe('Assertions must support throwing custom error types', () => {
     nodeAssert.throws(() => assert(false, 'BOOM!'), AssertionError);
-    nodeAssert.throws(() => assert(false, 'BOOM!'), 'BOOM!');
+    nodeAssert.throws(() => assert(false, 'BOOM!'), { message: 'BOOM!' });
     nodeAssert.throws(() => assert(false, 'BOOM!', TypeError), TypeError);
 });

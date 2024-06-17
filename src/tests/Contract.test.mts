@@ -41,13 +41,9 @@ describe('A contract must be independently definable', () => {
         let stackContract = new Contract<StackType<any>>({
             pop: {
                 demands: undefined
-            },
-            push: {
-                // @ts-expect-error
-                demands: false
             }
         });
-        nodeAssert.ok(stackContract.assertions.push!.demands instanceof Function);
+        nodeAssert.ok(stackContract.assertions.pop!.demands instanceof Function);
 
         stackContract = new Contract<StackType<any>>({
             pop: {
@@ -147,7 +143,7 @@ describe('Only a single contract can be assigned to a class', () => {
             class Foo { }
 
             return new Foo();
-        }, Messages.MsgSingleContract);
+        }, { message: Messages.MsgSingleContract });
     });
 });
 
@@ -204,6 +200,6 @@ describe('A subclass can only be contracted by a subcontract of the base class c
             const badContract = new Contract<Bar>({});
             @Contracted(badContract)
             class Bar extends Foo { }
-        }, Messages.MsgBadSubcontract);
+        }, { message: Messages.MsgBadSubcontract });
     });
 });

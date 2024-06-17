@@ -448,7 +448,7 @@ describe('Public properties must be forbidden', () => {
             }
 
             return new Foo();
-        }, Messages.MsgNoProperties);
+        }, { message: Messages.MsgNoProperties });
     });
 });
 
@@ -738,7 +738,7 @@ describe('Third-party features applied to a contracted class are subject to its 
             const foo = new Foo(),
                 bar = new Bar();
             bar.dec.apply(foo);
-        }, /^Invariant violated/);
+        }, /^Error: Invariant violated/);
     });
 });
 

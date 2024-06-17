@@ -34,12 +34,12 @@ describe('The `rescue` declaration must preserve the invariant after execution',
 
     test('test', () => {
         const base = new Base();
-        nodeAssert.throws(() => base.method1(), 'I am error');
+        nodeAssert.throws(() => base.method1(), { message: 'I am error' });
         nodeAssert.strictEqual(base.value, 5);
         nodeAssert.throws(() => {
             base.method2();
-        }, /^Invariant violated/);
-        nodeAssert.throws(() => base.value, /^Invariant violated/);
+        }, /^Error: Invariant violated/);
+        nodeAssert.throws(() => base.value, /^Error: Invariant violated/);
     });
 });
 
@@ -225,7 +225,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
             set value(_: number) { throw new Error('Setter fail'); }
         }
         const base = new Base();
-        nodeAssert.throws(() => base.value = 12, 'Rescue fail');
+        nodeAssert.throws(() => base.value = 12, { message: 'Rescue fail' });
     });
 });
 
@@ -250,7 +250,7 @@ describe('The rescue declarations are enabled in checkedMode and disabled otherw
 
             const base = new Base();
             base.throws('I am Error');
-        }, 'I am still an Error');
+        }, { message: 'I am still an Error' });
     });
 
     test('disabled', () => {
@@ -271,7 +271,7 @@ describe('The rescue declarations are enabled in checkedMode and disabled otherw
 
             const base = new Base();
             base.throws('I am Error');
-        }, 'I am Error');
+        }, { message: 'I am Error' });
     });
 });
 
@@ -361,7 +361,7 @@ describe('If a `rescue` is executed and the `retry` argument is not called then 
     });
 
     test('Un-rescued error', () => {
-        nodeAssert.throws(() => base.throwFail(), 'I am error');
+        nodeAssert.throws(() => base.throwFail(), { message: 'I am error' });
     });
 });
 
@@ -407,7 +407,7 @@ describe('If an exception is thrown in a class feature without a `rescue` define
         nodeAssert.throws(() => new B().method1(), { message: 'I am error' });
         nodeAssert.throws(() => {
             new B().method2();
-        }, /^Invariant violated/);
+        }, /^Error: Invariant violated/);
     });
 });
 
@@ -416,12 +416,16 @@ describe('If an exception is thrown in a class feature without a `rescue` define
  */
 describe('If an error is thrown in `demands` the error is raised to the caller', () => {
     const contractA = new Contract<A>({
-        [invariant](self) { return self.value > 0; },
+        [invariant](self) {
+            return self.value > 0;
+        },
         method: {
             rescue(_self, _error, args, _retry) {
                 if (args[0] === -2) throw new Error('Rescue Error');
             },
-            demands(_self, value) { return value >= 0; }
+            demands(_self, value) {
+                return value >= 0;
+            }
         },
         methodEmpty: {
             demands() { return false; },
@@ -437,19 +441,20 @@ describe('If an error is thrown in `demands` the error is raised to the caller',
     class A {
         accessor value = 1;
 
-        method(value: number): void { this.value = value; }
+        method(value: number): void {
+            this.value = value;
+        }
         methodEmpty(): void { }
         methodError(): void { throw new Error('Feature Error'); }
     }
 
     test('Error pathways', () => {
         nodeAssert.doesNotThrow(() => new A().method(1));
-        nodeAssert.throws(() => new A().method(0), /^Invariant violated/);
-        nodeAssert.throws(() => new A().method(-1), /^demands not met/);
-        nodeAssert.doesNotThrow(() => new A().method(-2), /^Rescue Error/);
-
-        nodeAssert.throws(() => new A().methodEmpty(), /^demands not met/);
-        nodeAssert.throws(() => new A().methodError(), /^Rescue Error/);
+        nodeAssert.throws(() => new A().method(0), /^Error: Invariant violated/);
+        nodeAssert.throws(() => new A().method(-1), /^Error: demands not met/);
+        nodeAssert.throws(() => new A().method(-2), /^Error: demands not met/);
+        nodeAssert.throws(() => new A().methodEmpty(), /^Error: demands not met/);
+        nodeAssert.throws(() => new A().methodError(), /^Error: Rescue Error/);
     });
 });
 
@@ -485,10 +490,9 @@ describe('If an error is raised in an `ensures` then the associated rescue is ex
 
     test('Error pathways', () => {
         nodeAssert.doesNotThrow(() => new A().method(1));
-        nodeAssert.throws(() => new A().method(0), /^ensures not met/);
-        nodeAssert.throws(() => new A().method(-1), /^Invariant violated/);
-        nodeAssert.doesNotThrow(() => new A().method(-2), /^Rescue Error/);
-        nodeAssert.throws(() => new A().methodEmpty(), /^ensures not met/);
-        nodeAssert.throws(() => new A().methodError(), /^Rescue Error/);
+        nodeAssert.throws(() => new A().method(0), /^Error: ensures not met/);
+        nodeAssert.throws(() => new A().method(-1), /^Error: Invariant violated/);
+        nodeAssert.throws(() => new A().methodEmpty(), /^Error: ensures not met/);
+        nodeAssert.throws(() => new A().methodError(), /^Error: Rescue Error/);
     });
 });

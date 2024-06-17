@@ -36,6 +36,6 @@ describe('Public properties must be forbidden', () => {
             ) { }
         }
 
-        nodeAssert.throws(() => new Point2D(12, 5), Messages.MsgNoProperties);
+        nodeAssert.throws(() => new Point2D(12, 5), { message: Messages.MsgNoProperties });
     });
 });

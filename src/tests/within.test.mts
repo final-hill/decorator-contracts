@@ -29,6 +29,6 @@ describe('Features should support a time constraint declaration', () => {
             }
         }
         nodeAssert.strictEqual(new Spinner().spinLock(50), 'Okay');
-        nodeAssert.throws(() => new Spinner().spinLock(500), /^Timing constraint violated/);
+        nodeAssert.throws(() => new Spinner().spinLock(500), /^Error: Timing constraint violated/);
     });
 });

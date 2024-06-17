@@ -104,6 +104,6 @@ describe('Testing Stack', () => {
     test('popping empty stack throws', () => {
         const myStack = new Stack(3);
 
-        nodeAssert.throws(() => myStack.pop(), /^demands not met/);
+        nodeAssert.throws(() => myStack.pop(), /^Error: demands not met/);
     });
 });
