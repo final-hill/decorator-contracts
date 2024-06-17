@@ -6,6 +6,8 @@
  */
 
 import iff from '../iff.mjs';
+import { describe, test } from 'node:test';
+import nodeAssert from 'node:assert/strict';
 
 // https://github.com/final-hill/decorator-contracts/issues/225
 describe('Biconditional tests', () => {
@@ -18,9 +20,9 @@ describe('Biconditional tests', () => {
             F    T      F
             F    F      T
         */
-        expect(iff(true, true)).toBe(true);
-        expect(iff(true, false)).toBe(false);
-        expect(iff(false, true)).toBe(false);
-        expect(iff(false, false)).toBe(true);
+        nodeAssert.strictEqual(iff(true, true), true);
+        nodeAssert.strictEqual(iff(true, false), false);
+        nodeAssert.strictEqual(iff(false, true), false);
+        nodeAssert.strictEqual(iff(false, false), true);
     });
 });

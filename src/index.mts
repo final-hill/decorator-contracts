@@ -11,5 +11,5 @@ import assert from './assert.mjs';
 import implies from './implies.mjs';
 
 export { AssertionError, Contracted, implies, innerContract, assert };
-export { Contract, extend, invariant, Invariant, checkedMode, Rescue } from './Contract.mjs';
-export { Constructor, AbstractConstructor, ClassType } from './lib/ClassType.mjs';
+export { Contract, extend, invariant, type Invariant, checkedMode, type Rescue } from './Contract.mjs';
+export { type Constructor, type AbstractConstructor, type ClassType } from './lib/ClassType.mjs';

@@ -6,6 +6,8 @@
  */
 
 import { AssertionError, checkedMode, Contract, Contracted, extend } from '../index.mjs';
+import { describe, test } from 'node:test';
+import nodeAssert from 'node:assert/strict';
 
 /**
  * https://github.com/final-hill/decorator-contracts/issues/78
@@ -34,13 +36,13 @@ describe('Ensures assertions can be defined for a class feature', () => {
 
         const foo = new Foo();
 
-        expect(() => foo.inc()).not.toThrow();
+        nodeAssert.doesNotThrow(() => foo.inc());
 
-        expect(foo.value).toBe(2);
+        nodeAssert.strictEqual(foo.value, 2);
 
-        expect(() => {
+        nodeAssert.throws(() => {
             foo.dec();
-        }).toThrow(AssertionError);
+        }, AssertionError);
     });
 });
 
@@ -67,19 +69,19 @@ describe('Overridden features are still subject to the ensures assertion ', () =
     }
 
     test('inc(); inc(); dec(); does not throw', () => {
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             const sub = new Sub();
             sub.inc();
             sub.inc();
             sub.dec();
-        }).not.toThrow();
+        });
     });
 
     test('dec(); throws', () => {
-        expect(() => {
+        nodeAssert.throws(() => {
             const sub = new Sub();
             sub.dec();
-        }).toThrow();
+        });
     });
 });
 
@@ -105,7 +107,7 @@ describe('The ensures assertion is evaluated after its associated feature is cal
 
         const bar = new Bar();
 
-        expect(bar.method()).toBe(2);
+        nodeAssert.strictEqual(bar.method(), 2);
     });
 
     test('false @ensures check throws', () => {
@@ -121,7 +123,7 @@ describe('The ensures assertion is evaluated after its associated feature is cal
         }
         const bar = new Bar();
 
-        expect(() => { bar.method(); }).toThrow();
+        nodeAssert.throws(() => { bar.method(); });
     });
 });
 
@@ -141,7 +143,7 @@ describe('`ensures` assertions are enabled in checkedMode and disabled otherwise
             method(): void { }
         }
 
-        expect(() => new Foo().method()).toThrow();
+        nodeAssert.throws(() => new Foo().method());
     });
 
     test('The associated assertion is NOT evaluated in checkMode = false', () => {
@@ -157,7 +159,7 @@ describe('`ensures` assertions are enabled in checkedMode and disabled otherwise
             method(): void { }
         }
 
-        expect(() => new Foo().method()).not.toThrow();
+        nodeAssert.doesNotThrow(() => new Foo().method());
     });
 });
 
@@ -179,10 +181,10 @@ describe('Postconditions cannot be weakened in a subtype', () => {
     test('Base postcondition', () => {
         const base = new Base();
 
-        expect(base.method(15)).toBe(15);
-        expect(base.method(25)).toBe(25);
-        expect(() => base.method(5)).toThrow(AssertionError);
-        expect(() => base.method(35)).toThrow(AssertionError);
+        nodeAssert.strictEqual(base.method(15), 15);
+        nodeAssert.strictEqual(base.method(25), 25);
+        nodeAssert.throws(() => base.method(5), AssertionError);
+        nodeAssert.throws(() => base.method(35), AssertionError);
     });
 
     const weakerContract = new Contract<Weaker>({
@@ -200,10 +202,10 @@ describe('Postconditions cannot be weakened in a subtype', () => {
     test('Weaker postcondition', () => {
         const weaker = new Weaker();
 
-        expect(weaker.method(15)).toBe(15);
-        expect(weaker.method(25)).toBe(25);
-        expect(() => weaker.method(5)).toThrow(AssertionError);
-        expect(() => weaker.method(35)).toThrow(AssertionError);
+        nodeAssert.strictEqual(weaker.method(15), 15);
+        nodeAssert.strictEqual(weaker.method(25), 25);
+        nodeAssert.throws(() => weaker.method(5), AssertionError);
+        nodeAssert.throws(() => weaker.method(35), AssertionError);
     });
 
     const strongerContract = new Contract<Stronger>({
@@ -221,11 +223,11 @@ describe('Postconditions cannot be weakened in a subtype', () => {
     test('Stronger postcondition', () => {
         const stronger = new Stronger();
 
-        expect(stronger.method(15)).toBe(15);
-        expect(stronger.method(20)).toBe(20);
-        expect(() => stronger.method(25)).toThrow(AssertionError);
-        expect(() => stronger.method(5)).toThrow(AssertionError);
-        expect(() => stronger.method(35)).toThrow(AssertionError);
+        nodeAssert.strictEqual(stronger.method(15), 15);
+        nodeAssert.strictEqual(stronger.method(20), 20);
+        nodeAssert.throws(() => stronger.method(25), AssertionError);
+        nodeAssert.throws(() => stronger.method(5), AssertionError);
+        nodeAssert.throws(() => stronger.method(35), AssertionError);
     });
 });
 
@@ -265,13 +267,13 @@ describe('ensures has access to the properties of the instance class before its 
 
         const stack = new Stack<string>();
 
-        expect(stack.size).toEqual(0);
-        expect(() => {
+        nodeAssert.strictEqual(stack.size, 0);
+        nodeAssert.doesNotThrow(() => {
             stack.push('a');
             stack.push('b');
             stack.push('c');
-        }).not.toThrow();
-        expect(() => stack.pop()).not.toThrow();
-        expect(stack.size).toEqual(2);
+        });
+        nodeAssert.doesNotThrow(() => stack.pop());
+        nodeAssert.strictEqual(stack.size, 2);
     });
 });

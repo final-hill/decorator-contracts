@@ -6,6 +6,8 @@
  */
 
 import { AssertionError, checkedMode, Contract, Contracted, extend } from '../index.mjs';
+import { describe, test } from 'node:test';
+import nodeAssert from 'node:assert/strict';
 
 /**
  * https://github.com/final-hill/decorator-contracts/issues/70
@@ -37,14 +39,14 @@ describe('Demands assertions can be defined for a class feature', () => {
 
         const foo = new Foo();
 
-        expect(() => foo.inc()).not.toThrow();
+        nodeAssert.doesNotThrow(() => foo.inc());
 
-        expect(foo.value).toBe(2);
+        nodeAssert.strictEqual(foo.value, 2);
 
-        expect(() => {
+        nodeAssert.throws(() => {
             foo.dec();
             foo.dec();
-        }).toThrow(AssertionError);
+        }, AssertionError);
     });
 });
 
@@ -71,20 +73,20 @@ describe('Overridden features are still subject to the demands assertion', () =>
     }
 
     test('inc(); inc(); dec(); does not throw', () => {
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             const sub = new Sub();
             sub.inc();
             sub.inc();
             sub.dec();
-        }).not.toThrow();
+        });
     });
 
     test('dec(); dec(); throws', () => {
-        expect(() => {
+        nodeAssert.throws(() => {
             const sub = new Sub();
             sub.dec();
             sub.dec();
-        }).toThrow(AssertionError);
+        }, AssertionError);
     });
 
     class SubSub extends Sub {
@@ -92,18 +94,18 @@ describe('Overridden features are still subject to the demands assertion', () =>
     }
 
     test('inc(); inc(); inc(); inc(): dec(); does not throw', () => {
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             const subSub = new SubSub();
             subSub.inc();
             subSub.inc();
             subSub.inc();
             subSub.inc();
             subSub.dec();
-        }).not.toThrow();
+        });
     });
 
     test('inc(); inc(); inc(); inc(): dec(); dec(); dec(); throws', () => {
-        expect(() => {
+        nodeAssert.throws(() => {
             const subSub = new SubSub();
             subSub.inc();
             subSub.inc();
@@ -112,7 +114,7 @@ describe('Overridden features are still subject to the demands assertion', () =>
             subSub.dec();
             subSub.dec();
             subSub.dec();
-        }).toThrow(AssertionError);
+        }, AssertionError);
     });
 });
 
@@ -140,7 +142,7 @@ describe('The `demands` assertion is evaluated before its associated feature is 
 
         const bar = new Bar();
 
-        expect(bar.method()).toBe(-2);
+        nodeAssert.strictEqual(bar.method(), -2);
     });
 
     test('false "demands" check throws', () => {
@@ -159,7 +161,7 @@ describe('The `demands` assertion is evaluated before its associated feature is 
 
         const bar = new Bar();
 
-        expect(() => bar.method()).toThrow();
+        nodeAssert.throws(() => bar.method());
     });
 });
 
@@ -179,7 +181,7 @@ describe('`demands` assertions are enabled in `checkedMode` and disabled otherwi
             method(): void { }
         }
 
-        expect(() => new Foo().method()).toThrow();
+        nodeAssert.throws(() => new Foo().method());
     });
 
     test('The associated assertion is NOT evaluated in checkMode = false', () => {
@@ -195,7 +197,7 @@ describe('`demands` assertions are enabled in `checkedMode` and disabled otherwi
             method(): void { }
         }
 
-        expect(() => new Foo().method()).not.toThrow();
+        nodeAssert.doesNotThrow(() => new Foo().method());
     });
 });
 
@@ -217,9 +219,9 @@ describe('`demands` assertions cannot be strengthened in a subtype', () => {
     test('Base demands', () => {
         const base = new Base();
 
-        expect(base.method(15)).toBe(15);
-        expect(() => base.method(5)).toThrow(AssertionError);
-        expect(() => base.method(35)).toThrow(AssertionError);
+        nodeAssert.strictEqual(base.method(15), 15);
+        nodeAssert.throws(() => base.method(5), AssertionError);
+        nodeAssert.throws(() => base.method(35), AssertionError);
     });
 
     const weakerContract = new Contract<Weaker>({
@@ -237,11 +239,11 @@ describe('`demands` assertions cannot be strengthened in a subtype', () => {
     test('Weaker precondition', () => {
         const weaker = new Weaker();
 
-        expect(weaker.method(15)).toBe(15);
-        expect(weaker.method(5)).toBe(5);
-        expect(weaker.method(35)).toBe(35);
-        expect(() => weaker.method(0)).toThrow(AssertionError);
-        expect(() => weaker.method(60)).toThrow(AssertionError);
+        nodeAssert.strictEqual(weaker.method(15), 15);
+        nodeAssert.strictEqual(weaker.method(5), 5);
+        nodeAssert.strictEqual(weaker.method(35), 35);
+        nodeAssert.throws(() => weaker.method(0), AssertionError);
+        nodeAssert.throws(() => weaker.method(60), AssertionError);
     });
 
     const strongerContract = new Contract<Stronger>({
@@ -259,9 +261,9 @@ describe('`demands` assertions cannot be strengthened in a subtype', () => {
     test('Stronger precondition', () => {
         const stronger = new Stronger();
 
-        expect(stronger.method(15)).toBe(15);
-        expect(() => stronger.method(5)).toThrow(AssertionError);
-        expect(() => stronger.method(35)).toThrow(AssertionError);
-        expect(stronger.method(25)).toBe(25);
+        nodeAssert.strictEqual(stronger.method(15), 15);
+        nodeAssert.throws(() => stronger.method(5), AssertionError);
+        nodeAssert.throws(() => stronger.method(35), AssertionError);
+        nodeAssert.strictEqual(stronger.method(25), 25);
     });
 });

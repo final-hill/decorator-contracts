@@ -10,7 +10,7 @@ import assertEnsures from './assertEnsures.mjs';
 import assertInvariants from './assertInvariants.mjs';
 import classRegistry from './classRegistry.mjs';
 import ClassRegistration from './ClassRegistration.mjs';
-import { ClassType } from './ClassType.mjs';
+import { type ClassType } from './ClassType.mjs';
 import deepFreeze from './deepFreeze.mjs';
 import Feature from './Feature.mjs';
 import takeWhile from './takeWhile.mjs';

@@ -5,6 +5,8 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
+import { describe, test } from 'node:test';
+import nodeAssert from 'node:assert/strict';
 import AssertionError from '../AssertionError.mjs';
 import assert from '../assert.mjs';
 
@@ -13,8 +15,8 @@ import assert from '../assert.mjs';
  */
 describe('The assertion function must support assertion signatures from TypeScript 3.7+', () => {
     test('Test assertion', () => {
-        expect(assert(true)).toBe(undefined);
-        expect(() => assert(false)).toThrow();
+        nodeAssert.strictEqual(assert(true), undefined);
+        nodeAssert.throws(() => assert(false), AssertionError);
 
         const a: any = 'foo';
 
@@ -26,7 +28,7 @@ describe('The assertion function must support assertion signatures from TypeScri
         // @ts-expect-error
         b = 5 * a;
 
-        expect(b).toBeDefined();
+        nodeAssert(b !== undefined);
     });
 });
 
@@ -34,7 +36,7 @@ describe('The assertion function must support assertion signatures from TypeScri
  * https://github.com/final-hill/decorator-contracts/issues/22
  */
 describe('Assertions must support throwing custom error types', () => {
-    expect(() => assert(false, 'BOOM!')).toThrow(AssertionError);
-    expect(() => assert(false, 'BOOM!')).toThrowError('BOOM!');
-    expect(() => assert(false, 'BOOM!', TypeError)).toThrow(TypeError);
+    nodeAssert.throws(() => assert(false, 'BOOM!'), AssertionError);
+    nodeAssert.throws(() => assert(false, 'BOOM!'), { message: 'BOOM!' });
+    nodeAssert.throws(() => assert(false, 'BOOM!', TypeError), TypeError);
 });

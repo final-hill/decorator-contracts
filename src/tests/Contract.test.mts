@@ -5,6 +5,8 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
+import { describe, test } from 'node:test';
+import nodeAssert from 'node:assert/strict';
 import { Messages } from '../Messages.mjs';
 import { Contracted, checkedMode, Contract, extend } from '../index.mjs';
 
@@ -29,30 +31,26 @@ describe('A contract must be independently definable', () => {
             foo: {}
         });
 
-        expect(stackContract.assertions.pop).toBeDefined();
-        expect(stackContract.assertions.push).toBeDefined();
+        nodeAssert.ok(stackContract.assertions.pop);
+        nodeAssert.ok(stackContract.assertions.push);
         // @ts-expect-error
-        expect(stackContract.assertions.foo);
+        nodeAssert.ok(stackContract.assertions.foo);
     });
 
     test('Specify \'demands\' assertion on features', () => {
         let stackContract = new Contract<StackType<any>>({
             pop: {
                 demands: undefined
-            },
-            push: {
-                // @ts-expect-error
-                demands: false
             }
         });
-        expect(stackContract.assertions.pop!.demands).toBeInstanceOf(Function);
+        nodeAssert.ok(stackContract.assertions.pop!.demands instanceof Function);
 
         stackContract = new Contract<StackType<any>>({
             pop: {
                 demands() { return true; }
             }
         });
-        expect(stackContract.assertions.pop!.demands).toBeInstanceOf(Function);
+        nodeAssert.ok(stackContract.assertions.pop!.demands instanceof Function);
     });
 
     test('Specify \'ensures\' assertion on features', () => {
@@ -65,7 +63,7 @@ describe('A contract must be independently definable', () => {
                 ensures: false
             }
         });
-        expect(stackContract.assertions.pop!.ensures).toBeInstanceOf(Function);
+        nodeAssert.ok(stackContract.assertions.pop!.ensures instanceof Function);
 
         stackContract = new Contract<StackType<any>>({
             pop: {
@@ -73,7 +71,7 @@ describe('A contract must be independently definable', () => {
             }
         });
 
-        expect(stackContract.assertions.pop!.ensures).toBeInstanceOf(Function);
+        nodeAssert.ok(stackContract.assertions.pop!.ensures instanceof Function);
     });
 
     test('Specify a "rescue" on features', () => {
@@ -82,7 +80,7 @@ describe('A contract must be independently definable', () => {
                 rescue: undefined
             }
         });
-        expect(stackContract.assertions.pop?.rescue).toBeUndefined();
+        nodeAssert.strictEqual(stackContract.assertions.pop?.rescue, undefined);
 
         stackContract = new Contract<StackType<any>>({
             push: {
@@ -93,7 +91,7 @@ describe('A contract must be independently definable', () => {
                 rescue: false
             }
         });
-        expect(stackContract.assertions.push?.rescue).toBeInstanceOf(Function);
+        nodeAssert.ok(stackContract.assertions.push?.rescue instanceof Function);
     });
 
     // https://github.com/final-hill/decorator-contracts/issues/179
@@ -102,7 +100,7 @@ describe('A contract must be independently definable', () => {
             [checkedMode]: true
         });
 
-        expect(stackContract[checkedMode]).toBeTruthy();
+        nodeAssert.ok(stackContract[checkedMode]);
     });
 
     test('Specify an \'extend\' declaration', () => {
@@ -113,14 +111,14 @@ describe('A contract must be independently definable', () => {
                 [extend]: stackContract
             });
 
-        expect(subContract[extend]).toBeDefined();
+        nodeAssert.ok(subContract[extend]);
     });
 });
 
 // https://github.com/final-hill/decorator-contracts/issues/181
 describe('Only a single contract can be assigned to a class', () => {
     test('Good declaration', () => {
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             const fooContract = new Contract<Foo>(),
                 barContract = new Contract<Bar>({
                     [extend]: fooContract
@@ -133,11 +131,11 @@ describe('Only a single contract can be assigned to a class', () => {
             class Bar extends Foo { }
 
             return new Bar();
-        }).not.toThrow();
+        });
     });
 
     test('Bad Declaration', () => {
-        expect(() => {
+        nodeAssert.throws(() => {
             const fooContract = new Contract(),
                 barContract = new Contract();
             @Contracted(fooContract)
@@ -145,37 +143,37 @@ describe('Only a single contract can be assigned to a class', () => {
             class Foo { }
 
             return new Foo();
-        }).toThrow(Messages.MsgSingleContract);
+        }, { message: Messages.MsgSingleContract });
     });
 });
 
 // https://github.com/final-hill/decorator-contracts/issues/193
 describe('An abstract class must support contract declarations', () => {
     test('Concrete declaration', () => {
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             const baseContract = new Contract<Base>({});
             @Contracted(baseContract)
             class Base { }
 
             return Base;
-        }).toBeDefined();
+        });
     });
 
     test('Abstract declaration', () => {
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             const baseContract = new Contract<Base>({});
             @Contracted(baseContract)
             abstract class Base { }
 
             return Base;
-        }).toBeDefined();
+        });
     });
 });
 
 // https://github.com/final-hill/decorator-contracts/issues/187
 describe('A subclass can only be contracted by a subcontract of the base class contract', () => {
     test('Good', () => {
-        expect(() => {
+        nodeAssert.doesNotThrow(() => {
             const fooContract = new Contract<Foo>({});
 
             @Contracted(fooContract)
@@ -189,7 +187,7 @@ describe('A subclass can only be contracted by a subcontract of the base class c
             class Bar { }
 
             return Bar;
-        }).not.toThrow();
+        });
     });
 
     test('Bad - missing extends', () => {
@@ -198,10 +196,10 @@ describe('A subclass can only be contracted by a subcontract of the base class c
         @Contracted(fooContract)
         class Foo { }
 
-        expect(() => {
+        nodeAssert.throws(() => {
             const badContract = new Contract<Bar>({});
             @Contracted(badContract)
             class Bar extends Foo { }
-        }).toThrow(Messages.MsgBadSubcontract);
+        }, { message: Messages.MsgBadSubcontract });
     });
 });

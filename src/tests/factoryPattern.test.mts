@@ -6,6 +6,8 @@
  */
 
 import { Contract, Contracted, extend, invariant } from '../index.mjs';
+import { describe, test } from 'node:test';
+import nodeAssert from 'node:assert/strict';
 
 describe('Factory Pattern', () => {
     const factoryContract = new Contract<Factory>();
@@ -35,15 +37,15 @@ describe('Factory Pattern', () => {
     test('Construct Child', () => {
         const c = new Child('a');
 
-        expect(c).toBeInstanceOf(Child);
-        expect(c.value).toBe('a');
+        nodeAssert.strictEqual(c instanceof Child, true);
+        nodeAssert.strictEqual(c.value, 'a');
     });
 
     test('Factory Construct Child', () => {
         const f = new Factory(),
             c = f.child('a');
 
-        expect(c).toBeInstanceOf(Child);
-        expect(c.value).toBe('a');
+        nodeAssert.strictEqual(c instanceof Child, true);
+        nodeAssert.strictEqual(c.value, 'a');
     });
 });

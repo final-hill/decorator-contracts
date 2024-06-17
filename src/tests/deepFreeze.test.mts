@@ -6,6 +6,8 @@
  */
 
 import { deepFreeze } from '../lib/index.mjs';
+import { describe, test } from 'node:test';
+import nodeAssert from 'node:assert/strict';
 
 describe('deepFreeze testing', () => {
     test('Shallow test', () => {
@@ -14,7 +16,7 @@ describe('deepFreeze testing', () => {
         };
 
         deepFreeze(obj);
-        expect(() => obj.prop = 33).toThrow();
+        nodeAssert.throws(() => obj.prop = 33);
     });
 
     test('Deep test', () => {
@@ -25,6 +27,6 @@ describe('deepFreeze testing', () => {
         };
 
         deepFreeze(obj);
-        expect(() => obj.prop1.prop2 = 33).toThrow();
+        nodeAssert.throws(() => obj.prop1.prop2 = 33);
     });
 });

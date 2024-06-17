@@ -5,6 +5,8 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
+import { describe, test } from 'node:test';
+import nodeAssert from 'node:assert/strict';
 import { Messages } from '../Messages.mjs';
 import { checkedMode, Contract, Contracted, invariant } from '../index.mjs';
 
@@ -32,12 +34,12 @@ describe('The `rescue` declaration must preserve the invariant after execution',
 
     test('test', () => {
         const base = new Base();
-        expect(() => base.method1()).toThrow('I am error');
-        expect(base.value).toBe(5);
-        expect(() => {
+        nodeAssert.throws(() => base.method1(), { message: 'I am error' });
+        nodeAssert.strictEqual(base.value, 5);
+        nodeAssert.throws(() => {
             base.method2();
-        }).toThrow(/^Invariant violated/);
-        expect(() => base.value).toThrow(/^Invariant violated/);
+        }, /^Error: Invariant violated/);
+        nodeAssert.throws(() => base.value, /^Error: Invariant violated/);
     });
 });
 
@@ -58,7 +60,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
         }
         const base = new Base();
 
-        expect(base.method()).toBe(7);
+        nodeAssert.strictEqual(base.method(), 7);
     });
 
     test('rescue of method with an error then retrying returns ok', () => {
@@ -78,7 +80,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
             }
         }
         const base = new Base();
-        expect(base.method(0)).toBe(3);
+        nodeAssert.strictEqual(base.method(0), 3);
     });
 
     test('rescue of method with an error then rethrow throws to caller', () => {
@@ -95,7 +97,12 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
             }
         }
         const base = new Base();
-        expect(() => base.method()).toThrow('Rescue throw');
+        try {
+            base.method();
+            nodeAssert.fail('Expected an error to be thrown');
+        } catch (error: any) {
+            nodeAssert.strictEqual(error.message, 'Rescue throw');
+        }
     });
 
     test('rescuing non-error getter returns normal', () => {
@@ -108,7 +115,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
             get value(): number { return 7; }
         }
         const base = new Base();
-        expect(base.value).toBe(7);
+        nodeAssert.strictEqual(base.value, 7);
     });
 
     test('rescuing error getter then retry returns ok', () => {
@@ -136,7 +143,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
             }
         }
         const base = new Base();
-        expect(base.value).toBe(7);
+        nodeAssert.strictEqual(base.value, 7);
     });
 
     test('rescue of error getter then rethrow throws to caller', () => {
@@ -153,7 +160,12 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
             }
         }
         const base = new Base();
-        expect(() => base.value).toThrow('Not Rescued');
+        try {
+            const value = base.value;
+            nodeAssert.fail(`Expected an error to be thrown when getting value${value}`);
+        } catch (error: any) {
+            nodeAssert.strictEqual(error.message, 'Not Rescued');
+        }
     });
 
     test('rescuing non-error setter then getting returns normal', () => {
@@ -169,7 +181,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
         }
         const base = new Base();
         base.value = 12;
-        expect(base.value).toBe(12);
+        nodeAssert.strictEqual(base.value, 12);
     });
 
     test('rescue of error setter then retry then getting returns ok', () => {
@@ -195,7 +207,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
         }
         const base = new Base();
         base.value = NaN;
-        expect(base.value).toBe(0);
+        nodeAssert.strictEqual(base.value, 0);
     });
 
     test('rescue of error setter then rethrow throws error at caller', () => {
@@ -213,7 +225,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
             set value(_: number) { throw new Error('Setter fail'); }
         }
         const base = new Base();
-        expect(() => base.value = 12).toThrow('Rescue fail');
+        nodeAssert.throws(() => base.value = 12, { message: 'Rescue fail' });
     });
 });
 
@@ -222,7 +234,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
  */
 describe('The rescue declarations are enabled in checkedMode and disabled otherwise', () => {
     test('enabled', () => {
-        expect(() => {
+        nodeAssert.throws(() => {
             const baseContract = new Contract<Base>({
                 throws: {
                     rescue() { throw new Error('I am still an Error'); }
@@ -238,11 +250,11 @@ describe('The rescue declarations are enabled in checkedMode and disabled otherw
 
             const base = new Base();
             base.throws('I am Error');
-        }).toThrow('I am still an Error');
+        }, { message: 'I am still an Error' });
     });
 
     test('disabled', () => {
-        expect(() => {
+        nodeAssert.throws(() => {
             const baseContract = new Contract<Base>({
                 [checkedMode]: false,
                 throws: {
@@ -259,7 +271,7 @@ describe('The rescue declarations are enabled in checkedMode and disabled otherw
 
             const base = new Base();
             base.throws('I am Error');
-        }).toThrow('I am Error');
+        }, { message: 'I am Error' });
     });
 });
 
@@ -282,7 +294,7 @@ describe('The `retry` argument of the `rescue` declaration can only be called on
             }
         }
         const base = new Base();
-        expect(base.method(0)).toBe(3);
+        nodeAssert.strictEqual(base.method(0), 3);
     });
 
     test('rescue of method with an error then retrying twice throws', () => {
@@ -305,7 +317,12 @@ describe('The `retry` argument of the `rescue` declaration can only be called on
             }
         }
         const base = new Base();
-        expect(() => base.method(0)).toThrow(Messages.MsgSingleRetry);
+        try {
+            base.method(0);
+            nodeAssert.fail('Expected an error to be thrown');
+        } catch (error: any) {
+            nodeAssert.strictEqual(error.message, Messages.MsgSingleRetry);
+        }
     });
 });
 
@@ -340,11 +357,11 @@ describe('If a `rescue` is executed and the `retry` argument is not called then 
     const base = new Base();
 
     test('Rescued error', () => {
-        expect(base.throwRescue(true)).toBe(true);
+        nodeAssert.strictEqual(base.throwRescue(true), true);
     });
 
     test('Un-rescued error', () => {
-        expect(() => base.throwFail()).toThrow('I am error');
+        nodeAssert.throws(() => base.throwFail(), { message: 'I am error' });
     });
 });
 
@@ -364,7 +381,7 @@ describe('If an exception is thrown in a class feature without a `rescue` define
     }
 
     test('Throwing error without `invariant` is raised to caller', () => {
-        expect(() => new A().method()).toThrow('I am error');
+        nodeAssert.throws(() => new A().method(), { message: 'I am error' });
     });
 
     const contractB = new Contract<B>({
@@ -387,10 +404,10 @@ describe('If an exception is thrown in a class feature without a `rescue` define
     }
 
     test('Throwing error with `invariant`', () => {
-        expect(() => new B().method1()).toThrow('I am error');
-        expect(() => {
+        nodeAssert.throws(() => new B().method1(), { message: 'I am error' });
+        nodeAssert.throws(() => {
             new B().method2();
-        }).toThrow(/^Invariant violated/);
+        }, /^Error: Invariant violated/);
     });
 });
 
@@ -399,12 +416,16 @@ describe('If an exception is thrown in a class feature without a `rescue` define
  */
 describe('If an error is thrown in `demands` the error is raised to the caller', () => {
     const contractA = new Contract<A>({
-        [invariant](self) { return self.value > 0; },
+        [invariant](self) {
+            return self.value > 0;
+        },
         method: {
             rescue(_self, _error, args, _retry) {
                 if (args[0] === -2) throw new Error('Rescue Error');
             },
-            demands(_self, value) { return value >= 0; }
+            demands(_self, value) {
+                return value >= 0;
+            }
         },
         methodEmpty: {
             demands() { return false; },
@@ -420,19 +441,20 @@ describe('If an error is thrown in `demands` the error is raised to the caller',
     class A {
         accessor value = 1;
 
-        method(value: number): void { this.value = value; }
+        method(value: number): void {
+            this.value = value;
+        }
         methodEmpty(): void { }
         methodError(): void { throw new Error('Feature Error'); }
     }
 
     test('Error pathways', () => {
-        expect(() => new A().method(1)).not.toThrow();
-        expect(() => new A().method(0)).toThrow(/^Invariant violated/);
-        expect(() => new A().method(-1)).toThrow(/^demands not met/);
-        expect(() => new A().method(-2)).not.toThrow(/^Rescue Error/);
-
-        expect(() => new A().methodEmpty()).toThrow(/^demands not met/);
-        expect(() => new A().methodError()).toThrow(/^Rescue Error/);
+        nodeAssert.doesNotThrow(() => new A().method(1));
+        nodeAssert.throws(() => new A().method(0), /^Error: Invariant violated/);
+        nodeAssert.throws(() => new A().method(-1), /^Error: demands not met/);
+        nodeAssert.throws(() => new A().method(-2), /^Error: demands not met/);
+        nodeAssert.throws(() => new A().methodEmpty(), /^Error: demands not met/);
+        nodeAssert.throws(() => new A().methodError(), /^Error: Rescue Error/);
     });
 });
 
@@ -467,11 +489,10 @@ describe('If an error is raised in an `ensures` then the associated rescue is ex
     }
 
     test('Error pathways', () => {
-        expect(() => new A().method(1)).not.toThrow();
-        expect(() => new A().method(0)).toThrow(/^ensures not met/);
-        expect(() => new A().method(-1)).toThrow(/^Invariant violated/);
-        expect(() => new A().method(-2)).not.toThrow(/^Rescue Error/);
-        expect(() => new A().methodEmpty()).toThrow(/^ensures not met/);
-        expect(() => new A().methodError()).toThrow(/^Rescue Error/);
+        nodeAssert.doesNotThrow(() => new A().method(1));
+        nodeAssert.throws(() => new A().method(0), /^Error: ensures not met/);
+        nodeAssert.throws(() => new A().method(-1), /^Error: Invariant violated/);
+        nodeAssert.throws(() => new A().methodEmpty(), /^Error: ensures not met/);
+        nodeAssert.throws(() => new A().methodError(), /^Error: Rescue Error/);
     });
 });
