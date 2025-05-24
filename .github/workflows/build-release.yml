@@ -15,9 +15,9 @@ jobs:
         node-version: [22.x]
     
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
       - name: Cache Node.js modules
@@ -39,7 +39,7 @@ jobs:
       - name: Rename package to generic name
         run: mv *.tgz final-hill-decorator-contracts.tgz
       - name: Upload package
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v4
         with:
           name: artifact
           path: final-hill-decorator-contracts.tgz
@@ -55,13 +55,13 @@ jobs:
     
     steps:
       - name: Download artifact
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@v4
         with:
           name: artifact
       - name: Extract package from artifact
         run: tar -xf artifact/final-hill-decorator-contracts.tgz --strip 1
       - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           registry-url: https://registry.npmjs.org
