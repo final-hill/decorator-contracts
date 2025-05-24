@@ -15,7 +15,7 @@ export const demands: DemandsDecorator = (predicate) => (_feature, ctx) => {
     assert(["method", "getter", "setter"].includes(ctx.kind), '@demands decorator can only be applied to methods, getters, or setters');
     assert(ctx.static === false, '@demands decorator cannot be applied to static features');
     assert(ctx.private === false, '@demands decorator cannot be applied to private/protected features');
-    assert(!String(ctx.name).startsWith('_'), '@demands decorator cannot be applied to private/protect features');
+    assert(!String(ctx.name).startsWith('_'), '@demands decorator cannot be applied to private/protected features');
 
     ctx.addInitializer(function () {
         assert(this instanceof Contracted, '@demands decorator can only be applied to classes that extend Contracted');
