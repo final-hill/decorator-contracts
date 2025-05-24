@@ -1,10 +1,3 @@
-/*!
- * @license
- * Copyright (C) 2024 Final Hill LLC
- * SPDX-License-Identifier: AGPL-3.0-only
- * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
- */
-
 /**
  * Biconditional.
  * p ↔ q.
@@ -12,13 +5,19 @@
  * An example of usage is the encoding of "You can ride the train if and only if you have a ticket"
  * This is logically equivalent to: implies(p,q) && implies(q,p)
  *
- * @example
- * iff(person.hasTicket, person.ridesTrain)
+ * @param p - The first boolean value (the antecedent).
+ * @param q - The second boolean value (the consequent).
+ * @returns - The result (biconditional) of p and q.
  *
- * @param {boolean} p - The antecedent
- * @param {boolean} q - The consequent
- * @returns {boolean} - The result
+ * @example
+ * ```ts
+ * import { iff } from '@final-hill/decorator-contracts';
+ *
+ * // You can ride the train if and only if you have a ticket
+ * iff(person.hasTicket, person.ridesTrain)
+ * ```
  */
-export default function iff(p: boolean, q: boolean): boolean {
+
+export function iff(p: boolean, q: boolean): boolean {
     return (p && q) || (!p && !q);
 }

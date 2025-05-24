@@ -1,109 +1,68 @@
-/*!
- * @license
- * Copyright (C) 2024 Final Hill LLC
- * SPDX-License-Identifier: AGPL-3.0-only
- * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
- */
-
-import { Contract, Contracted, invariant } from '../index.mjs';
+import { Contracted, demands, ensures, invariant } from '@final-hill/decorator-contracts';
 import { describe, test } from 'node:test';
 import nodeAssert from 'node:assert/strict';
 
-interface StackType<T> {
-    readonly limit: number;
-    readonly size: number;
-    clear(): void;
-    isEmpty(): boolean;
-    isFull(): boolean;
-    pop(): T;
-    push(item: T): void;
-    top(): T;
-}
-
-const stackContract = new Contract<StackType<any>>({
-    [invariant](self) {
-        return self.isEmpty() == (self.size == 0) &&
-            self.isFull() == (self.size == self.limit) &&
-            self.size >= 0 && self.size <= self.limit;
-    },
-    pop: {
-        demands(self) { return !self.isEmpty(); },
-        ensures(self, old) {
-            return !self.isFull() &&
-                self.size == old.size - 1;
-        }
-    },
-    push: {
-        demands(self) { return !self.isFull(); },
-        ensures(self, old, item) {
-            return !self.isEmpty() &&
-                self.top === item &&
-                self.size === old.size + 1;
-        }
-    },
-    top: {
-        demands(self) {
-            return !self.isEmpty();
-        }
-    }
-});
-
-@Contracted(stackContract)
-class Stack<T> implements StackType<T> {
-    #implementation: T[] = [];
-    #size = 0;
-    #limit: number;
+@invariant((self: Stack<any>) =>
+    self.isEmpty() == (self.size == 0) &&
+    self.isFull() == (self.size == self.limit) &&
+    self.size >= 0 && self.size <= self.limit
+)
+class Stack<T> extends Contracted {
+    private _implementation: T[] = [];
+    private _size = 0;
+    private _limit: number;
 
     constructor(limit: number) {
-        this.#limit = limit;
+        super()
+        this._limit = limit;
     }
 
-    get limit() {
-        return this.#limit;
-    }
+    get limit() { return this._limit; }
 
-    get size(): number {
-        return this.#size;
-    }
+    get size(): number { return this._size; }
 
     clear(): void {
-        this.#implementation = [];
-        this.#size = 0;
+        this._implementation = [];
+        this._size = 0;
     }
 
-    isEmpty(): boolean {
-        return this.#implementation.length == 0;
-    }
+    isEmpty(): boolean { return this._implementation.length == 0; }
+    isFull(): boolean { return this._implementation.length == this.limit; }
 
-    isFull(): boolean {
-        return this.#implementation.length == this.limit;
-    }
-
+    @demands((self: Stack<any>) => !self.isEmpty())
+    @ensures((self: Stack<any>, _args, old: Stack<any>) =>
+        !self.isFull() && self.size == old.size - 1)
     pop(): T {
-        this.#size--;
+        this._size--;
 
-        return this.#implementation.pop()!;
+        return this._implementation.pop()!;
     }
 
+    @demands((self: Stack<any>) => !self.isFull())
+    @ensures((self, [item], old: Stack<any>) =>
+        !self.isEmpty() &&
+        self.top === item &&
+        self.size === old.size + 1
+    )
     push(item: T): void {
-        this.#size++;
-        this.#implementation.push(item);
+        this._size++;
+        this._implementation.push(item);
     }
 
+    @demands((self: Stack<any>) => !self.isEmpty())
     top(): T {
-        return this.#implementation[this.#implementation.length - 1];
+        return this._implementation[this._implementation.length - 1];
     }
 }
 
 describe('Testing Stack', () => {
     test('Creating stack', () => {
-        nodeAssert.doesNotThrow(() => new Stack(3));
-        nodeAssert.throws(() => new Stack(-1));
+        nodeAssert.doesNotThrow(() => Stack.new(3));
+        nodeAssert.throws(() => Stack.new(-1));
     });
 
     test('popping empty stack throws', () => {
-        const myStack = new Stack(3);
-
-        nodeAssert.throws(() => myStack.pop(), /^Error: demands not met/);
+        const myStack = Stack.new(3);
+        nodeAssert.throws(() => myStack.pop(), /^Error: No demands were satisfied/);
     });
 });

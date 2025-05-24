@@ -1,6 +1,6 @@
 {
     "name": "@final-hill/decorator-contracts",
-    "version": "0.25.3",
+    "version": "1.0.0",
     "description": "Code Contracts for TypeScript and ECMAScript classes",
     "type": "module",
     "exports": {
@@ -13,8 +13,10 @@
         "prebuild": "npm run lint",
         "build": "webpack",
         "lint": "eslint src/ --ext .mts --fix",
-        "test": "globstar -- node --import tsx --test \"src/**/*.test.mts\""
+        "pretest": "npm run build",
+        "test": "globstar -- node --import tsx --test ./src/tests/*.test.mts"
     },
+    "homepage": "https://github.com/final-hill/decorator-contracts#readme",
     "repository": {
         "type": "git",
         "url": "https://github.com/final-hill/decorator-contracts"
@@ -47,19 +49,20 @@
     "author": "Michael L Haufe <michael.haufe@final-hill.com> (https://final-hill.com)",
     "license": "AGPL-3.0-only",
     "devDependencies": {
-        "@types/node": "^20.14.2",
-        "@typescript-eslint/eslint-plugin": "^7.13.0",
-        "@typescript-eslint/parser": "^7.13.0",
-        "eslint": "^8.57.0",
-        "eslint-plugin-header": "^3.1.1",
-        "eslint-plugin-import": "^2.29.1",
-        "eslint-webpack-plugin": "^4.2.0",
+        "@eslint/js": "^9.27.0",
+        "@eslint/json": "^0.12.0",
+        "@eslint/markdown": "^6.4.0",
+        "@types/node": "^22.15.21",
+        "eslint": "^9.27.0",
+        "eslint-webpack-plugin": "^5.0.1",
+        "globals": "^16.1.0",
         "globstar": "^1.0.0",
-        "ts-loader": "^9.5.1",
-        "tsx": "^4.15.6",
-        "typescript": "^5.4.5",
-        "webpack": "^5.92.0",
-        "webpack-cli": "^5.1.4"
+        "ts-loader": "^9.5.2",
+        "tsx": "^4.19.4",
+        "typescript": "^5.8.3",
+        "typescript-eslint": "^8.32.1",
+        "webpack": "^5.99.9",
+        "webpack-cli": "^6.0.1"
     },
     "files": [
         "dist"

@@ -3,6 +3,12 @@
         "source.fixAll.eslint": "explicit"
     },
     "editor.formatOnSave": true,
+    "explorer.fileNesting.enabled": true,
+    "explorer.fileNesting.expand": false,
+    "explorer.fileNesting.patterns": {
+        "*.mjs": "${basename}.mjs.map, ${basename}.d.mts",
+        "*.mts": "${basename}.test.mts"
+    },
     "typescript.tsdk": "node_modules\\typescript\\lib",
     "cSpell.ignorePaths": [
         "node_modules",

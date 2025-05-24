@@ -1,56 +1,45 @@
-/*!
- * @license
- * Copyright (C) 2024 Final Hill LLC
- * SPDX-License-Identifier: AGPL-3.0-only
- * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
- */
-
 import { describe, test } from 'node:test';
 import nodeAssert from 'node:assert/strict';
-import { AssertionError, checkedMode, Contract, Contracted, extend, invariant } from '../index.mjs';
-import { Messages } from '../Messages.mjs';
+import { AssertionError, checkedMode, Contracted, invariant } from '@final-hill/decorator-contracts';
 
-// https://github.com/final-hill/decorator-contracts/issues/30
 describe('The subclasses of a contracted class must obey the invariants', () => {
-    const fooContract: Contract<Foo> = new Contract<Foo>({
-        [checkedMode]: true,
-        [invariant]: self => self.value >= 0
-    });
-
-    @Contracted(fooContract)
-    class Foo {
-        accessor value = 0;
+    @invariant((instance) => instance.value >= 0)
+    class Foo extends Contracted {
+        protected _value = 0;
+        get value() { return this._value; }
+        set value(v: number) { this._value = v; }
 
         inc(): void { this.value++; }
         dec(): void { this.value--; }
     }
 
     class Bar extends Foo { }
-    test('Test subclassing in debug mode', () => {
+
+    test('Test subclassing in checked mode', () => {
         nodeAssert.doesNotThrow(() => {
-            const bar = new Bar();
+            const bar = Bar.new();
             bar.inc();
             bar.dec();
         });
 
         nodeAssert.throws(() => {
-            const bar = new Bar();
+            const bar = Bar.new();
             bar.dec();
         }, AssertionError);
 
         nodeAssert.doesNotThrow(() => {
-            const bar = new Bar();
+            const bar = Bar.new();
             bar.value = 3;
         });
 
         nodeAssert.doesNotThrow(() => {
-            const bar = new Bar();
+            const bar = Bar.new();
 
             return bar.value == 0;
         });
 
         nodeAssert.throws(() => {
-            const bar = new Bar();
+            const bar = Bar.new();
             bar.value = -1;
         }, AssertionError);
 
@@ -64,42 +53,41 @@ describe('The subclasses of a contracted class must obey the invariants', () => 
         }
 
         nodeAssert.doesNotThrow(() => {
-            const baz = new Baz();
+            const baz = Baz.new();
             baz.inc();
             baz.dec();
         });
 
         nodeAssert.throws(() => {
-            const baz = new Baz();
+            const baz = Baz.new();
             baz.dec();
         }, AssertionError);
 
         nodeAssert.doesNotThrow(() => {
-            const baz = new Baz();
+            const baz = Baz.new();
             baz.value = 3;
         });
 
         nodeAssert.doesNotThrow(() => {
-            const baz = new Baz();
+            const baz = Baz.new();
 
             return baz.value == 0;
         });
 
         nodeAssert.throws(() => {
-            const baz = new Baz();
+            const baz = Baz.new();
             baz.value = -1;
         }, AssertionError);
     });
 
-    test('Test subclassing in prod mode', () => {
-        const fooContract: Contract<Foo> = new Contract<Foo>({
-            [checkedMode]: false,
-            [invariant]: self => self.value >= 0
-        });
+    test('Test subclassing in unchecked mode', () => {
+        Contracted[checkedMode] = false;
 
-        @Contracted(fooContract)
-        class Foo {
-            accessor value = 0;
+        @invariant(self => self.value >= 0)
+        class Foo extends Contracted {
+            protected _value = 0;
+            get value() { return this._value; }
+            set value(v: number) { this._value = v; }
 
             inc(): void { this.value++; }
             dec(): void { this.value--; }
@@ -108,98 +96,80 @@ describe('The subclasses of a contracted class must obey the invariants', () => 
         class Bar extends Foo { }
 
         nodeAssert.doesNotThrow(() => {
-            const bar = new Bar();
+            const bar = Bar.new();
             bar.inc();
             bar.dec();
         });
 
         nodeAssert.doesNotThrow(() => {
-            const bar = new Bar();
+            const bar = Bar.new();
             bar.dec();
         });
 
         nodeAssert.doesNotThrow(() => {
-            const bar = new Bar();
+            const bar = Bar.new();
             bar.value = 3;
         });
 
         nodeAssert.doesNotThrow(() => {
-            const bar = new Bar();
+            const bar = Bar.new();
 
             return bar.value == 0;
         });
 
         nodeAssert.doesNotThrow(() => {
-            const bar = new Bar();
+            const bar = Bar.new();
             bar.value = -1;
         });
+
+        Contracted[checkedMode] = true;
     });
 
     test('Subcontract with private field', () => {
-        const baseContract = new Contract<Base>({});
-        @Contracted(baseContract)
-        class Base { }
+        @invariant(() => true)
+        class Base extends Contracted { }
 
-        const subContract = new Contract<Sub>({
-            [extend]: baseContract,
-            [invariant](self) { return self.value >= 0; }
-        });
-
-        @Contracted(subContract)
+        @invariant((self) => self.value >= 0)
         class Sub extends Base {
-            #value = 0;
-            get value() { return this.#value; }
+            protected _value = 0;
+            get value() { return this._value; }
         }
 
         nodeAssert.doesNotThrow(() =>
-            new Sub()
+            Sub.new()
         );
     });
 });
 
-/**
- * https://github.com/final-hill/decorator-contracts/issues/31
- */
 describe('A truthy invariant does not throw an exception when evaluated', () => {
     test('Construction does not throw', () => {
         nodeAssert.doesNotThrow(() => {
-            const enabledContract: Contract<Foo> = new Contract<Foo>({
-                [checkedMode]: true,
-                [invariant]: self => self instanceof Foo
-            });
-            @Contracted(enabledContract)
-            class Foo { }
+            @invariant(self => self instanceof Foo)
+            class Foo extends Contracted { }
 
-            return new Foo();
+            return Foo.new();
         });
         nodeAssert.doesNotThrow(() => {
-            const disabledContract: Contract<Foo> = new Contract<Foo>({
-                [checkedMode]: false,
-                [invariant]: self => self instanceof Foo
-            });
-            @Contracted(disabledContract)
-            class Foo { }
+            @invariant(self => self instanceof Foo)
+            class Foo extends Contracted { }
 
-            return new Foo();
+            return Foo.new();
         });
     });
 
     test('Method does not throw', () => {
         nodeAssert.doesNotThrow(() => {
-            const enabledContract: Contract<Foo> = new Contract<Foo>({
-                [checkedMode]: true,
-                [invariant]: self => self.value >= 0
-            });
-
-            @Contracted(enabledContract)
-            class Foo {
-                accessor value = 0;
+            @invariant(self => self.value >= 0)
+            class Foo extends Contracted {
+                protected _value = 0;
+                get value() { return this._value; }
+                set value(v: number) { this._value = v; }
 
                 dec(): void { this.value--; }
                 inc(): void { this.value++; }
             }
 
-            const foo = new Foo();
+            const foo = Foo.new();
             foo.inc();
             foo.dec();
 
@@ -207,74 +177,68 @@ describe('A truthy invariant does not throw an exception when evaluated', () => 
         });
 
         nodeAssert.doesNotThrow(() => {
-            const disabledContract: Contract<Foo> = new Contract<Foo>({
-                [checkedMode]: false,
-                [invariant]: self => self.value >= 0
-            });
-
-            @Contracted(disabledContract)
-            class Foo {
-                accessor value = 0;
+            @invariant(self => self.value >= 0)
+            class Foo extends Contracted {
+                protected _value = 0;
+                get value() { return this._value; }
+                set value(v: number) { this._value = v; }
 
                 dec(): void { this.value--; }
                 inc(): void { this.value++; }
             }
 
-            const foo = new Foo();
+            const foo = Foo.new();
             foo.inc();
             foo.dec();
 
             return foo;
         });
     });
-});
+})
 
-/**
- * https://github.com/final-hill/decorator-contracts/issues/32
- */
 describe('A falsy invariant throws an exception when evaluated', () => {
     test('Construction throws in checkMode', () => {
         nodeAssert.throws(() => {
-            const badContract = new Contract<Foo>({
-                [invariant]: self => self instanceof Set
-            });
+            @invariant(self => self instanceof Set)
+            class Foo extends Contracted { }
 
-            @Contracted(badContract)
-            class Foo { }
-
-            return new Foo();
+            return Foo.new();
         }, AssertionError);
     });
 
     test('Construction does not throw in unchecked mode', () => {
+        Contracted[checkedMode] = false;
+
         nodeAssert.doesNotThrow(() => {
-            const badContract: Contract<Foo> = new Contract<Foo>({
-                [checkedMode]: false,
-                [invariant]: self => self instanceof Map
-            });
+            Contracted[checkedMode] = false;
 
-            @Contracted(badContract)
-            class Foo { }
+            @invariant(self => self instanceof Map)
+            class Foo extends Contracted { }
 
-            return new Foo();
+            const result = Foo.new();
+
+            Contracted[checkedMode] = true;
+
+            return result
+
         });
+
+        Contracted[checkedMode] = true;
     });
 
     test('Method throws in checkMode', () => {
         nodeAssert.throws(() => {
-            const fooContract: Contract<Foo> = new Contract<Foo>({
-                [invariant]: self => self.value === 37
-            });
-
-            @Contracted(fooContract)
-            class Foo {
-                accessor value = 37;
+            @invariant(self => self.value === 37)
+            class Foo extends Contracted {
+                protected _value = 37;
+                get value() { return this._value; }
+                set value(v: number) { this._value = v; }
 
                 dec(): void { this.value--; }
                 inc(): void { this.value++; }
             }
 
-            const foo = new Foo();
+            const foo = Foo.new();
             foo.inc();
             foo.dec();
 
@@ -283,104 +247,95 @@ describe('A falsy invariant throws an exception when evaluated', () => {
     });
 
     test('Method does not throw in unchecked mode', () => {
-        nodeAssert.doesNotThrow(() => {
-            const fooContract: Contract<Foo> = new Contract<Foo>({
-                [checkedMode]: false,
-                [invariant]: self => self.value === 37
-            });
+        Contracted[checkedMode] = false;
 
-            @Contracted(fooContract)
-            class Foo {
-                accessor value = 37;
+        nodeAssert.doesNotThrow(() => {
+            @invariant(self => self.value === 37)
+            class Foo extends Contracted {
+                protected _value = 37;
+                get value() { return this._value; }
+                set value(v: number) { this._value = v; }
 
                 dec(): void { this.value--; }
                 inc(): void { this.value++; }
             }
 
-            const foo = new Foo();
+            Contracted[checkedMode] = false;
+
+            const foo = Foo.new();
             foo.inc();
             foo.dec();
 
+            Contracted[checkedMode] = true;
+
             return foo;
         });
+
+        Contracted[checkedMode] = true;
     });
 });
 
-/**
- * https://github.com/final-hill/decorator-contracts/issues/33
- */
 describe('Invariants are evaluated after the associated class is constructed', () => {
     test('truthy construction does not throw in checked and unchecked mode', () => {
         nodeAssert.doesNotThrow(() => {
-            const enabledContract: Contract<Foo> = new Contract<Foo>({
-                [invariant]: self => self instanceof Foo
-            });
+            @invariant(self => self instanceof Foo)
+            class Foo extends Contracted { }
 
-            @Contracted(enabledContract)
-            class Foo { }
-
-            return new Foo();
+            return Foo.new();
         });
 
         nodeAssert.doesNotThrow(() => {
-            const disabledContract: Contract<Foo> = new Contract<Foo>({
-                [checkedMode]: false,
-                [invariant]: self => self instanceof Foo
-            });
+            Contracted[checkedMode] = false;
 
-            @Contracted(disabledContract)
-            class Foo { }
+            @invariant(self => self instanceof Foo)
+            class Foo extends Contracted { }
 
-            return new Foo();
+            const result = Foo.new();
+
+            Contracted[checkedMode] = true;
+
+            return result
         });
     });
 
     test('falsy construction throws in checked mode', () => {
         nodeAssert.throws(() => {
-            const fooContract: Contract<Foo> = new Contract<Foo>({
-                [invariant]: self => self instanceof Array
-            });
+            @invariant(self => self instanceof Array)
+            class Foo extends Contracted { }
 
-            @Contracted(fooContract)
-            class Foo { }
-
-            return new Foo();
+            return Foo.new();
         });
     });
 
     test('falsy construction does not throw in unchecked mode', () => {
         nodeAssert.doesNotThrow(() => {
-            const fooContract: Contract<Foo> = new Contract<Foo>({
-                [checkedMode]: false,
-                [invariant]: self => self instanceof Error
-            });
+            Contracted[checkedMode] = false;
 
-            @Contracted(fooContract)
-            class Foo { }
+            @invariant(self => self instanceof Error)
+            class Foo extends Contracted { }
 
-            return new Foo();
+            const result = Foo.new();
+
+            Contracted[checkedMode] = true;
+
+            return result;
         });
     });
 });
 
-/**
- * https://github.com/final-hill/decorator-contracts/issues/34
- */
 describe('An invariant is evaluated before and after every method call on the associated class', () => {
-    test('Test method call in checked kMode', () => {
-        const fooContract: Contract<Foo> = new Contract<Foo>({
-            [invariant]: self => self.value >= 0
-        });
-
-        @Contracted(fooContract)
-        class Foo {
-            accessor value = 0;
+    test('Test method call in checked mode', () => {
+        @invariant(self => self.value >= 0)
+        class Foo extends Contracted {
+            protected _value = 0;
+            get value() { return this._value; }
+            set value(v: number) { this._value = v; }
 
             inc(): void { this.value++; }
             dec(): void { this.value--; }
         }
 
-        const foo = new Foo();
+        const foo = Foo.new();
 
         nodeAssert.doesNotThrow(() => {
             foo.inc();
@@ -396,20 +351,19 @@ describe('An invariant is evaluated before and after every method call on the as
     });
 
     test('Test method call in unchecked mode', () => {
-        const fooContract: Contract<Foo> = new Contract<Foo>({
-            [checkedMode]: false,
-            [invariant]: self => self.value >= 0
-        });
+        Contracted[checkedMode] = false;
 
-        @Contracted(fooContract)
-        class Foo {
-            accessor value = 0;
+        @invariant(self => self.value >= 0)
+        class Foo extends Contracted {
+            protected _value = 0;
+            get value() { return this._value; }
+            set value(v: number) { this._value = v; }
 
             inc(): void { this.value++; }
             dec(): void { this.value--; }
         }
 
-        const foo = new Foo();
+        const foo = Foo.new();
 
         nodeAssert.doesNotThrow(() => {
             foo.inc();
@@ -422,68 +376,34 @@ describe('An invariant is evaluated before and after every method call on the as
         nodeAssert.doesNotThrow(() => {
             foo.dec();
         });
+
+        Contracted[checkedMode] = true;
     });
 });
 
-/**
- * https://github.com/final-hill/decorator-contracts/issues/35
- */
-describe('Public properties must be forbidden', () => {
-    test('Class without public properties', () => {
-        nodeAssert.doesNotThrow(() => {
-            @Contracted()
-            class Foo {
-                accessor value = 10;
-            }
-
-            return new Foo();
-        });
-
-        nodeAssert.throws(() => {
-            @Contracted()
-            class Foo {
-                val = 10;
-                get value() { return this.val; }
-                set value(v) { this.val = v; }
-            }
-
-            return new Foo();
-        }, { message: Messages.MsgNoProperties });
-    });
-});
-
-/**
- * https://github.com/final-hill/decorator-contracts/issues/38
- */
 describe('In checked mode the invariant is evaluated', () => {
-    test('Construction throws in checkMode', () => {
+    test('Constructor throws in checkMode', () => {
         nodeAssert.throws(() => {
-            const fooContract = new Contract<Foo>({
-                [invariant](self) { return self instanceof Array; }
-            });
+            @invariant(self => self instanceof Array)
+            class Foo extends Contracted { }
 
-            @Contracted(fooContract)
-            class Foo { }
-
-            return new Foo();
+            return Foo.new();
         }, AssertionError);
     });
 
     test('Method throws in checkMode', () => {
         nodeAssert.throws(() => {
-            const fooContract = new Contract<Foo>({
-                [invariant](self) { return self.value === 37; }
-            });
-
-            @Contracted(fooContract)
-            class Foo {
-                accessor value = 37;
+            @invariant(self => self.value === 37)
+            class Foo extends Contracted {
+                protected _value = 37;
+                get value() { return this._value; }
+                set value(v: number) { this._value = v; }
 
                 dec(): void { this.value--; }
                 inc(): void { this.value++; }
             }
 
-            const foo = new Foo();
+            const foo = Foo.new();
             foo.inc();
             foo.dec();
 
@@ -492,15 +412,14 @@ describe('In checked mode the invariant is evaluated', () => {
     });
 
     test('Test getter/setter', () => {
-        const fooContract = new Contract<Foo>({
-            [invariant](self) { return self.value >= 0; }
-        });
-        @Contracted(fooContract)
-        class Foo {
-            accessor value = 0;
+        @invariant(self => self.value >= 0)
+        class Foo extends Contracted {
+            protected _value = 0;
+            get value() { return this._value; }
+            set value(v: number) { this._value = v; }
         }
 
-        const foo = new Foo();
+        const foo = Foo.new();
 
         nodeAssert.doesNotThrow(() => {
             foo.value = 3;
@@ -512,221 +431,169 @@ describe('In checked mode the invariant is evaluated', () => {
     });
 });
 
-/**
- * https://github.com/final-hill/decorator-contracts/issues/39
- */
 describe('In unchecked mode the invariant is not evaluated', () => {
     test('Construction does not throw', () => {
         nodeAssert.doesNotThrow(() => {
-            const fooContract = new Contract<Foo>({
-                [checkedMode]: false,
-                [invariant](self) {
-                    return self instanceof Array;
-                }
-            });
-            @Contracted(fooContract)
-            class Foo { }
+            Contracted[checkedMode] = false;
 
-            return new Foo();
+            @invariant(self => self instanceof Array)
+            class Foo extends Contracted { }
+
+            const result = Foo.new();
+
+            Contracted[checkedMode] = true;
+
+            return result
         });
     });
 
     test('Method does not throw', () => {
         nodeAssert.doesNotThrow(() => {
-            const fooContract = new Contract<Foo>({
-                [checkedMode]: false,
-                [invariant](self) {
-                    return self.value === 42;
-                }
-            });
+            Contracted[checkedMode] = false;
 
-            @Contracted(fooContract)
-            class Foo {
-                accessor value = 0;
+            @invariant(self => self.value === 42)
+            class Foo extends Contracted {
+                protected _value = 0;
+                get value() { return this._value; }
+                set value(v: number) { this._value = v; }
 
                 dec(): void { this.value--; }
                 inc(): void { this.value++; }
             }
 
-            const foo = new Foo();
+            const foo = Foo.new();
             foo.inc();
             foo.dec();
+
+            Contracted[checkedMode] = true;
 
             return foo;
         });
     });
 });
 
-/**
- * https://github.com/final-hill/decorator-contracts/issues/40
- */
 describe('A subclass with its own invariants must enforce all ancestor invariants', () => {
     test('Checked Mode', () => {
         nodeAssert.doesNotThrow(() => {
-            const baseContract = new Contract<Base>({
-                [invariant]: self => self instanceof Base && self != null
-            }),
-                subContract = new Contract<Sub>({
-                    [extend]: baseContract,
-                    [invariant]: self => self instanceof Sub
-                });
+            @invariant(self => self instanceof Base && self != null)
+            class Base extends Contracted { }
 
-            @Contracted(baseContract)
-            class Base { }
-
-            @Contracted(subContract)
+            @invariant(self => self instanceof Sub)
             class Sub extends Base { }
 
-            return new Sub();
+            return Sub.new();
         });
 
         nodeAssert.throws(() => {
-            const baseContract = new Contract<Base>({
-                [invariant]: self => self instanceof Array
-            }),
-                subContract = new Contract<Sub>({
-                    [extend]: baseContract,
-                    [invariant]: self => self instanceof Sub
-                });
+            @invariant(self => self instanceof Array)
+            class Base extends Contracted { }
 
-            @Contracted(baseContract)
-            class Base { }
-
-            @Contracted(subContract)
+            @invariant(self => self instanceof Sub)
             class Sub extends Base { }
 
-            return new Sub();
+            return Sub.new();
         }, AssertionError);
 
         nodeAssert.doesNotThrow(() => {
-            const baseContract = new Contract<Base>({
-                [invariant]: self => self instanceof Base
-            }),
-                subContract = new Contract<Sub>({
-                    [extend]: baseContract,
-                    [invariant]: self => self instanceof Array
-                });
+            @invariant(self => self instanceof Base)
+            class Base extends Contracted { }
 
-            @Contracted(baseContract)
-            class Base { }
-
-            @Contracted(subContract)
+            @invariant(self => self instanceof Array)
             class Sub extends Base { }
 
-            return new Base();
+            console.log('Sub:', Sub.name);
+
+            return Base.new();
         });
     });
 
     test('Unchecked mode both contracts', () => {
         nodeAssert.doesNotThrow(() => {
-            const baseContract = new Contract<Base>({
-                [checkedMode]: false,
-                [invariant]: () => false
-            }),
-                subContract = new Contract<Sub>({
-                    [checkedMode]: false,
-                    [extend]: baseContract,
-                    [invariant]: () => false
-                });
+            Contracted[checkedMode] = false;
 
-            @Contracted(baseContract)
-            class Base { }
+            @invariant(() => false)
+            class Base extends Contracted { }
 
-            @Contracted(subContract)
+            @invariant(() => false)
             class Sub extends Base { }
 
-            return new Sub();
+            const result = Sub.new();
+
+            Contracted[checkedMode] = true;
+
+            return result;
         });
     });
 
     test('Unchecked mode base contract', () => {
         nodeAssert.doesNotThrow(() => {
-            const baseContract = new Contract<Base>({
-                [checkedMode]: false,
-                [invariant]: () => false
-            }),
-                subContract = new Contract<Sub>({
-                    [checkedMode]: true,
-                    [extend]: baseContract,
-                    [invariant]: () => true
-                });
+            Contracted[checkedMode] = false;
 
-            @Contracted(baseContract)
-            class Base { }
+            @invariant(() => false)
+            class Base extends Contracted { }
 
-            @Contracted(subContract)
+            @invariant(() => true)
             class Sub extends Base { }
 
-            return new Sub();
+            const result = Sub.new();
+
+            Contracted[checkedMode] = true;
+
+            return result
         });
     });
 
     test('Unchecked mode sub contract', () => {
         nodeAssert.throws(() => {
-            const baseContract = new Contract<Base>({
-                [checkedMode]: true,
-                [invariant]: () => false
-            }),
-                subContract = new Contract<Sub>({
-                    [checkedMode]: false,
-                    [extend]: baseContract,
-                    [invariant]: () => true
-                });
+            @invariant(() => false)
+            class Base extends Contracted { }
 
-            @Contracted(baseContract)
-            class Base { }
-
-            @Contracted(subContract)
+            @invariant(() => true)
             class Sub extends Base { }
 
-            return new Sub();
+            const result = Sub.new();
+
+            return result;
         }, AssertionError);
+
         nodeAssert.doesNotThrow(() => {
-            const baseContract = new Contract<Base>({
-                [checkedMode]: true,
-                [invariant]: () => true
-            }),
-                subContract = new Contract<Sub>({
-                    [checkedMode]: false,
-                    [extend]: baseContract,
-                    [invariant]: () => false
-                });
+            Contracted[checkedMode] = false;
+            @invariant(() => true)
+            class Base extends Contracted { }
 
-            @Contracted(baseContract)
-            class Base { }
-
-            @Contracted(subContract)
+            @invariant(() => false)
             class Sub extends Base { }
 
-            return new Sub();
+            const result = Sub.new();
+            Contracted[checkedMode] = true;
+
+            return result
         });
     });
 });
 
-// https://github.com/final-hill/decorator-contracts/issues/217
 describe('Third-party features applied to a contracted class are subject to its invariant', () => {
-    const fooContract: Contract<Foo> = new Contract<Foo>({
-        [checkedMode]: true,
-        [invariant]: self => self.value >= 0
-    });
-
-    @Contracted(fooContract)
-    class Foo {
-        accessor value = 0;
+    @invariant(self => self.value >= 0)
+    class Foo extends Contracted {
+        protected _value = 0;
+        get value() { return this._value; }
+        set value(v: number) { this._value = v; }
 
         inc(): void { this.value++; }
         dec(): void { this.value--; }
     }
 
     class Bar {
-        accessor value = 0;
+        protected _value = 0;
+        get value() { return this._value; }
+        set value(v: number) { this._value = v; }
 
         inc(): void { this.value++; }
         dec(): void { this.value--; }
     }
 
     test('okay', () => {
-        const foo = new Foo(),
+        const foo = Foo.new(),
             bar = new Bar();
         bar.inc.apply(foo);
 
@@ -735,44 +602,9 @@ describe('Third-party features applied to a contracted class are subject to its 
 
     test('failure', () => {
         nodeAssert.throws(() => {
-            const foo = new Foo(),
+            const foo = Foo.new(),
                 bar = new Bar();
             bar.dec.apply(foo);
         }, /^Error: Invariant violated/);
-    });
-});
-
-// https://github.com/final-hill/decorator-contracts/issues/218
-describe('Contracted features can only be applied to objects of the same instance', () => {
-    const fooContract: Contract<Foo> = new Contract<Foo>({
-        [checkedMode]: true,
-        [invariant]: self => self.value >= 0
-    });
-
-    @Contracted(fooContract)
-    class Foo {
-        accessor value = 0;
-
-        inc(): void { this.value++; }
-    }
-
-    class Bar {
-        accessor value = 0;
-
-        inc(): void { this.value++; }
-    }
-
-    const foo = new Foo(),
-        bar = new Bar();
-
-    test('same instance okay', () => {
-        foo.inc.apply(foo);
-        nodeAssert.strictEqual(foo.value, 1);
-    });
-
-    test('different instance error', () => {
-        nodeAssert.throws(() => {
-            foo.inc.apply(bar);
-        }, Messages.MsgInvalidContext);
     });
 });

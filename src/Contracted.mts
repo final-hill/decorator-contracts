@@ -1,101 +1,142 @@
-/*!
- * @license
- * Copyright (C) 2024 Final Hill LLC
- * SPDX-License-Identifier: AGPL-3.0-only
- * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
- */
+import { assertInvariants, InvariantPredicate } from './invariant.mjs';
+import { assertDemands, DemandsPredicate } from './demands.mjs';
+import { assertEnsures, EnsuresPredicate } from './ensures.mjs';
+import { applyRescueHandler as applyRescueHandler, RescueHandler } from './rescue.mjs';
 
-import { ClassRegistration, classRegistry, ClassType, Feature, takeWhile, assertInvariants } from './lib/index.mjs';
-import { assert, checkedMode, Contract, extend } from './index.mjs';
-import { Messages } from './Messages.mjs';
+// Symbol to store checked mode state
+export const checkedMode = Symbol.for('Contracted.checkedMode');
 
-const isContracted = Symbol('isContracted'),
-    innerContract = Symbol('innerContract');
+const populateOld = (target: Contracted) => {
+    if (!Contracted[checkedMode]) return;
 
-/**
- * Checks the features of the provided object for properties.
- * If any are found an exception is thrown
- * @param {ClassRegistration} registration - The ClassRegistration for the object
- * @param {U} obj - The object to check
- * @throws {AssertionError} - Throws if a property is found
- * @returns {boolean} - The result of the test
- */
-function hasProperties<U>(registration: ClassRegistration, obj: U): boolean {
-    return Object.entries(Object.getOwnPropertyDescriptors(obj))
-        .some(([key, desc]) => new Feature(registration, key, desc).isProperty);
+    Contracted[checkedMode] = false; // Disable checked mode to avoid infinite recursion
+
+    const old = Object.create(target)
+    for (const key in target)
+        Reflect.set(old, key, Reflect.get(target, key));
+
+    Contracted[checkedMode] = true;
+
+    return old;
 }
 
-/**
- * Associates a contract with a class via the mixin pattern.
- *
- * @param {Contract} contract The Contract definition
- * @param {T} Base An optional base class
- * @returns {T} The base class for extension
- * @example
- *
- * @Contracted(stackContract)
- * class Stack<T> { ... }
- */
-function Contracted<
-    T extends Contract<any> = Contract<any>,
-    U extends ClassType<any> = ClassType<any>
->(contract: T = new Contract() as T) {
-    return function (Clazz: U & { [innerContract]?: Contract<any> }, ctx: ClassDecoratorContext<U>) {
-        if (ctx.kind !== 'class')
-            throw new TypeError(Messages.MsgNotContracted);
+// Utility to walk up the prototype chain to find a property descriptor
+function getPropertyDescriptor(obj: object, prop: PropertyKey): PropertyDescriptor | undefined {
+    let proto = obj;
+    while (proto && proto !== Object.prototype) {
+        const desc = Object.getOwnPropertyDescriptor(proto, prop);
+        if (desc) return desc;
+        proto = Object.getPrototypeOf(proto);
+    }
+    return undefined;
+}
 
-        assert(!Object.getOwnPropertySymbols(Clazz).includes(isContracted), Messages.MsgSingleContract);
+const proxyHandler: ProxyHandler<Contracted> = {
+    get(target, prop, receiver) {
+        if (!Contracted[checkedMode]) return Reflect.get(target, prop, receiver);
 
-        if (contract[checkedMode] === false)
-            return Clazz;
+        const Class = target.constructor as typeof Contracted,
+            descriptor = getPropertyDescriptor(Object.getPrototypeOf(target), prop),
+            es = Class[Symbol.metadata]?.ensures?.[prop] ?? [] as EnsuresPredicate<Contracted>[],
+            hasEnsures = es.length > 0,
+            old = hasEnsures ? populateOld(target) : undefined;
 
-        const baseContract = Clazz[innerContract];
-        assert(
-            !baseContract ||
-            baseContract && contract[extend] instanceof baseContract.constructor,
-            Messages.MsgBadSubcontract
-        );
-
-        abstract class InnerContracted extends Clazz {
-            // prevents multiple @Contracted decorators from being applied
-            static readonly [isContracted] = true;
-
-            constructor(...args: any[]) {
-                super(...args);
-
-                const Class = this.constructor as ClassType<any>,
-                    classRegistration = classRegistry.getOrCreate(Class);
-
-                assert(!hasProperties(classRegistration, this), Messages.MsgNoProperties);
-
-                if (!classRegistration.contractsChecked) {
-                    // bottom-up to closest Contracted class bind contracts
-                    const ancRegistrations = takeWhile(classRegistration.ancestry(), (cr => cr.Class !== Clazz));
-                    [classRegistration, ...ancRegistrations, classRegistry.get(Clazz)!].forEach(registration => {
-                        registration.bindContract(InnerContracted[innerContract]);
-                    });
+        if (typeof descriptor?.value === 'function') {
+            return function (this: Contracted, ...methodArgs: any[]) {
+                assertInvariants(Class, target);
+                assertDemands(target, prop, methodArgs);
+                let result
+                try {
+                    result = Reflect.apply(descriptor.value, target, methodArgs);
+                    if (hasEnsures) assertEnsures(target, old, prop, methodArgs);
+                } catch (error) {
+                    result = applyRescueHandler('func', target, prop as keyof Contracted, error, methodArgs);
+                } finally {
+                    assertInvariants(Class, target);
                 }
-
-                assertInvariants(this, InnerContracted[innerContract]);
-
-                return this;
+                return result;
             }
+        } else if (typeof descriptor?.get === 'function') {
+            assertInvariants(Class, target);
+            assertDemands(target, prop, []);
+            let result
+            try {
+                result = Reflect.get(target, prop, receiver);
+                if (hasEnsures) assertEnsures(target, old, prop, [result]);
+            } catch (error) {
+                result = applyRescueHandler('get', target, prop, error, []);
+            } finally {
+                assertInvariants(Class, target);
+            }
+            return result;
+        } else {
+            return Reflect.get(target, prop, receiver);
+        }
+    },
+    set(target, prop, value, receiver) {
+        if (!Contracted[checkedMode]) return Reflect.set(target, prop, value, receiver);
 
-            // FIXME: dirty hack. Possibly resolved by moving to contracts as classes
-            // The static getter is used by the construction invariant check
-            // The instance getter is used by the feature declarations
-            static get [innerContract]() { return contract; }
-            get [innerContract]() { return contract; }
+        const descriptor = getPropertyDescriptor(Object.getPrototypeOf(target), prop)
+
+        if (!(descriptor && typeof descriptor.set === 'function'))
+            if (typeof prop === 'string' && !prop.startsWith('_'))
+                throw new TypeError(`Cannot assign to property '${String(prop)}': only properties starting with '_' or with a setter can be set on Contracted instances.`);
+
+        const Class = target.constructor as typeof Contracted,
+            es = Class[Symbol.metadata]?.ensures?.[prop] ?? [] as EnsuresPredicate<Contracted>[],
+            hasEnsures = es.length > 0,
+            old = hasEnsures ? populateOld(target) : undefined;
+        assertInvariants(Class, target);
+        assertDemands(target, prop, [value]);
+        let result
+        try {
+            result = Reflect.set(target, prop, value, receiver);
+            if (hasEnsures) assertEnsures(target, old, prop, [value]);
+        } catch (error) {
+            result = applyRescueHandler('set', target, prop as keyof Contracted, error, [value])
+        } finally {
+            assertInvariants(Class, target);
         }
 
-        const classRegistration = classRegistry.getOrCreate(InnerContracted);
-        classRegistration.contractsChecked = false;
+        return result;
+    },
+    deleteProperty(target, prop) {
+        throw new TypeError(`Cannot delete property '${String(prop)}' from Contracted instances.`);
+    },
+};
 
-        Object.freeze(Clazz);
-
-        return InnerContracted;
+export class Contracted {
+    static [Symbol.metadata]: {
+        invariants: InvariantPredicate<typeof Contracted>[];
+        demands: Record<PropertyKey, DemandsPredicate<Contracted>[]>;
+        ensures: Record<PropertyKey, EnsuresPredicate<Contracted>[]>;
+        rescue: Record<PropertyKey, RescueHandler<Contracted>>;
     };
-}
 
-export { isContracted, innerContract };
-export default Contracted;
+    // Prevents direct instantiation of the class
+    protected static _allowConstruction = false;
+
+    // Symbol-based checked mode state
+    public static [checkedMode]: boolean = true;
+
+    static new<
+        C extends typeof Contracted,
+        Args extends ConstructorParameters<C>,
+    >(this: C, ...args: Args): InstanceType<C> {
+        (this as any)._allowConstruction = true;
+        try {
+            const instance = new this(...args) as InstanceType<C>;
+            assertInvariants(this, instance);
+
+            return new Proxy<InstanceType<C>>(instance, proxyHandler);
+        } finally {
+            (this as any)._allowConstruction = false;
+        }
+    }
+
+    constructor(..._args: any[]) {
+        const Class = this.constructor as typeof Contracted;
+        if (!Class._allowConstruction)
+            throw new TypeError("Use the static 'new' method to instantiate this class.")
+    }
+}

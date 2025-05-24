@@ -1,10 +1,3 @@
-/*!
- * @license
- * Copyright (C) 2024 Final Hill LLC
- * SPDX-License-Identifier: AGPL-3.0-only
- * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
- */
-
 /**
  * Material Implication.
  * `p → q`
@@ -12,13 +5,19 @@
  * An example of usage is the encoding of "sunny weather is a precondition of visiting the beach"
  * This is logically equivalent to: !p || q
  *
- * @example
- * implies(weather.isSunny, person.visitsBeach)
+ * @param p - The first boolean value (the antecedent).
+ * @param q - The second boolean value (the consequent).
+ * @returns - The result (material implication) of p and q.
  *
- * @param {boolean} p - The antecedent
- * @param {boolean} q - The consequent
- * @returns {boolean} - The result
+ * @example
+ * ```ts
+ * import { implies } from '@final-hill/decorator-contracts';
+ *
+ * // Sunny weather is a precondition of visiting the beach
+ * implies(weather.isSunny, person.visitsBeach)
+ * ```
  */
-export default function implies(p: boolean, q: boolean): boolean {
+
+export function implies(p: boolean, q: boolean): boolean {
     return !p || q;
 }
