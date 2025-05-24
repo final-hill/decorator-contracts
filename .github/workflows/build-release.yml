@@ -59,7 +59,7 @@ jobs:
         with:
           name: artifact
       - name: Extract package from artifact
-        run: tar -xf artifact/final-hill-decorator-contracts.tgz --strip 1
+        run: tar -xf final-hill-decorator-contracts.tgz --strip 1
       - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
