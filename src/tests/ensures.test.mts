@@ -1,40 +1,25 @@
-/*!
- * @license
- * Copyright (C) 2024 Final Hill LLC
- * SPDX-License-Identifier: AGPL-3.0-only
- * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
- */
-
-import { AssertionError, checkedMode, Contract, Contracted, extend } from '../index.mjs';
+import { AssertionError, checkedMode, Contracted, ensures } from '@final-hill/decorator-contracts';
 import { describe, test } from 'node:test';
 import nodeAssert from 'node:assert/strict';
 
-/**
- * https://github.com/final-hill/decorator-contracts/issues/78
- */
 describe('Ensures assertions can be defined for a class feature', () => {
     test('Basic Definition', () => {
         const nonNegative = (self: Foo): boolean => self.value >= 0,
-            isEven = (self: Foo): boolean => self.value % 2 == 0,
-            fooContract = new Contract<Foo>({
-                dec: {
-                    ensures(self) { return nonNegative(self) && isEven(self); }
-                },
-                inc: {
-                    ensures(self) { return nonNegative(self) && isEven(self); }
-                }
-            });
+            isEven = (self: Foo): boolean => self.value % 2 == 0
 
+        class Foo extends Contracted {
+            protected _value = 0;
+            get value() { return this._value; }
+            set value(val: number) { this._value = val; }
 
-        @Contracted(fooContract)
-        class Foo {
-            accessor value = 0;
-
+            @ensures((self: Foo) => nonNegative(self) && isEven(self))
             inc(): void { this.value += 2; }
+
+            @ensures((self: Foo) => nonNegative(self) && isEven(self))
             dec(): void { this.value -= 1; }
         }
 
-        const foo = new Foo();
+        const foo = Foo.new();
 
         nodeAssert.doesNotThrow(() => foo.inc());
 
@@ -46,20 +31,13 @@ describe('Ensures assertions can be defined for a class feature', () => {
     });
 });
 
-/**
- * https://github.com/final-hill/decorator-contracts/issues/79
- */
 describe('Overridden features are still subject to the ensures assertion ', () => {
-    const baseContract = new Contract<Base>({
-        dec: {
-            ensures(self) { return self.value >= 0; }
-        }
-    });
+    class Base extends Contracted {
+        private _value = 0;
+        get value() { return this._value; }
+        set value(val: number) { this._value = val; }
 
-    @Contracted(baseContract)
-    class Base {
-        accessor value = 0;
-
+        @ensures((self: Base) => self.value >= 0)
         dec(): void { this.value--; }
         inc(): void { this.value++; }
     }
@@ -70,7 +48,7 @@ describe('Overridden features are still subject to the ensures assertion ', () =
 
     test('inc(); inc(); dec(); does not throw', () => {
         nodeAssert.doesNotThrow(() => {
-            const sub = new Sub();
+            const sub = Sub.new();
             sub.inc();
             sub.inc();
             sub.dec();
@@ -79,107 +57,73 @@ describe('Overridden features are still subject to the ensures assertion ', () =
 
     test('dec(); throws', () => {
         nodeAssert.throws(() => {
-            const sub = new Sub();
+            const sub = Sub.new();
             sub.dec();
         });
     });
 });
 
-/**
- * https://github.com/final-hill/decorator-contracts/issues/80
- */
 describe('The ensures assertion is evaluated after its associated feature is called', () => {
-    class Foo {
-        accessor value = 0;
+    class Foo extends Contracted {
+        private _value = 0;
+        get value() { return this._value; }
+        set value(val: number) { this._value = val; }
     }
 
     test('true @ensures check does not throw', () => {
-        const barContract = new Contract<Bar>({
-            method: {
-                ensures(self) { return self.value >= 0; }
-            }
-        });
-
-        @Contracted(barContract)
         class Bar extends Foo {
+            @ensures((self: Bar) => self.value >= 0)
             method(): number { return this.value = 2; }
         }
 
-        const bar = new Bar();
+        const bar = Bar.new();
 
         nodeAssert.strictEqual(bar.method(), 2);
     });
 
     test('false @ensures check throws', () => {
-        const barContract = new Contract<Bar>({
-            method: {
-                ensures() { return false; }
-            }
-        });
-
-        @Contracted(barContract)
         class Bar extends Foo {
+            @ensures(_self => false)
             method(): number { return this.value = 12; }
         }
-        const bar = new Bar();
+        const bar = Bar.new();
 
         nodeAssert.throws(() => { bar.method(); });
     });
 });
 
-/**
- * https://github.com/final-hill/decorator-contracts/issues/81
- */
 describe('`ensures` assertions are enabled in checkedMode and disabled otherwise', () => {
     test('The associated assertion is evaluated when checkMode = true', () => {
-        const fooContract = new Contract<Foo>({
-            method: {
-                ensures() { return false; }
-            }
-        });
-
-        @Contracted(fooContract)
-        class Foo {
+        class Foo extends Contracted {
+            @ensures(() => false)
             method(): void { }
         }
 
-        nodeAssert.throws(() => new Foo().method());
+        nodeAssert.throws(() => Foo.new().method());
     });
 
     test('The associated assertion is NOT evaluated in checkMode = false', () => {
-        const fooContract = new Contract<Foo>({
-            [checkedMode]: false,
-            method: {
-                ensures() { return false; }
-            }
-        });
+        Contracted[checkedMode] = false;
 
-        @Contracted(fooContract)
-        class Foo {
+        class Foo extends Contracted {
+            @ensures(() => false)
             method(): void { }
         }
 
-        nodeAssert.doesNotThrow(() => new Foo().method());
+        nodeAssert.doesNotThrow(() => Foo.new().method());
+
+        Contracted[checkedMode] = true;
     });
 });
 
-/**
- * https://github.com/final-hill/decorator-contracts/issues/82
- */
 describe('Postconditions cannot be weakened in a subtype', () => {
-    const baseContract = new Contract<Base>({
-        method: {
-            ensures(_self, _old, value) { return 10 <= value && value <= 30; }
-        }
-    });
-
-    @Contracted(baseContract)
-    class Base {
+    class Base extends Contracted {
+        @ensures((_self, [value]) => 10 <= value && value <= 30)
         method(value: number): number { return value; }
     }
 
     test('Base postcondition', () => {
-        const base = new Base();
+        const base = Base.new();
 
         nodeAssert.strictEqual(base.method(15), 15);
         nodeAssert.strictEqual(base.method(25), 25);
@@ -187,20 +131,13 @@ describe('Postconditions cannot be weakened in a subtype', () => {
         nodeAssert.throws(() => base.method(35), AssertionError);
     });
 
-    const weakerContract = new Contract<Weaker>({
-        [extend]: baseContract,
-        method: {
-            ensures(_self, _old, value: number) { return 1 <= value && value <= 50; }
-        }
-    });
-
-    @Contracted(weakerContract)
     class Weaker extends Base {
+        @ensures((_self, [value]) => 1 <= value && value <= 50)
         override method(value: number): number { return value; }
     }
 
     test('Weaker postcondition', () => {
-        const weaker = new Weaker();
+        const weaker = Weaker.new();
 
         nodeAssert.strictEqual(weaker.method(15), 15);
         nodeAssert.strictEqual(weaker.method(25), 25);
@@ -208,20 +145,13 @@ describe('Postconditions cannot be weakened in a subtype', () => {
         nodeAssert.throws(() => weaker.method(35), AssertionError);
     });
 
-    const strongerContract = new Contract<Stronger>({
-        [extend]: baseContract,
-        method: {
-            ensures(_self, _old, value: number) { return 15 <= value && value <= 20; }
-        }
-    });
-
-    @Contracted(strongerContract)
     class Stronger extends Base {
+        @ensures((_self, [value]) => 15 <= value && value <= 20)
         override method(value: number): number { return value; }
     }
 
     test('Stronger postcondition', () => {
-        const stronger = new Stronger();
+        const stronger = Stronger.new();
 
         nodeAssert.strictEqual(stronger.method(15), 15);
         nodeAssert.strictEqual(stronger.method(20), 20);
@@ -231,41 +161,30 @@ describe('Postconditions cannot be weakened in a subtype', () => {
     });
 });
 
-/**
- * https://github.com/final-hill/decorator-contracts/issues/98
- */
 describe('ensures has access to the properties of the instance class before its associated member was executed', () => {
     test('Stack Size', () => {
-        const stackContract = new Contract<Stack<any>>({
-            pop: {
-                ensures(self, old) { return self.size == old.size - 1; }
-            },
-            push: {
-                ensures(self, old) { return self.size == old.size + 1; }
-            }
-        });
+        class Stack<T> extends Contracted {
+            private _implementation: T[] = [];
+            private _size = 0;
 
-        @Contracted(stackContract)
-        class Stack<T> {
-            #implementation: T[] = [];
-            #size = 0;
+            get size() { return this._size; }
 
-            get size() { return this.#size; }
-
+            @ensures((self: Stack<T>, _args, old) => self.size == old.size - 1)
             pop(): T {
-                const result = this.#implementation.pop()!;
-                this.#size = this.#implementation.length;
+                const result = this._implementation.pop()!;
+                this._size = this._implementation.length;
 
                 return result;
             }
 
+            @ensures((self: Stack<T>, _args, old) => self.size == old.size + 1)
             push(item: T): void {
-                this.#implementation.push(item);
-                this.#size = this.#implementation.length;
+                this._implementation.push(item);
+                this._size = this._implementation.length;
             }
         }
 
-        const stack = new Stack<string>();
+        const stack = Stack.new() as Stack<string>;
 
         nodeAssert.strictEqual(stack.size, 0);
         nodeAssert.doesNotThrow(() => {

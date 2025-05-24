@@ -1,27 +1,17 @@
 {
+    "include": [
+        "src/index.mts"
+    ],
     "compilerOptions": {
-        "target": "ES2022",
-        "lib": [
-            "es2022",
-            "esnext.decorators"
-        ],
-        "module": "Node16",
-        "moduleResolution": "node16",
-        "outDir": "./dist",
-        "esModuleInterop": true,
+        "target": "ES2024",
+        "module": "NodeNext",
+        "moduleResolution": "nodenext",
         "forceConsistentCasingInFileNames": true,
-        "sourceMap": true,
         "strict": true,
-        "noImplicitAny": true,
+        "sourceMap": true,
         "declaration": true,
-        "rootDir": "./src",
-        "removeComments": true,
-        "noUnusedLocals": true,
-        "noUnusedParameters": true,
-        "noImplicitReturns": true,
-        "noFallthroughCasesInSwitch": true,
         "baseUrl": "./src",
-        "allowSyntheticDefaultImports": true,
-        "noImplicitOverride": true
+        "rootDir": "./src",
+        "outDir": "./dist",
     }
 }

@@ -17,7 +17,6 @@
 - [Invariants](#invariants)
 - [Demands](#demands)
 - [Ensures](#ensures)
-- [Within](#within)
 - [Rescue](#rescue)
 - [The order of assertions](#the-order-of-assertions)
 - [Further Reading](#further-reading)
@@ -65,181 +64,103 @@ Via [skypack.dev](https://www.skypack.dev/):
 
 ## Usage
 
-After installation the library can be used as such:
+After installation, use the decorators directly on your class methods and properties. All contracted classes must extend `Contracted` and be instantiated using the static `.new()` method.
 
 ```typescript
-import {Contract, Contracted, invariant, checkedMode} from '@final-hill/decorator-contracts';
+import { Contracted, invariant, demands, ensures } from '@final-hill/decorator-contracts';
 
-interface StackType<T> {
-    readonly limit: number;
-    readonly size: number;
-    clear(): void;
-    isEmpty(): boolean;
-    isFull(): boolean;
-    pop(): T;
-    push(item: T): void;
-    top(): T;
-}
-
-const stackContract = new Contract<StackType<any>>({
-    [checkedMode]: process.env.NODE_ENV === 'development',
-    [invariant](self) {
-        return self.isEmpty() == (self.size == 0) &&
-            self.isFull() == (self.size == self.limit) &&
-            self.size >= 0 && self.size <= self.limit;
-    },
-    pop: {
-        demands(self) { return !self.isEmpty(); },
-        ensures(self,old) {
-            return !self.isFull() &&
-                   self.size == old.size - 1;
-        }
-    },
-    push: {
-        demands(self){ return !self.isFull(); },
-        ensures(self, old, item) {
-            return !self.isEmpty() &&
-                self.top() === item &&
-                self.size === old.size + 1;
-        }
-    },
-    top: {
-        demands(self) {
-            return !self.isEmpty();
-        }
-    }
-});
-
-@Contracted(stackContract)
-class Stack<T> implements StackType<T> {
-    #implementation: T[] = [];
-    #size = 0;
-    #limit: number;
+@invariant((self: Stack<any>) =>
+    self.isEmpty() == (self.size == 0) &&
+    self.isFull() == (self.size == self.limit) &&
+    self.size >= 0 && self.size <= self.limit
+)
+class Stack<T> extends Contracted {
+    private _implementation: T[] = [];
+    private _size = 0;
+    private _limit: number;
 
     constructor(limit: number) {
-        this.#limit = limit;
+        super();
+        this._limit = limit;
     }
+
+    get limit() { return this._limit; }
+    get size() { return this._size; }
 
     clear(): void {
-        this.#implementation = [];
-        this.#size = 0;
+        this._implementation = [];
+        this._size = 0;
     }
 
-    isEmpty(): boolean {
-        return this.#implementation.length == 0;
-    }
+    isEmpty(): boolean { return this._implementation.length == 0; }
+    isFull(): boolean { return this._implementation.length == this.limit; }
 
-    isFull(): boolean {
-        return this.#implementation.length == this.limit;
-    }
-
-    get limit() {
-        return this.#limit;
-    }
-
+    @demands((self: Stack<any>) => !self.isEmpty())
+    @ensures((self: Stack<any>, _args, old: Stack<any>) =>
+        !self.isFull() && self.size == old.size - 1)
     pop(): T {
-        this.#size--;
-
-        return this.#implementation.pop()!;
+        this._size--;
+        return this._implementation.pop()!;
     }
 
+    @demands((self: Stack<any>) => !self.isFull())
+    @ensures((self, [item], old: Stack<any>) =>
+        !self.isEmpty() &&
+        self.top === item &&
+        self.size === old.size + 1
+    )
     push(item: T): void {
-        this.#size++;
-        this.#implementation.push(item);
+        this._size++;
+        this._implementation.push(item);
     }
 
-    get size(): number {
-        return this.#size;
-    }
-
-    top(): T {
-        return this.#implementation.at(-1);
+    get top(): T | undefined {
+        return this._implementation.at(-1);
     }
 }
+
+const stack = Stack.new(3);
+stack.push(1);
+stack.push(2);
+stack.pop();
 ```
 
-A contract specifies the semantics of a class and is defined independently from it
-the same way that an interface is. Its has the following form:
+## Instantiation: Using the Static `.new(...)` Method
 
-```ts
-const fooContract = new Contract<Foo>({
-    [checkedMode]: true,
-    [invariant](self: Foo) { return self instanceof Foo },
-    methodName: {
-        demands(self: Foo, arg1, arg2, argN) { return true },
-        ensures(self: Foo, old: Foo, arg1, arg2, argN){ return true }
-        rescue(self, error, args, retry) {
-            console.error(`Error with given arguments ${JSON.stringify(args)}`)
-            console.error(error)
-            console.log('Attempting to retry')
-            self.value = 7
-            retry(...args)
-        }
-    },
-    accessorName: {
-        ...
-    }
-})
+Because this library uses JavaScript `Proxy` to enforce contracts, you **must** instantiate all classes that extend `Contracted` using the static `.new(...)` method (not with `new MyClass(...)`).
 
-const subContract = new Contract<Sub>({
-    [extend]: fooContract,
-    methodName: {
-        demands(self: Foo){ return true }
-    }
-})
-```
+This is required so that the instance is wrapped in a Proxy and invariants are asserted immediately after construction. Direct use of the `new` keyword will throw an error.
 
 ## Checked Mode
 
-A contract can be enabled or disabled with the `checkedMode` property.
+Checked Mode controls whether contract checking (invariants, demands, ensures, and rescue) is enabled or disabled at runtime. This feature allows you to turn off contract enforcement in production environments for maximum performance, while keeping it enabled during development and testing to catch bugs and contract violations early.
 
-```ts
-const stackContract = new Contract<StackType<any>>({
-    [checkedMode]: true,
-    ...
-})
+By default, Checked Mode is enabled. You can control it via the static `[checkedMode]` symbol property of Contracted:
+
+```typescript
+Contracted[checkedMode] = false; // Disable Checked Mode
 ```
 
-During development and testing you will want to use checked mode. This will
-enable all assertion checks. In production all assertion checks become
-no-ops for run-time efficiency. As the number of contract definitions can
-be numerous, using the appropriate mode becomes increasingly important.
+One approach to managing this is to leverage environment variables. For example, you can interrogate `NODE_ENV` to determine whether to enable or disable Checked Mode:
 
-You are not prevented from mixing modes in the event you desire to maintain
-a number of checks in a production environment.
-
-This property is optional and defaults to `true`
-
-One approach you could use to manage this is the `env-cmd` package. Details can be [found here](https://www.digitalocean.com/community/tutorials/nodejs-take-command-with-env-cmd). Usage may look like:
-
-```ts
-const fooContract = new Contract<Foo>({
-    [checkedMode]: !process.env.IS_PRODUCTION,
-    ...
-})
+```typescript
+Contracted[checkedMode] = process.env.NODE_ENV === 'development'
 ```
-
-Note: `checkedMode` is set to `false` during evaluation of the assertions and `rescue`. This prevents non-termination when your contract uses other class features during its evaluation. This means you should
-avoid mutating state in your assertions, especially the `invariant`, in order to prevent your object
-from being put in an invalid state.
 
 ## Assertions
 
-Assertions are a fundamental tool for enforcing correctness in an implementation.
-They are used inline to express a condition that must evaluate to true at a
-particular point of execution.
+Use the `assert` function for inline assertions:
 
 ```typescript
-import {assert} from '@final-hill/decorator-contracts';
+import { assert } from '@final-hill/decorator-contracts';
 
 function avg(xs: number[]): number {
-    assert(xs.length > 0, 'The list can not be empty')
-
-    return xs.reduce((sum, next) => sum + next) / xs.length
+    assert(xs.length > 0, 'The list can not be empty');
+    return xs.reduce((sum, next) => sum + next) / xs.length;
 }
 ```
 
-If you are using TypeScript `assert` will also assert the type of the condition:
+If you are using TypeScript, `assert` will also assert the type of the condition:
 
 ```typescript
 let str: any = 'foo';
@@ -253,561 +174,206 @@ str.toUpperCase(); // str is now a string
 
 **`assert` should not be used for validating arguments**
 
-Use the `demands` declaration for this purpose.
+Use the `@demands` decorator for this purpose.
 
 ## Implies
 
-When defining predicates it is a common use case to encode
-[material implication](https://en.wikipedia.org/wiki/Material_conditional).
+When defining predicates it is a common use case to encode [material implication](https://en.wikipedia.org/wiki/Material_conditional):
 
-The truth table is as follows:
+```typescript
+import { implies } from '@final-hill/decorator-contracts';
 
-| *p* | *q* | *p* &rarr; *q* |
-|-----|-----|----------------|
-|  T   |   T   |  T          |
-|  T   |   F   |  F          |
-|  F   |   T   |  T          |
-|  F   |   F   |  T          |
-
-An example of usage is the encoding of `sunny weather is a precondition of visiting the beach`:
-
-```ts
-implies(
-    weather.isSunny,
-    person.visitsBeach
-)
+implies(weather.isSunny, person.visitsBeach);
+// Equivalent to: !weather.isSunny || person.visitsBeach
 ```
-
-This is logically equivalent to: `!p || q`
 
 ## Iff
 
-When defining predicates it is a common use case to encode [if and only if](https://en.wikipedia.org/wiki/Logical_biconditional).
-Also referred to as a biconditional.
+When defining predicates it is a common use case to encode [if and only if](https://en.wikipedia.org/wiki/Logical_biconditional):
 
-The truth table is as follows:
+```typescript
+import { iff } from '@final-hill/decorator-contracts';
 
-| *p* | *q* | *p* &harr; *q* |
-|-----|-----|----------------|
-|  T   |   T   |  T          |
-|  T   |   F   |  F          |
-|  F   |   T   |  F          |
-|  F   |   F   |  T          |
-
-An example of usage is the encoding of `You can ride the train if and only if you have a ticket`:
-
-```ts
-iff(
-    person.hasTicket,
-    person.ridesTrain
-)
+iff(person.hasTicket, person.ridesTrain);
+// Equivalent to: implies(p, q) && implies(q, p)
 ```
-
-This is logically equivalent to: `implies(p,q) && implies(q,p)`
 
 ## Encapsulation
 
-To guarantee invariants remain valid for classes, public property definitions are forbidden.
-All interactions with a contracted class must be done through a method or accessor.
-This prevents modification of object state outside of the contract system. Private
-properties with accessors should be used instead. Example:
+To guarantee invariants remain valid for classes, public property definitions are forbidden. All interactions with a contracted class must be done through a method or getter/setter. Only properties that start with `_` (conventionally private) can be assigned to after construction.
 
-```ts
-@Contracted(pointContract)
-class Point2D {
-    accessor x: number
-    accessor y: number
-
-    constructor(x: number, y: number) {
-        super()
-        this.x = x
-        this.y = y
-    }
+```typescript
+class Example extends Contracted {
+    _private = 1; // Allowed
+    publicProp = 2; // Not allowed
 }
 ```
+
+## Note on Private Fields and Accessors
+
+Due to the use of JavaScript `Proxy` in the implementation of this library, native `#private` fields and the `accessor` keyword are **not supported**. Instead, use conventional private fields (e.g., `_private`) and define explicit getter/setter pairs for encapsulation:
+
+```typescript
+class Example extends Contracted {
+    private _value = 0;
+    get value() { return this._value; }
+    set value(v: number) { this._value = v; }
+}
+```
+
+Do **not** use:
+
+- `#privateField` syntax
+- `accessor foo` syntax
+
+These will not work correctly with the contract enforcement provided by this library.
 
 ## Invariants
 
-A class is not just a collection of methods it has semantics that
-bind them together and the `invariant` declaration describes and enforces these relationships.
-This assertion is checked after the associated class is constructed, before and
-after every method execution, and before and after every accessor usage (get/set).
-If this evaluates to false during class usage an `AssertionError` will be thrown in the library code
-as it indicates a bug in the class where it has the [opportunity](#rescue) to handle it.
-True assertions do not throw an error. An example of this is given below using a Stack:
+Use the `@invariant` decorator on your class to enforce relationships between properties and methods. The invariant is checked after construction, before and after every method execution, and before and after every get/set usage.
 
 ```typescript
-const stackContract = new Contract<StackType<any>>({
-    [invariant](self) {
-        return self.isEmpty() == (self.size == 0) &&
-               self.isFull() == (self.size == self.limit) &&
-               self.size >= 0 && self.size <= self.limit
-    }
-})
+@invariant(self => self.value >= 0)
+class Foo extends Contracted {
+    protected _value = 0;
+    get value() { return this._value; }
+    set value(v: number) { this._value = v; }
 
-@Contracted(stackContract)
-class Stack<T> implements StackType<T> {
-    ...
+    inc(): void { this.value++; }
+    dec(): void { this.value--; }
 }
 ```
 
-With the above invariant any attempt to construct an invalid stack will fail:
+### Subcontracting and Invariants
+
+When subclassing, if a subclass defines its own `@invariant`, the resulting invariant is **strengthened**: the subclass invariant and the base class invariant are both enforced (they are logically AND-ed together). This means all invariants in the inheritance chain must hold for the object to be valid.
 
 ```typescript
-let myStack = new Stack(-1)
+@invariant(self => self.value >= 0)
+class Base extends Contracted {
+    // ...
+}
+
+@invariant(self => self.value <= 10)
+class Sub extends Base {
+    // ...
+}
+// The effective invariant for Sub is: (self.value >= 0) && (self.value <= 10)
 ```
-
-Additionally, attempting to pop an item from an empty stack would be
-nonsensical according to the invariant therefore the following will
-throw an `AssertionError` after `pop()` is executed due to the size being negative:
-
-```typescript
-let myStack = new Stack(3)
-let item = myStack.pop();
-```
-
-A contract can be extended and declare an invariant of its own.
-
-```typescript
-const baseContract = new Contract<Base>({
-    [invariant](self) { return 0 <= self.value && self.value <= 10 }
-})
-
-@Contracted(baseContract)
-class Base { ... }
-
-const subContract = new Contract<Sub>({
-    [extend]: baseContract,
-    [invariant](self){ return 10 <= self.value && self.value <= 20 }
-})
-
-@Contracted(subContract)
-class Sub extends Base { ... }
-```
-
-The result is that the invariant of `Sub` is strengthened, meaning that the assertions are and-ed together:
-
-`(0 <= self.value && self.value <= 10) && (10 <= self.value && self.value <= 20)`
-
-Effectively meaning that `self.value` can only be `10`
-
-Only public features have to honor the `invariant`. During execution it can be broken as long as it is restored before exiting.
 
 ## Demands
 
-The `demands` declaration describes and enforces an assertion that must be true
-before its associated feature can execute. In other words before a client
-of your class can execute a method or accessor the defined precondition
-must first be met or an error will be raised [to the caller](#the-order-of-assertions).
-This is because a failure to meet the precondition indicates a bug in the caller's code
-and not yours.
+Use the `@demands` decorator to specify preconditions for methods or get/set. If the condition fails, an error is thrown before the method executes.
 
 ```typescript
-const stackContract = new Contract<StackType<any>>({
-    ...
-    pop: {
-        demands: self => !self.isEmpty()
-    },
-    push: {
-        demands: self => !self.isFull()
-    }
-})
+class Foo extends Contracted {
+    protected _value = 0;
+    get value() { return this._value; }
+    set value(v: number) { this._value = v; }
 
-@Contracted(stackContract)
-class Stack<T> implements StackType<T> {
-    ...
-    pop(): T {
-        return this.#implementation.pop();
-    }
-    push(item: T): void {
-        this.#implementation.push(item);
-    }
+    @demands(self => self.value >= 0)
+    dec(): void { this.value--; }
 }
 ```
 
-In the above example the precondition of executing `pop`
-on a stack is that it is not empty. If this assertion fails
-an `AssertionError` is raised.
+### Subcontracting and Demands
 
-Static features, including the constructor, cannot be assigned a `demands`
-assertion. In the future this may be enabled for non-constructor static methods
-but the implications are not clear at present.
-
-If a class feature is overridden then the `demands` assertion still applies:
+When subclassing, if a subclass defines its own `@demands` for a method, the resulting precondition is **weakened**: the subclass and base class demands are OR-ed together. The method can be called if **any** of the demands in the inheritance chain are satisfied.
 
 ```typescript
-class MyStack<T> extends Stack<T> {
-    override pop(): { ... }
+class Base extends Contracted {
+    @demands((_self, x: number) => x >= 0)
+    foo(x: number) { /* ... */ }
 }
 
-...
-let myStack = new MyStack()
-
-myStack.pop() // throws
-```
-
-A contract can be extended and that sub contract can declare a `demands` assertion of its own
-for the same feature:
-
-```ts
-const baseContract = new Contract<Base>({
-    someMethod: {
-        demands(){ ... }
-    }
-})
-
-const subContract = new Contract<Sub>({
-    [extend]: baseContract,
-    someMethod: {
-        demands(){ ... }
-    }
-})
-```
-
-This subcontracted `demands` declaration can not strengthen the `demands` of the base contract.
-What this means is that the new precondition will be or-ed with its ancestors. If any `demand` is true
-then the obligation is considered fulfilled by the user of the feature.
-
-```ts
-const baseContract = new Contract<Base>({
-    someMethod: {
-        demands(_self, x: number) { return 0 <= x && x <= 10 }
-    }
-})
-
-@Contracted(baseContract)
-class Base {
-    someMethod(x: number) { ... }
-}
-
-const subContract = new Contract<Sub>({
-    [extend]: baseContract,
-    someMethod: {
-        demands(_self, x: number){ return -10 <= x && x <= 20 }
-    }
-})
-
-@Contracted(subContract)
 class Sub extends Base {
-    override someMethod(x: number){ ... }
+    @demands((_self, x: number) => x === 42)
+    override foo(x: number) { /* ... */ }
 }
+// The effective demand for Sub#foo is: (x >= 0) || (x === 42)
 ```
-
-In the above example the precondition of `Sub.prototype.someMethod` is:
-
-`(-10 <= x && x <= 20) || (0 <= x && x <= 10)`
 
 ## Ensures
 
-The `ensures` declaration describes and enforces an assertion that must be true *after* its associated feature  executes. In other words after a client of your class executes a method or accessor the defined post-condition must be met or an error will be [raised to the library author](#the-order-of-assertions). This indicates a bug in the library code and not in the
-caller. The library code then has the [opportunity](#rescue) to capture and fix this error if it's expected.
+Use the `@ensures` decorator to specify postconditions for methods or get/set. If the condition fails, an error is thrown after the method executes.
 
 ```typescript
-const stackContract<Stack<any>> = new Contract({
-    push: {
-        ensures(self){ return !self.isEmpty() }
-    }
-})
+class Foo extends Contracted {
+    protected _value = 0;
+    get value() { return this._value; }
+    set value(v: number) { this._value = v; }
 
-@Contracted(stackContract)
-class Stack<T> {
-    ...
-    push(value: T) {
-        ...
-         this.#implementation.push(value);
-    }
+    @ensures(self => self.value >= 0)
+    dec(): void { this.value--; }
 }
 ```
 
-In the above example the post-condition of executing push on a stack is that it is not empty. If this assertion fails an `AssertionError` is raised.
+### Subcontracting and Ensures
 
-Static features, including the constructor, cannot be assigned an `ensures` declaration. In the future this may be enabled for non-constructor static methods but the implications are not clear at present.
-
-In addition to the `self` argument there is also an `old` argument which provides access to the values of any getters of the instance before its associated member was executed.
+When subclassing, if a subclass defines its own `@ensures` for a method, the resulting postcondition is **strengthened**: the subclass and base class ensures are AND-ed together. The method's result must satisfy **all** ensures in the inheritance chain.
 
 ```typescript
-const stackContract = new Contract<Stack<any>>({
-    push: {
-        ensures(self, old){ return self.size == old.size + 1 }
-    },
-    pop: {
-        ensures(self, old){ return self.size == old.size - 1 }
-    }
-})
-
-@Contracted(stackContract)
-class Stack<T> {
-    ...
-    push(value: T) {
-         this.#implementation.push(value);
-    }
-    pop(): T {
-        return this.#implementation.pop();
-    }
-}
-```
-
-If a class feature is overridden then the `ensures` assertion still applies:
-
-```typescript
-class MyStack<T> extends Stack<T> {
-    override push(value: T): { ... }
+class Base extends Contracted {
+    @ensures((_self, _args, x: number) => x >= 0)
+    foo(x: number) { /* ... */ }
 }
 
-...
-let myStack = new MyStack()
-
-myStack.push()
-myStack.isEmpty() == false;
-```
-
-The remaining arguments of `ensures` reflect the arguments of the associated feature.
-
-```typescript
-const baseContract = new Contract<Base>({
-    someMethod: {
-        ensures(_self, _old, x: number){ return 0 <= x && x <= 10 }
-    }
-})
-
-@Contracted(baseContract)
-class Base {
-    someMethod(x: number) { ... }
-}
-```
-
-A contract can be extended and that sub contract can declare an `ensures` assertion of its own for the same feature:
-
-```ts
-const baseContract = new Contract<Base>({
-    someMethod: {
-        ensures(){ ... }
-    }
-})
-
-const subContract = new Contract<Sub>({
-    [extend]: baseContract,
-    someMethod: {
-        ensures(){ ... }
-    }
-})
-```
-
-This subcontracted `ensures` declaration cannot weaken the `ensures` of the base contract. What this means is that the new post-condition will be and-ed with its ancestors. If all of the `ensures` are true then the obligation is considered fulfilled by the author of the feature otherwise an `AssertionError` is raised.
-
-```typescript
-const baseContract = new Contract<Base>({
-    method: {
-        ensures(_self, _old, x: number) { return 0 <= x && x <= 10 }
-    }
-})
-
-@Contracted(baseContract)
-class Base {
-    method(x: number){ ... }
-}
-
-const subContract = new Contract<Sub>({
-    [extend]: baseContract,
-    method: {
-        ensures(_self, _old, x: number){ return -10 <= x && x <= 20 }
-    }
-})
-
-@Contracted(subContract)
 class Sub extends Base {
-    method(x: number) { ... }
+    @ensures((_self, _args, x: number) => x <= 10)
+    override foo(x: number) { /* ... */ }
 }
+// The effective ensures for Sub#foo is: (x >= 0) && (x <= 10)
 ```
-
-In the above example the post-condition of `Sub.prototype.method` is:
-
-`(-10 <= x && x <= 20) && (0 <= x && x <= 10)`
-
-Which effectively means that if the method returns `x === 10`
-
-## Within
-
-The `within` declaration provides a means of requiring the associated feature
-to complete execution within a time constraint.
-
-```typescript
-const timingContract = new Contract<Spinner>({
-    spinLock: {
-        within: 100
-    }
-});
-
-@Contracted(timingContract)
-class Spinner {
-    spinLock(delay: number) {
-        const t1 = Date.now();
-        while(Date.now() - t1 < delay) {
-            continue;
-        }
-
-        return 'Okay';
-    }
-}
-
-new Ticker().spinLock(50) === 'Okay';
-
-new Ticker().spinLock(500) // throws "Timing constraint violated...";
-```
-
-Currently `within` only supports synchronous features. async feature support is planned for a future version
 
 ## Rescue
 
-The `rescue` declaration enables a mechanism for providing **Robustness**.
-Robustness is the ability of an implementation to respond to situations
-not specified; in other words the ability to handle exceptions (pun intended).
-This declaration can be associated with class features. The intent of this
-is to restore any invariants of the class and optionally retry execution.
+Use the `@rescue` decorator to handle exceptions thrown by a method, restore invariants, or retry execution:
 
 ```typescript
-const stackContract = new Contract<Stack<any>>({
-    pop: {
-        rescue(_self, error, _args, _retry) {
-            console.log(error)
-        }
-    }
-})
+import { rescue } from '@final-hill/decorator-contracts';
 
-@Contracted(stackContract)
-class Stack<T> {
-    ...
-    pop(): T {
-        assert(!this.isEmpty(), 'You can not pop from an empty stack')
+class Example extends Contracted {
+    private _value = 3;
+    get value() { return this._value; }
+    set value(v) { this._value = v; }
 
-        return this.#implementation.pop()!
-    }
-    ...
+    @rescue(self => self.value = 5)
+    method1(): void { throw new Error('I am error'); }
 }
 ```
 
-In the above naive example if the `pop` method is called when the stack is
-empty an exception occurs. The `rescue` declaration intercepts this
-exception and handles it by simply logging the error. The exception is
-then raised to the caller.
+You can also use the `retry` function in your rescue handler to attempt the method again:
 
-You also have the ability to retry the execution of the decorated
-feature from the beginning by calling the `retry` function. This provides
-a mechanism for [fault tolerance](https://en.wikipedia.org/wiki/Fault_tolerance).
-When `retry` is called the exception will no longer be raised to the caller of the original method.
-`retry` can only be called once per exception rescue in order to prevent unbounded
-recursion. An example of `retry` usage:
-
-```ts
-const studentRepositoryContract = new Contract<StudentRepository>({
-    getStudent: {
-        rescue(_self, error, [id], retry) {
-            console.error(error)
-            console.log('Retrying with legacy id...')
-            retry(`old-${id}`)
-        }
-    }
-})
-
-@Contracted(studentRepositoryContract)
-class StudentRepository {
-    ...
-    async getStudent(id: string): Student {
-        const data = await fetch(`/repos/students/${id}`).then(response => response.json())
-
-        return new Student(data)
+```typescript
+class Example extends Contracted {
+    @rescue((_self, _error, _args, retry) => retry(3))
+    method(value: number): number {
+        if (value <= 0)
+            throw new Error('value must be greater than 0');
+        else
+            return value;
     }
 }
 ```
 
-The `rescue` can be defined on the contract of an ancestor class feature and it will be used if none
-is defined on the current class:
+### Robustness, Organized Panic, and the Benefits of `@rescue`
 
-```ts
-const baseContract = new Contract<Base>({
-    myMethod: {
-        rescue(self, error, args, retry){ ... }
-    }
-})
+The `@rescue` decorator enables a mechanism for **Robustness** in your code. It allows your implementation to respond to situations not specified, providing the ability to handle exceptions in a structured way. This is sometimes called **Organized Panic**.
 
-@Contracted(baseContract)
-class Base {
-    ...
-    myMethod(){ ... }
-}
+In addition, `@rescue` provides a foundation for **N-Version programming**, **Fault-Tolerance**, and **Redundancy**. You can implement multiple strategies for handling errors, retrying with alternative logic or data, and ensuring your application can recover from unexpected failures.
 
-class Sub extends Base {
-    override myMethod(){ ... throw new Error('BOOM!') ... }
-}
-```
+Unlike traditional `try/catch`, where exceptions are non-resumable and often handled far from the source (leading to scattered and redundant error handling), `@rescue` allows for **resumable exceptions** and localized, declarative error handling. This means:
 
-Another capability that the `rescue` declaration provides is
-[N-Version programming](https://en.wikipedia.org/wiki/N-version_programming)
-to enable [Fault-Tolerance](https://en.wikipedia.org/wiki/Fault_tolerance)
-and [Redundancy](https://en.wikipedia.org/wiki/Redundancy_(engineering)).
+- You can lexically determine where exception handling occurs.
+- You can restore invariants or perform corrective actions before retrying or failing.
+- You can optionally call `retry` to attempt the method again with new arguments or after fixing state, providing a form of fault tolerance and robustness.
+- You can implement alternative strategies for error recovery, supporting N-Version programming and redundancy.
 
-A dated example of this is performing ajax requests in multi-browser environments where `fetch` may not exist:
+**Inheritance:**
 
-```ts
-const ajaxRequestContract = new Contract<AjaxRequest>({
-    get: {
-        rescue(self, _error, [url], retry) {
-            self.attempts++
-            if(self.attempts < 2)
-                retry(url)
-            }
-    }
-})
+If a base class declares a `@rescue` handler for a method, that handler is inherited by subclasses unless the subclass overrides it with its own `@rescue` declaration. This ensures that robust error handling is preserved throughout the inheritance chain, unless explicitly changed.
 
-@Contracted(ajaxRequestContract)
-class AjaxRequest {
-    #attempts = 0
-
-    get attempts(): number { return this.#attempts }
-    set attempts(value: number) { this.#attempts = value }
-
-    get(url) {
-        if(this.#attempts == 0)
-            return this.getFetch(url)
-        else if(this.#attempts == 1)
-            return this.getXhr(url)
-    }
-
-    async getFetch(url) {
-        return await fetch(url)
-    }
-
-    async getXhr(url) {
-        return await new Promise((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
-            xhr.open('GET', url);
-            xhr.onload = function() {
-                if (this.status >= 200 && this.status < 300) {
-                    resolve(xhr.response);
-                } else {
-                    reject({
-                        status: this.status,
-                        statusText: xhr.statusText
-                    });
-                }
-            };
-            xhr.onerror = function() {
-                reject({
-                    status: this.status,
-                    statusText: xhr.statusText
-                });
-            };
-            xhr.send();
-        })
-    }
-}
-```
-
-Unlike `try/catch` where exceptions are non-resumable and handled at a location often distantly
-and indirectly related to the source, and probably redundantly across the callers,
-you can see from the above examples that the `rescue` mechanism enables resumable exceptions and
-"[Organized Panic](https://en.wikipedia.org/wiki/Exception_handling#Exception_handling_based_on_design_by_contract)"
-where you can lexically determine where the handling occurs and optionally perform changes and retry the feature call.
+This approach leads to more maintainable and robust code, as error handling is organized and closely tied to the contract of the class feature, rather than being scattered throughout the call stack.
 
 ## The order of assertions
 
@@ -815,22 +381,15 @@ When `obj.feature` is called the happy path is:
 
 ![image](./docs/happy-path.png)
 
-If an error is thrown and there is no `rescue` defined then the `invariant`
-is checked before the error is raised to the caller.
+If an error is thrown and there is no `@rescue` defined then the `@invariant` is checked before the error is raised to the caller.
 
-If an error is thrown in the `invariant` then it is raised to the caller.
+If an error is thrown in the `@invariant` then it is raised to the caller.
 
-If an error is thrown in the `demands` then the error is raised to the caller.
-In this case the `invariant` is not checked because the feature body has not
-been entered and the assertion cannot modify the state of the class without
-calling another method which is governed by its own contracts.
+If an error is thrown in the `@demands` then the error is raised to the caller. In this case the `@invariant` is not checked because the feature body has not been entered and the assertion cannot modify the state of the class without calling another method which is governed by its own contracts.
 
-If an error is thrown by the feature body or the `ensures` then
-the `rescue` is executed. If `retry` is called then the process
-starts from the beginning.
+If an error is thrown by the feature body or the `@ensures` then the `@rescue` is executed. If `retry` is called then the process starts from the beginning.
 
-If `rescue` throws an error or does not call `retry` then the
-`invariant` is checked before the error is raised to the caller.
+If `@rescue` throws an error or does not call `retry` then the `@invariant` is checked before the error is raised to the caller.
 
 ![image](./docs/order-of-assertions.png)
 

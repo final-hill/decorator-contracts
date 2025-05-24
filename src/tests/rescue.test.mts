@@ -1,39 +1,22 @@
-/*!
- * @license
- * Copyright (C) 2024 Final Hill LLC
- * SPDX-License-Identifier: AGPL-3.0-only
- * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
- */
-
 import { describe, test } from 'node:test';
 import nodeAssert from 'node:assert/strict';
-import { Messages } from '../Messages.mjs';
-import { checkedMode, Contract, Contracted, invariant } from '../index.mjs';
+import { checkedMode, Contracted, demands, ensures, invariant, rescue } from '@final-hill/decorator-contracts'
 
-/**
- * https://github.com/final-hill/decorator-contracts/issues/58
- */
-describe('The `rescue` declaration must preserve the invariant after execution', () => {
-    const baseContract = new Contract<Base>({
-        [invariant](self) { return self.value > 0; },
-        method1: {
-            rescue(self) { self.value = 5; }
-        },
-        method2: {
-            rescue(self) { self.value = -1; }
-        }
-    });
+describe('The `rescue` decorator must preserve the invariant after execution', () => {
+    @invariant(self => self.value > 0)
+    class Base extends Contracted {
+        private _value = 3;
+        get value() { return this._value; }
+        set value(v) { this._value = v; }
 
-    @Contracted(baseContract)
-    class Base {
-        accessor value = 3;
-
+        @rescue((self: Base) => self.value = 5)
         method1(): void { throw new Error('I am error'); }
+        @rescue((self: Base) => self.value = -1)
         method2(): void { throw new Error('I am error'); }
     }
 
     test('test', () => {
-        const base = new Base();
+        const base = Base.new();
         nodeAssert.throws(() => base.method1(), { message: 'I am error' });
         nodeAssert.strictEqual(base.value, 5);
         nodeAssert.throws(() => {
@@ -48,30 +31,18 @@ describe('The `rescue` declaration must preserve the invariant after execution',
  */
 describe('Any error thrown by a class feature must be captured by its @rescue', () => {
     test('rescuing non-error method returns normal', () => {
-        const baseContract = new Contract<Base>({
-            method: {
-                rescue() { }
-            }
-        });
-
-        @Contracted(baseContract)
-        class Base {
+        class Base extends Contracted {
+            @rescue(() => { })
             method(): number { return 7; }
         }
-        const base = new Base();
+        const base = Base.new();
 
         nodeAssert.strictEqual(base.method(), 7);
     });
 
     test('rescue of method with an error then retrying returns ok', () => {
-        const baseContract = new Contract<Base>({
-            method: {
-                rescue(_self, _error: any, _args: any[], retry: any) { retry(3); }
-            }
-        });
-
-        @Contracted(baseContract)
-        class Base {
+        class Base extends Contracted {
+            @rescue((_self, _error: any, _args: any[], retry: any) => { retry(3); })
             method(value: number): number {
                 if (value <= 0)
                     throw new Error('value must be greater than 0');
@@ -79,24 +50,18 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
                     return value;
             }
         }
-        const base = new Base();
+        const base = Base.new();
         nodeAssert.strictEqual(base.method(0), 3);
     });
 
     test('rescue of method with an error then rethrow throws to caller', () => {
-        const baseContract = new Contract<Base>({
-            method: {
-                rescue() { throw new Error('Rescue throw'); }
-            }
-        });
-
-        @Contracted(baseContract)
-        class Base {
+        class Base extends Contracted {
+            @rescue(() => { throw new Error('Rescue throw') })
             method(): void {
                 throw new Error('Method error');
             }
         }
-        const base = new Base();
+        const base = Base.new();
         try {
             base.method();
             nodeAssert.fail('Expected an error to be thrown');
@@ -106,60 +71,44 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
     });
 
     test('rescuing non-error getter returns normal', () => {
-        const baseContract = new Contract<Base>({
-            value: { rescue() { } }
-        });
-
-        @Contracted(baseContract)
-        class Base {
+        class Base extends Contracted {
+            @rescue(() => { })
             get value(): number { return 7; }
         }
-        const base = new Base();
+        const base = Base.new();
         nodeAssert.strictEqual(base.value, 7);
     });
 
     test('rescuing error getter then retry returns ok', () => {
-        const baseContract = new Contract<Base>({
-            value: {
-                rescue(self, _error, _args, retry) {
-                    self.value = 7;
-                    retry(7);
-                }
-            }
-        });
+        class Base extends Contracted {
+            private _value = 0;
 
-        @Contracted(baseContract)
-        class Base {
-            #value = 0;
-
+            @rescue((self: Base, _error, _args, retry: (value) => void) => {
+                self.value = 7;
+                retry(7);
+            })
             get value(): number {
-                if (this.#value == 0)
+                if (this._value == 0)
                     throw new Error('Bad State');
                 else
-                    return this.#value;
+                    return this._value;
             }
             set value(v: number) {
-                this.#value = v;
+                this._value = v;
             }
         }
-        const base = new Base();
+        const base = Base.new();
         nodeAssert.strictEqual(base.value, 7);
     });
 
     test('rescue of error getter then rethrow throws to caller', () => {
-        const baseContract = new Contract<Base>({
-            value: {
-                rescue() { throw new Error('Not Rescued'); }
-            }
-        });
-
-        @Contracted(baseContract)
-        class Base {
+        class Base extends Contracted {
+            @rescue(() => { throw new Error('Not Rescued'); })
             get value(): void {
                 throw new Error('Not implemented');
             }
         }
-        const base = new Base();
+        const base = Base.new();
         try {
             const value = base.value;
             nodeAssert.fail(`Expected an error to be thrown when getting value${value}`);
@@ -169,123 +118,86 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
     });
 
     test('rescuing non-error setter then getting returns normal', () => {
-        const baseContract = new Contract<Base>({
-            value: {
-                rescue() { }
-            }
-        });
-
-        @Contracted(baseContract)
-        class Base {
-            accessor value = NaN;
+        class Base extends Contracted {
+            private _value = NaN;
+            get value() { return this._value; }
+            @rescue(() => { })
+            set value(v) { this._value = v; }
         }
-        const base = new Base();
+        const base = Base.new();
         base.value = 12;
         nodeAssert.strictEqual(base.value, 12);
     });
 
     test('rescue of error setter then retry then getting returns ok', () => {
-        const baseContract = new Contract<Base>({
-            value: {
-                rescue(_self, _error, _args, retry) {
-                    retry(0);
-                }
-            }
-        });
+        class Base extends Contracted {
+            private _value = NaN;
 
-        @Contracted(baseContract)
-        class Base {
-            #value = NaN;
-
-            get value(): number { return this.#value; }
+            get value(): number { return this._value; }
+            @rescue((_self, _error, _args, retry: (value) => void) => { retry(0); })
             set value(value: number) {
                 if (Number.isNaN(value))
                     throw new Error('NaN not allowed');
 
-                this.#value = value;
+                this._value = value;
             }
         }
-        const base = new Base();
+        const base = Base.new();
         base.value = NaN;
         nodeAssert.strictEqual(base.value, 0);
     });
 
     test('rescue of error setter then rethrow throws error at caller', () => {
-        const baseContract = new Contract<Base>({
-            value: {
-                rescue() { throw new Error('Rescue fail'); }
-            }
-        });
+        class Base extends Contracted {
+            private _value = NaN;
 
-        @Contracted(baseContract)
-        class Base {
-            #value = NaN;
-
-            get value(): number { return this.#value; }
+            get value(): number { return this._value; }
+            @rescue(() => { throw new Error('Rescue fail'); })
             set value(_: number) { throw new Error('Setter fail'); }
         }
-        const base = new Base();
+        const base = Base.new();
         nodeAssert.throws(() => base.value = 12, { message: 'Rescue fail' });
     });
 });
 
-/**
- * https://github.com/final-hill/decorator-contracts/issues/60
- */
 describe('The rescue declarations are enabled in checkedMode and disabled otherwise', () => {
     test('enabled', () => {
         nodeAssert.throws(() => {
-            const baseContract = new Contract<Base>({
-                throws: {
-                    rescue() { throw new Error('I am still an Error'); }
-                }
-            });
-
-            @Contracted(baseContract)
-            class Base {
+            class Base extends Contracted {
+                @rescue(() => { throw new Error('I am still an Error'); })
                 throws(value: string): void {
                     throw new Error(value);
                 }
             }
 
-            const base = new Base();
+            const base = Base.new();
             base.throws('I am Error');
         }, { message: 'I am still an Error' });
     });
 
     test('disabled', () => {
-        nodeAssert.throws(() => {
-            const baseContract = new Contract<Base>({
-                [checkedMode]: false,
-                throws: {
-                    rescue() { throw new Error('I am still an Error'); }
-                }
-            });
+        Contracted[checkedMode] = false;
 
-            @Contracted(baseContract)
-            class Base {
+        nodeAssert.throws(() => {
+            class Base extends Contracted {
+                @rescue(() => { throw new Error('I am still an Error'); })
                 throws(value: string): void {
                     throw new Error(value);
                 }
             }
 
-            const base = new Base();
+            const base = Base.new();
             base.throws('I am Error');
         }, { message: 'I am Error' });
+
+        Contracted[checkedMode] = true;
     });
 });
 
-// https://github.com/final-hill/decorator-contracts/issues/62
 describe('The `retry` argument of the `rescue` declaration can only be called once during rescue execution', () => {
     test('rescue of method with an error then retrying returns ok', () => {
-        const baseContract = new Contract<Base>({
-            method: {
-                rescue(_self, _error: any, _args: any[], retry: any) { retry(3); }
-            }
-        });
-
-        @Contracted(baseContract)
-        class Base {
+        class Base extends Contracted {
+            @rescue((_self, _error: any, _args: any[], retry: any) => { retry(3); })
             method(value: number): number {
                 if (value <= 0)
                     throw new Error('value must be greater than 0');
@@ -293,22 +205,16 @@ describe('The `retry` argument of the `rescue` declaration can only be called on
                     return value;
             }
         }
-        const base = new Base();
+        const base = Base.new();
         nodeAssert.strictEqual(base.method(0), 3);
     });
 
     test('rescue of method with an error then retrying twice throws', () => {
-        const baseContract = new Contract<Base>({
-            method: {
-                rescue(_self, _error: any, _args: any[], retry: any) {
-                    retry(3);
-                    retry(3);
-                }
-            }
-        });
-
-        @Contracted(baseContract)
-        class Base {
+        class Base extends Contracted {
+            @rescue((_self, _error: any, _args: any[], retry: any) => {
+                retry(3);
+                retry(3);
+            })
             method(value: number): number {
                 if (value <= 0)
                     throw new Error('value must be greater than 0');
@@ -316,45 +222,32 @@ describe('The `retry` argument of the `rescue` declaration can only be called on
                     return value;
             }
         }
-        const base = new Base();
+        const base = Base.new();
         try {
             base.method(0);
             nodeAssert.fail('Expected an error to be thrown');
         } catch (error: any) {
-            nodeAssert.strictEqual(error.message, Messages.MsgSingleRetry);
+            nodeAssert.strictEqual(error.message, 'retry can only be called once');
         }
     });
 });
 
-/**
- * https://github.com/final-hill/decorator-contracts/issues/63
- */
 describe('If a `rescue` is executed and the `retry` argument is not called then the original error is thrown', () => {
-    const baseContract = new Contract<Base>({
-        throwRescue: {
-            rescue(_self, _error, _args, retry) {
-                retry(false);
-            }
-        },
-        throwFail: {
-            rescue() { /* Do nothing */ }
-        }
-    });
-
-    @Contracted(baseContract)
-    class Base {
+    class Base extends Contracted {
+        @rescue((_self, _error, _args, retry: (trigger: boolean) => boolean) => { retry(false) })
         throwRescue(trigger: boolean): boolean {
             if (trigger)
                 throw new Error('I am error');
             else
                 return true;
         }
+        @rescue(() => { /* Do nothing */ })
         throwFail(): void {
             throw new Error('I am error');
         }
     }
 
-    const base = new Base();
+    const base = Base.new();
 
     test('Rescued error', () => {
         nodeAssert.strictEqual(base.throwRescue(true), true);
@@ -365,32 +258,22 @@ describe('If a `rescue` is executed and the `retry` argument is not called then 
     });
 });
 
-/**
- * https://github.com/final-hill/decorator-contracts/issues/64
- */
 describe('If an exception is thrown in a class feature without a `rescue` defined then the exception is raised to its caller after the `invariant` is checked', () => {
-    const contractA = new Contract<A>({
-        method: {}
-    });
-
-    @Contracted(contractA)
-    class A {
+    class A extends Contracted {
         method(): void {
             throw new Error('I am error');
         }
     }
 
     test('Throwing error without `invariant` is raised to caller', () => {
-        nodeAssert.throws(() => new A().method(), { message: 'I am error' });
+        nodeAssert.throws(() => A.new().method(), { message: 'I am error' });
     });
 
-    const contractB = new Contract<B>({
-        [invariant](self) { return self.value > 0; }
-    });
-
-    @Contracted(contractB)
-    class B {
-        accessor value = 1;
+    @invariant(self => self.value > 0)
+    class B extends Contracted {
+        private _value = 1;
+        get value() { return this._value; }
+        set value(v) { this._value = v; }
 
         method1(): void {
             this.value = 3;
@@ -404,95 +287,67 @@ describe('If an exception is thrown in a class feature without a `rescue` define
     }
 
     test('Throwing error with `invariant`', () => {
-        nodeAssert.throws(() => new B().method1(), { message: 'I am error' });
-        nodeAssert.throws(() => {
-            new B().method2();
-        }, /^Error: Invariant violated/);
+        nodeAssert.throws(() => B.new().method1(), { message: 'I am error' });
+        nodeAssert.throws(() => { B.new().method2(); }, /^Error: Invariant violated/);
     });
 });
 
-/**
- * https://github.com/final-hill/decorator-contracts/issues/65
- */
 describe('If an error is thrown in `demands` the error is raised to the caller', () => {
-    const contractA = new Contract<A>({
-        [invariant](self) {
-            return self.value > 0;
-        },
-        method: {
-            rescue(_self, _error, args, _retry) {
-                if (args[0] === -2) throw new Error('Rescue Error');
-            },
-            demands(_self, value) {
-                return value >= 0;
-            }
-        },
-        methodEmpty: {
-            demands() { return false; },
-            rescue() { throw new Error('Rescue Error'); }
-        },
-        methodError: {
-            demands() { return true; },
-            rescue() { throw new Error('Rescue Error'); }
-        }
-    });
+    @invariant(self => self.value > 0)
+    class A extends Contracted {
+        private _value = 1;
+        get value() { return this._value; }
+        set value(v) { this._value = v; }
 
-    @Contracted(contractA)
-    class A {
-        accessor value = 1;
-
+        @demands((self, [value]) => value >= 0)
+        @rescue((self, _error, [value], _retry) => { if (value === -2) throw new Error('Rescue Error'); })
         method(value: number): void {
             this.value = value;
         }
+
+        @demands(() => false)
+        @rescue(() => { throw new Error('Rescue Error'); })
         methodEmpty(): void { }
+
+        @demands(() => true)
+        @rescue(() => { throw new Error('Rescue Error'); })
         methodError(): void { throw new Error('Feature Error'); }
     }
 
     test('Error pathways', () => {
-        nodeAssert.doesNotThrow(() => new A().method(1));
-        nodeAssert.throws(() => new A().method(0), /^Error: Invariant violated/);
-        nodeAssert.throws(() => new A().method(-1), /^Error: demands not met/);
-        nodeAssert.throws(() => new A().method(-2), /^Error: demands not met/);
-        nodeAssert.throws(() => new A().methodEmpty(), /^Error: demands not met/);
-        nodeAssert.throws(() => new A().methodError(), /^Error: Rescue Error/);
+        nodeAssert.doesNotThrow(() => A.new().method(1));
+        nodeAssert.throws(() => A.new().method(0), /^Error: Invariant violated/);
+        nodeAssert.throws(() => A.new().method(-1), /^Error: No demands were satisfied/);
+        nodeAssert.throws(() => A.new().method(-2), /^Error: No demands were satisfied/);
+        nodeAssert.throws(() => A.new().methodEmpty(), /^Error: No demands were satisfied/);
+        nodeAssert.throws(() => A.new().methodError(), /^Error: Rescue Error/);
     });
 });
 
-/**
- * https://github.com/final-hill/decorator-contracts/issues/66
- */
 describe('If an error is raised in an `ensures` then the associated rescue is executed', () => {
-    const contractA = new Contract<A>({
-        [invariant](self) { return self.value >= 0; },
-        method: {
-            ensures(self) { return self.value > 0; },
-            rescue(_self, _error, args, _retry) {
-                if (args[0] === -2) throw new Error('Rescue Error');
-            }
-        },
-        methodEmpty: {
-            ensures() { return false; }
-        },
-        methodError: {
-            ensures() { return true; },
-            rescue() { throw new Error('Rescue Error'); }
-        }
-    });
+    @invariant((self: A) => self.value >= 0)
+    class A extends Contracted {
+        private _value = 1;
+        get value() { return this._value; }
+        set value(v) { this._value = v; }
 
-    @Contracted(contractA)
-    class A {
-        accessor value = 1;
-
+        @ensures((self: A) => self.value > 0)
+        @rescue((self: A, _error, [value], _retry) => { if (value === -2) throw new Error('Rescue Error'); })
         method(value: number): void { this.value = value; }
+
+        @ensures(() => false)
         methodEmpty(): void { }
+
+        @ensures(() => true)
+        @rescue(() => { throw new Error('Rescue Error'); })
         methodError(): void { throw new Error('Feature Error'); }
     }
 
     test('Error pathways', () => {
-        nodeAssert.doesNotThrow(() => new A().method(1));
-        nodeAssert.throws(() => new A().method(0), /^Error: ensures not met/);
-        nodeAssert.throws(() => new A().method(-1), /^Error: Invariant violated/);
-        nodeAssert.throws(() => new A().methodEmpty(), /^Error: ensures not met/);
-        nodeAssert.throws(() => new A().methodError(), /^Error: Rescue Error/);
+        nodeAssert.doesNotThrow(() => A.new().method(1));
+        nodeAssert.throws(() => A.new().method(0), /^Error: No ensurances were satisfied for/);
+        nodeAssert.throws(() => A.new().method(-1), /^Error: Invariant violated/);
+        nodeAssert.throws(() => A.new().methodEmpty(), /^Error: No ensurances were satisfied for/);
+        nodeAssert.throws(() => A.new().methodError(), /^Error: Rescue Error/);
     });
 });

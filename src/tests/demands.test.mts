@@ -1,43 +1,25 @@
-/*!
- * @license
- * Copyright (C) 2024 Final Hill LLC
- * SPDX-License-Identifier: AGPL-3.0-only
- * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
- */
-
-import { AssertionError, checkedMode, Contract, Contracted, extend } from '../index.mjs';
+import { AssertionError, checkedMode, Contracted, demands } from '@final-hill/decorator-contracts';
 import { describe, test } from 'node:test';
 import nodeAssert from 'node:assert/strict';
 
-/**
- * https://github.com/final-hill/decorator-contracts/issues/70
- */
 describe('Demands assertions can be defined for a class feature', () => {
     test('Basic definition', () => {
         const nonNegative = (self: Foo): boolean => self.value >= 0,
-            isEven = (self: Foo): boolean => self.value % 2 == 0,
-            fooContract = new Contract<Foo>({
-                inc: {
-                    demands(self) {
-                        return nonNegative(self) && isEven(self);
-                    }
-                },
-                dec: {
-                    demands(self) {
-                        return nonNegative(self) && isEven(self);
-                    }
-                }
-            });
+            isEven = (self: Foo): boolean => self.value % 2 == 0
 
-        @Contracted(fooContract)
-        class Foo {
-            accessor value = 0;
+        class Foo extends Contracted {
+            protected _value = 0;
+            get value() { return this._value; }
+            set value(v: number) { this._value = v; }
 
+            @demands((self: Foo) => nonNegative(self) && isEven(self))
             inc(): void { this.value += 2; }
+
+            @demands((self: Foo) => nonNegative(self) && isEven(self))
             dec(): void { this.value -= 1; }
         }
 
-        const foo = new Foo();
+        const foo = Foo.new();
 
         nodeAssert.doesNotThrow(() => foo.inc());
 
@@ -50,20 +32,13 @@ describe('Demands assertions can be defined for a class feature', () => {
     });
 });
 
-/**
- * https://github.com/final-hill/decorator-contracts/issues/71
- */
 describe('Overridden features are still subject to the demands assertion', () => {
-    const baseContract = new Contract<Base>({
-        dec: {
-            demands(self) { return self.value >= 0; }
-        }
-    });
+    class Base extends Contracted {
+        protected _value = 0;
+        get value() { return this._value; }
+        set value(v: number) { this._value = v; }
 
-    @Contracted(baseContract)
-    class Base {
-        accessor value = 0;
-
+        @demands((self: Base) => self.value >= 0)
         dec(): void { this.value--; }
         inc(): void { this.value++; }
     }
@@ -74,7 +49,7 @@ describe('Overridden features are still subject to the demands assertion', () =>
 
     test('inc(); inc(); dec(); does not throw', () => {
         nodeAssert.doesNotThrow(() => {
-            const sub = new Sub();
+            const sub = Sub.new();
             sub.inc();
             sub.inc();
             sub.dec();
@@ -83,7 +58,7 @@ describe('Overridden features are still subject to the demands assertion', () =>
 
     test('dec(); dec(); throws', () => {
         nodeAssert.throws(() => {
-            const sub = new Sub();
+            const sub = Sub.new();
             sub.dec();
             sub.dec();
         }, AssertionError);
@@ -95,7 +70,7 @@ describe('Overridden features are still subject to the demands assertion', () =>
 
     test('inc(); inc(); inc(); inc(): dec(); does not throw', () => {
         nodeAssert.doesNotThrow(() => {
-            const subSub = new SubSub();
+            const subSub = SubSub.new();
             subSub.inc();
             subSub.inc();
             subSub.inc();
@@ -106,7 +81,7 @@ describe('Overridden features are still subject to the demands assertion', () =>
 
     test('inc(); inc(); inc(); inc(): dec(); dec(); dec(); throws', () => {
         nodeAssert.throws(() => {
-            const subSub = new SubSub();
+            const subSub = SubSub.new();
             subSub.inc();
             subSub.inc();
             subSub.inc();
@@ -118,126 +93,84 @@ describe('Overridden features are still subject to the demands assertion', () =>
     });
 });
 
-/**
- * https://github.com/final-hill/decorator-contracts/issues/73
- */
 describe('The `demands` assertion is evaluated before its associated feature is called', () => {
-    class Foo {
-        accessor value = 0;
+    class Foo extends Contracted {
+        protected _value = 0;
+        get value() { return this._value; }
+        set value(v: number) { this._value = v; }
     }
 
     test('true "demands" check does not throw', () => {
-        const barContract = new Contract<Bar>({
-            method: {
-                demands(self) { return self.value >= 0; }
-            }
-        });
-
-        @Contracted(barContract)
         class Bar extends Foo {
+            @demands((self: Bar) => self.value >= 0)
             method(): number {
                 return this.value = -2;
             }
         }
 
-        const bar = new Bar();
+        const bar = Bar.new();
 
         nodeAssert.strictEqual(bar.method(), -2);
     });
 
     test('false "demands" check throws', () => {
-        const barContract = new Contract<Bar>({
-            method: {
-                demands() { return false; }
-            }
-        });
-
-        @Contracted(barContract)
         class Bar extends Foo {
+            @demands(() => false)
             method(): number {
                 return this.value = 12;
             }
         }
 
-        const bar = new Bar();
+        const bar = Bar.new();
 
         nodeAssert.throws(() => bar.method());
     });
 });
 
-/**
- * https://github.com/final-hill/decorator-contracts/issues/74
- */
 describe('`demands` assertions are enabled in `checkedMode` and disabled otherwise', () => {
     test('The associated assertion is evaluated when checkMode = true', () => {
-        const fooContract = new Contract<Foo>({
-            method: {
-                demands() { return false; }
-            }
-        });
-
-        @Contracted(fooContract)
-        class Foo {
+        class Foo extends Contracted {
+            @demands(() => false)
             method(): void { }
         }
 
-        nodeAssert.throws(() => new Foo().method());
+        nodeAssert.throws(() => Foo.new().method());
     });
 
     test('The associated assertion is NOT evaluated in checkMode = false', () => {
-        const fooContract = new Contract<Foo>({
-            [checkedMode]: false,
-            method: {
-                demands() { return false; }
-            }
-        });
-
-        @Contracted(fooContract)
-        class Foo {
+        class Foo extends Contracted {
+            @demands(() => false)
             method(): void { }
         }
 
-        nodeAssert.doesNotThrow(() => new Foo().method());
+        Contracted[checkedMode] = false;
+        nodeAssert.doesNotThrow(() => Foo.new().method());
+        Contracted[checkedMode] = true;
     });
 });
 
-/**
- * https://github.com/final-hill/decorator-contracts/issues/75
- */
-describe('`demands` assertions cannot be strengthened in a subtype', () => {
-    const baseContract = new Contract<Base>({
-        method: {
-            demands(_self, value: number) { return 10 <= value && value <= 30; }
-        }
-    });
 
-    @Contracted(baseContract)
-    class Base {
+describe('`demands` assertions cannot be strengthened in a subtype', () => {
+    class Base extends Contracted {
+        @demands((_self, value) => 10 <= value && value <= 30)
         method(value: number): number { return value; }
     }
 
     test('Base demands', () => {
-        const base = new Base();
+        const base = Base.new();
 
         nodeAssert.strictEqual(base.method(15), 15);
         nodeAssert.throws(() => base.method(5), AssertionError);
         nodeAssert.throws(() => base.method(35), AssertionError);
     });
 
-    const weakerContract = new Contract<Weaker>({
-        [extend]: baseContract,
-        method: {
-            demands(_, value: number) { return 1 <= value && value <= 50; }
-        }
-    });
-
-    @Contracted(weakerContract)
     class Weaker extends Base {
+        @demands((_self, value) => 1 <= value && value <= 50)
         override method(value: number): number { return value; }
     }
 
     test('Weaker precondition', () => {
-        const weaker = new Weaker();
+        const weaker = Weaker.new();
 
         nodeAssert.strictEqual(weaker.method(15), 15);
         nodeAssert.strictEqual(weaker.method(5), 5);
@@ -246,20 +179,13 @@ describe('`demands` assertions cannot be strengthened in a subtype', () => {
         nodeAssert.throws(() => weaker.method(60), AssertionError);
     });
 
-    const strongerContract = new Contract<Stronger>({
-        [extend]: baseContract,
-        method: {
-            demands(_, value) { return 15 <= value && value <= 20; }
-        }
-    });
-
-    @Contracted(strongerContract)
     class Stronger extends Base {
+        @demands((_self, value) => 15 <= value && value <= 20)
         override method(value: number): number { return value; }
     }
 
     test('Stronger precondition', () => {
-        const stronger = new Stronger();
+        const stronger = Stronger.new();
 
         nodeAssert.strictEqual(stronger.method(15), 15);
         nodeAssert.throws(() => stronger.method(5), AssertionError);
