@@ -5,10 +5,12 @@
     "type": "module",
     "exports": {
         ".": {
-            "types": "./dist/index.d.ts",
+            "types": "./dist/index.d.mts",
             "import": "./dist/index.mjs"
         }
     },
+    "types": "./dist/index.d.mts",
+    "main": "./dist/index.mjs",
     "scripts": {
         "prebuild": "npm run lint",
         "build": "webpack",
