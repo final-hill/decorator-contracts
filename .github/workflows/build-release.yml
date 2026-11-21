@@ -42,6 +42,14 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
 
+    # Trusted publishing authenticates with a short-lived OIDC token instead of a
+    # stored secret. `id-token: write` is what allows the runner to request one;
+    # without it npm authenticates as nobody and the registry answers a publish
+    # attempt with 404 rather than a permission error.
+    permissions:
+      contents: read
+      id-token: write
+
     strategy:
       matrix:
         node-version: [26.x]
@@ -58,9 +66,12 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           registry-url: https://registry.npmjs.org
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+          # Never cache in a release build: the publish must reflect exactly
+          # what `npm ci` resolves for this commit.
+          package-manager-cache: false
       - name: Publish
+        # No NODE_AUTH_TOKEN: the npm CLI detects the OIDC environment and
+        # exchanges it for a short-lived publish token. Provenance attestations
+        # are generated automatically for a public package from a public
+        # repository.
         run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
