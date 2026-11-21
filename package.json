@@ -13,8 +13,9 @@
         "prebuild": "npm run lint",
         "build": "webpack",
         "lint": "eslint src/ --ext .mts --fix",
-        "pretest": "npm run build",
-        "test": "globstar -- node --import tsx --test ./src/tests/*.test.mts"
+        "pretest": "npm run build && npm run typecheck",
+        "test": "globstar -- node --import tsx --test ./src/tests/*.test.mts",
+        "typecheck": "tsc --noEmit -p tsconfig.json && tsc -p tsconfig.test.json"
     },
     "homepage": "https://github.com/final-hill/decorator-contracts#readme",
     "repository": {

@@ -83,7 +83,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
         class Base extends Contracted {
             private _value = 0;
 
-            @rescue((self: Base, _error, _args, retry: (value) => void) => {
+            @rescue((self: Base, _error, _args, retry: (value: number) => void) => {
                 self.value = 7;
                 retry(7);
             })
@@ -134,7 +134,7 @@ describe('Any error thrown by a class feature must be captured by its @rescue', 
             private _value = NaN;
 
             get value(): number { return this._value; }
-            @rescue((_self, _error, _args, retry: (value) => void) => { retry(0); })
+            @rescue((_self, _error, _args, retry: (value: number) => void) => { retry(0); })
             set value(value: number) {
                 if (Number.isNaN(value))
                     throw new Error('NaN not allowed');
