@@ -1,4 +1,5 @@
-import { assert, assertContractResult } from './assert.mjs';
+import { assert, assertContractResult, describeViolation } from './assert.mjs';
+import { AssertionError } from './AssertionError.mjs';
 import { checkedMode, Contracted } from './Contracted.mjs';
 
 export type InvariantPredicate<Class extends typeof Contracted> = (self: InstanceType<Class>) => boolean;
@@ -13,13 +14,25 @@ export type InvariantDecorator = <Class extends typeof Contracted>(
 export function assertInvariants<C extends typeof Contracted, T extends InstanceType<C>>(Class: C, instance: T) {
     if (!Contracted[checkedMode]) return;
 
-    const invariants = (Class[Symbol.metadata]?.['invariants'] ?? []) as InvariantPredicate<C>[];
+    const invariants = (Class[Symbol.metadata]?.['invariants'] ?? []) as InvariantPredicate<C>[],
+        failed: number[] = [];
 
     for (const [index, inv] of invariants.entries())
-        assert(
-            assertContractResult(inv(instance), '@invariant', Class.name, index),
-            `Invariant violated in class ${Class.name}: ${inv.toString()}`
-        );
+        if (!assertContractResult(inv(instance), '@invariant', Class.name, index))
+            failed.push(index);
+
+    if (failed.length === 0) return;
+
+    const { message, violation } = describeViolation(
+        '@invariant',
+        Class.name,
+        undefined,
+        invariants,
+        failed,
+        'The instance left the invariant unsatisfied.',
+    );
+
+    throw new AssertionError(message, violation);
 }
 
 export const invariant: InvariantDecorator = (predicate) => (OriginalClass, { kind, metadata }) => {

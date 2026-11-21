@@ -657,6 +657,6 @@ describe('Third-party features applied to a contracted class are subject to its 
             const foo = Foo.new(),
                 bar = new Bar();
             bar.dec.apply(foo);
-        }, /^Error: Invariant violated/);
+        }, /^AssertionError: @invariant failed/);
     });
 });

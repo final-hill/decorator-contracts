@@ -158,7 +158,7 @@ describe('The assertions run in the documented order', () => {
         Contracted[checkedMode] = false;
         try { foo.value = -1; } finally { Contracted[checkedMode] = true; }
 
-        nodeAssert.throws(() => foo.method(), /^Error: Invariant violated/);
+        nodeAssert.throws(() => foo.method(), /^AssertionError: @invariant failed/);
     });
 
     test('the invariant is checked once when a precondition rejects the call', () => {
@@ -172,7 +172,7 @@ describe('The assertions run in the documented order', () => {
 
         const foo = Foo.new();
         evaluations = 0;
-        nodeAssert.throws(() => foo.method(), /No demands were satisfied/);
+        nodeAssert.throws(() => foo.method(), /@demands failed/);
 
         // the entry check runs; the exit check is skipped because the body was
         // never entered

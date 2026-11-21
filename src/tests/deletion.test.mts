@@ -118,7 +118,7 @@ describe('Deletion runs the contract lifecycle', () => {
 
         const foo = Foo.new() as any;
 
-        nodeAssert.throws(() => { delete foo._needed; }, /Invariant violated/);
+        nodeAssert.throws(() => { delete foo._needed; }, /@invariant failed/);
     });
 
     test('a delete that satisfies the invariant succeeds', () => {

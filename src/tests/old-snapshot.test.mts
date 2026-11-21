@@ -222,7 +222,7 @@ describe('Reading a method returns a stable reference', () => {
         const foo = Foo.new() as any,
             method = foo.method;
 
-        nodeAssert.throws(() => method(), /No ensurances were satisfied/);
+        nodeAssert.throws(() => method(), /@ensures failed/);
     });
 
     test('different instances yield different wrappers', () => {

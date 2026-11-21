@@ -102,7 +102,7 @@ describe('Checked mode remains the global on/off switch', () => {
             Contracted[checkedMode] = true;
         }
 
-        nodeAssert.throws(() => foo.method(), /No ensurances were satisfied/);
+        nodeAssert.throws(() => foo.method(), /@ensures failed/);
     });
 
     test('disabling checked mode permits external writes', () => {
