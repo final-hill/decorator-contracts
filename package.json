@@ -25,7 +25,7 @@
     "homepage": "https://github.com/final-hill/decorator-contracts#readme",
     "repository": {
         "type": "git",
-        "url": "https://github.com/final-hill/decorator-contracts"
+        "url": "git+https://github.com/final-hill/decorator-contracts.git"
     },
     "bugs": {
         "url": "https://github.com/final-hill/decorator-contracts/issues"
