@@ -263,6 +263,18 @@ class Example extends Contracted {
 }
 ```
 
+The boundary begins *after* construction. A constructor runs before the instance is proxied, so its assignments — to public properties included — are unrestricted. That is deliberate: field initialisers and `Object.assign(this, ...)` are ordinary ways to establish initial state, and the invariant evaluated at the end of `Contracted.new()` is what validates the result.
+
+```typescript
+class Example extends Contracted {
+    publicProp = 2;             // allowed: field initialiser
+    constructor() {
+        super();
+        this.publicProp = 3;    // allowed: still inside construction
+    }
+}
+```
+
 An external write to a public property raises a `TypeError`:
 
 ```typescript
@@ -501,6 +513,18 @@ class Example extends Contracted {
 ```
 
 Calling `retry()` retries with no arguments.
+
+A `@rescue` handler **cannot supply the feature's result**. Only `retry` can produce one, by running the body again; a value returned from the handler is ignored, and the original error is raised to the caller when `retry` is not called. To recover with a substitute value, restructure the body to accept the alternative and retry with it:
+
+```typescript
+@rescue((_self, _error, args, retry) => {
+    // the handler restores state, then asks for a second attempt
+    retry(...args);
+})
+method(value: number): number { /* ... */ }
+```
+
+This keeps the postcondition meaningful: a result the body never produced would not be covered by `@ensures`.
 
 ### Robustness, Organized Panic, and the Benefits of `@rescue`
 
