@@ -209,6 +209,22 @@ class Example extends Contracted {
 }
 ```
 
+The rule applies **inside** a feature body as well as outside it. A method, getter, or setter that assigns to a public property raises a `TypeError`, so a class cannot bypass its own encapsulation:
+
+```typescript
+class Example extends Contracted {
+    publicProp = 2;
+
+    break(): void {
+        this.publicProp = 3; // TypeError
+    }
+}
+```
+
+A nested access, such as a method calling another method of the same instance, does not start a second contract lifecycle. The enclosing invocation owns the assertions for that call, so the invariant is evaluated once on entry and once on exit regardless of how many internal accesses the body performs.
+
+`Object.defineProperty` and `Reflect.defineProperty` operate below the proxy and are not intercepted.
+
 ## Note on Private Fields and Accessors
 
 Due to the use of JavaScript `Proxy` in the implementation of this library, native `#private` fields and the `accessor` keyword are **not supported**. Instead, use conventional private fields (e.g., `_private`) and define explicit getter/setter pairs for encapsulation:

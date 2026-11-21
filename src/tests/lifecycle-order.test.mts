@@ -179,7 +179,13 @@ describe('The assertions run in the documented order', () => {
         nodeAssert.strictEqual(evaluations, 1);
     });
 
-    test('an accessor body observes the same `this` binding as a method body', () => {
+    /**
+     * Feature bodies run with `this` bound to the proxy, so the encapsulation
+     * guarantee applies from inside a feature and not only from outside.
+     *
+     * See https://github.com/final-hill/decorator-contracts/issues/305
+     */
+    test('a feature body cannot assign to a public property', () => {
         const observed: Record<string, boolean> = {};
 
         class Foo extends Contracted {
@@ -208,8 +214,9 @@ describe('The assertions run in the documented order', () => {
         void foo.value;
         foo.value = 1;
 
-        nodeAssert.strictEqual(observed.method, false);
-        nodeAssert.strictEqual(observed.getter, observed.method);
-        nodeAssert.strictEqual(observed.setter, observed.method);
+        nodeAssert.strictEqual(observed.method, true, 'method body write is rejected');
+        nodeAssert.strictEqual(observed.getter, true, 'getter body write is rejected');
+        nodeAssert.strictEqual(observed.setter, true, 'setter body write is rejected');
+        nodeAssert.strictEqual(foo.publicProp, 1, 'the public property is unchanged');
     });
 });
