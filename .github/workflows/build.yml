@@ -40,3 +40,15 @@ jobs:
         npm test
       env:
         CI: true
+
+    - name: Verify the working tree is clean after a build
+      shell: bash
+      run: |
+        # A build must not rewrite tracked files. This catches a linter that
+        # fixes sources, a generator that touches them, or a stale artifact
+        # being committed.
+        if [[ -n "$(git status --porcelain)" ]]; then
+          echo "::error::The build modified tracked files:"
+          git --no-pager diff
+          exit 1
+        fi
