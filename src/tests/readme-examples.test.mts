@@ -103,3 +103,42 @@ describe('A predicate receives the argument list', () => {
         nodeAssert.strictEqual(oldSeen, true);
     });
 });
+
+/**
+ * https://github.com/final-hill/decorator-contracts/issues/332
+ *
+ * Mirrors the README's "a predicate that throws is a failed predicate" example, so
+ * the documented behaviour is executable.
+ */
+describe('README: a throwing predicate is a failed predicate', () => {
+    class Denied extends Error {
+        override name = 'Denied';
+    }
+
+    class BaseThrows extends Contracted {
+        @demands((_self: BaseThrows, [x]: [number]) => { if (x !== 42) throw new Denied(); return true; })
+        method(x: number): number { return x; }
+    }
+
+    class SubThrows extends BaseThrows {
+        @demands((_self: SubThrows, [x]: [number]) => x === 7)
+        override method(x: number): number { return x; }
+    }
+
+    test('the weakening arm permits a call the throwing arm would have denied', () => {
+        nodeAssert.strictEqual(SubThrows.new().method(7), 7);
+    });
+
+    test('an all-arms-failed call raises the typed error with the violation attached', () => {
+        try {
+            SubThrows.new().method(1);
+            nodeAssert.fail('expected the arms to reject');
+        } catch (caught) {
+            const error = caught as any;
+
+            nodeAssert.strictEqual(error instanceof Denied, true);
+            nodeAssert.strictEqual(error.violation.contract, '@demands');
+            nodeAssert.deepStrictEqual(error.violation.thrownIndices, [0]);
+        }
+    });
+});

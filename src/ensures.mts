@@ -1,7 +1,7 @@
-import { violationError } from './assert.mjs';
+import { violationFailure } from './assert.mjs';
 import { checkedMode, Contracted } from './Contracted.mjs';
 import { assertFeatureContractTarget } from './decorator.mjs';
-import { assertNormalizable, describeArm, evaluateArm, type ArmOptions } from './admissibility.mjs';
+import { armFailures, assertNormalizable, describeArm, evaluateArm, recordFailure, type ArmOptions } from './admissibility.mjs';
 import type { StandardSchemaV1 } from './standard-schema.mjs';
 import type { FeatureDecoratorContext } from './types.mjs';
 
@@ -94,8 +94,7 @@ export function assertEnsures(
     if (es.length === 0) return result;
 
     const label = `${instance.constructor.name}.${String(propertyKey)}`,
-        failed: number[] = [],
-        issues: StandardSchemaV1.Issue[] = [];
+        failures = armFailures();
 
     let normalized = result;
 
@@ -116,10 +115,10 @@ export function assertEnsures(
             entry.options,
         );
 
+        // One failing arm rejects the call, but its siblings are still evaluated:
+        // the caller learns about every broken postcondition rather than the first.
         if (!outcome.ok) {
-            failed.push(index);
-
-            if (outcome.issues) issues.push(...outcome.issues);
+            recordFailure(failures, index, outcome);
 
             continue;
         }
@@ -127,16 +126,15 @@ export function assertEnsures(
         if (outcome.value !== undefined) normalized = outcome.value;
     }
 
-    if (failed.length === 0) return normalized;
+    if (failures.failed.length === 0) return normalized;
 
-    throw violationError(
+    throw violationFailure(
         '@ensures',
         instance.constructor.name,
         String(propertyKey),
         es.map(entry => entry.arm),
-        failed,
+        failures,
         'A postcondition was not satisfied after the feature ran.',
-        issues,
         describeArm,
     );
 }

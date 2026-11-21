@@ -278,13 +278,52 @@ interface ContractViolation {
     className: string;
     feature?: string;        // absent for `@invariant`
     failedIndices: number[]; // positions in the contract's composition list
+    thrownIndices?: number[]; // the failing arms that threw, in evaluation order
+    thrown?: string[];       // what they threw, described, aligned with `thrownIndices`
     predicates: string[];    // source text, aligned with `failedIndices`
 }
 ```
 
-`@demands` is OR-composed, so a failure lists **every** arm — any of them could have permitted the call. `@ensures` and `@invariant` are AND-composed, so a failure lists only the predicates that broke.
+`@demands` is OR-composed, so a failure lists **every** arm that rejected the call — any of them could have permitted it. `@ensures` and `@invariant` are AND-composed, so a failure lists only the arms that broke.
 
 An `AssertionError` thrown by `assert()` itself has no `violation`.
+
+### A predicate that throws is a failed predicate
+
+A predicate that throws has answered *no*. It has not withdrawn the other arms, so evaluation continues and a later arm can still permit the call. This is what makes OR-composition hold: a subtype may weaken a precondition, and an arm that throws must not be able to deny a call its sibling allows.
+
+```typescript
+class Base extends Contracted {
+    @demands((_self: Base, [x]: [number]) => { if (x !== 42) throw new Denied(); return true; })
+    method(x: number): number { return x; }
+}
+
+class Sub extends Base {
+    @demands((_self: Sub, [x]: [number]) => x === 7) // a legal weakening arm
+    override method(x: number): number { return x; }
+}
+
+Sub.new().method(7); // permitted: the second arm holds, so the first arm's throw is moot
+```
+
+When **every** arm fails and at least one of them threw, that thrown value is raised in place of the `AssertionError`, so a typed error reaches the caller. The **first arm that threw** decides which value that is. The structured violation is still attached to it, non-enumerable, so `error.violation` describes the contract the same way it does for a verdict; the underlying `AssertionError`, whose message names every unsatisfied arm, travels as `error.cause`:
+
+```typescript
+try {
+    Sub.new().method(1); // both arms fail
+} catch (error) {
+    error instanceof Denied;            // true; the typed error, not an AssertionError
+    error.violation.contract;           // '@demands'
+    error.violation.thrownIndices;      // [0]
+    error.cause.message;                // names every arm, marking the one that threw
+}
+```
+
+The record describes each thrown value rather than holding it, because `ContractViolation` is otherwise plain data that a caller logs and serialises; the value itself is the error in their `catch`.
+
+A thrown primitive is raised unchanged, since it has nowhere to carry the violation. A `TypeError` from inside a predicate — a bug rather than a decision — keeps its own class, so a caller's `catch` still branches on the bug rather than on a contract failure.
+
+An error the contract did not create is never damaged: a frozen or non-extensible one is raised without the annotation, and a `cause` the consumer set is left alone. A contract's own `cause` never replaces one.
 
 ## Encapsulation
 
