@@ -125,12 +125,17 @@ describe('Contracted class tests', () => {
         });
     })
 
-    test("The properties of contracted classes can not be deleted", () => {
+    test("Deletion follows the same rule as assignment", () => {
         class Foo extends Contracted {
             _private = 1;
             publicProp = 2;
         }
         const foo = Foo.new();
+
+        // `_`-prefixed properties are the ones a caller may mutate, so they may
+        // also be removed.
+        nodeAssert.strictEqual(delete (foo as any)._private, true);
+        nodeAssert.strictEqual('_private' in foo, false);
 
         nodeAssert.throws(() => {
             // @ts-expect-error : Ignore type error
@@ -139,13 +144,33 @@ describe('Contracted class tests', () => {
 
         nodeAssert.throws(() => {
             // @ts-expect-error : Ignore type error
-            delete foo._private;
-        }, TypeError);
-
-        nodeAssert.throws(() => {
-            // @ts-expect-error : Ignore type error
             delete foo.nonexistent;
         }, TypeError);
+    })
+
+    test("Deletion is unrestricted when checked mode is disabled", () => {
+        class Foo extends Contracted {
+            _private = 1;
+            publicProp = 2;
+        }
+        const foo = Foo.new();
+
+        Contracted[checkedMode] = false;
+
+        try {
+            nodeAssert.doesNotThrow(() => {
+                // @ts-expect-error : Ignore type error
+                delete foo.publicProp;
+            });
+            nodeAssert.doesNotThrow(() => {
+                // @ts-expect-error : Ignore type error
+                delete foo._private;
+            });
+            nodeAssert.strictEqual('publicProp' in foo, false);
+            nodeAssert.strictEqual('_private' in foo, false);
+        } finally {
+            Contracted[checkedMode] = true;
+        }
     })
 
 })
