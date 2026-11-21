@@ -704,15 +704,64 @@ const proxyHandler: ProxyHandler<Contracted> = {
 
         const setter = typeof descriptor?.set === 'function' ? descriptor.set : undefined;
 
-        runLifecycle('set', target, prop, [value],
+        // `Reflect.set` is called without a receiver on purpose. Passing the
+        // proxy would route the write back through the `defineProperty` trap,
+        // which refuses an external definition of a public property. The name
+        // is already checked above, so writing the target directly performs
+        // exactly the mutation this trap authorises.
+        const assigned = runLifecycle('set', target, prop, [value],
             (args) => setter
                 ? (setter.call(target, args[0]), true)
-                : Reflect.set(target, prop, args[0], receiver));
+                : Reflect.set(target, prop, args[0]));
 
-        // A `set` trap must report success or the assignment throws in strict
-        // mode. Accessors do not return a meaningful value, so success is
-        // implicit once the lifecycle completes.
-        return true;
+        // Report the target's own outcome. A target that cannot accept the
+        // write, because `Object.freeze` or `Object.preventExtensions` was
+        // applied, raises a `TypeError` in strict mode.
+        return assigned !== false;
+    },
+    defineProperty(target, prop, descriptor) {
+        if (!Contracted[checkedMode]) return Reflect.defineProperty(target, prop, descriptor);
+
+        // Defining a property is an external mutation, so it follows the same
+        // rule as assignment. Redefining a public field escapes the
+        // postcondition that would have caught the change, and replacing a
+        // contracted method routes callers around its `@demands` and
+        // `@ensures`.
+        //
+        // Only `_`-prefixed names are permitted. A prototype setter does not
+        // widen this: assignment invokes the setter, while defining an own
+        // data property shadows the accessor.
+        //
+        // A descriptor carrying neither a value nor an accessor cannot change
+        // or shadow state, so any name is permitted. `Object.freeze` and
+        // `Object.seal` define such descriptors for each existing property,
+        // and refusing them would make an instance impossible to freeze.
+        const freezesOnly = !('value' in descriptor) && !('get' in descriptor) && !('set' in descriptor);
+
+        if (!freezesOnly && typeof prop === 'string' && !prop.startsWith('_'))
+            throw new TypeError(
+                `Cannot define property '${String(prop)}' on Contracted instances: only properties starting with '_' can be defined.`
+                + ' A feature body may change its own state, but an external caller must go through a method or a setter.',
+            );
+
+        return Reflect.defineProperty(target, prop, descriptor);
+    },
+    setPrototypeOf(target, prototype) {
+        if (!Contracted[checkedMode]) return Reflect.setPrototypeOf(target, prototype);
+
+        // Replacing the prototype swaps which descriptors a feature resolves to.
+        // The per-feature wrappers are cached against `prop` for the lifetime of
+        // the instance and would then dispatch to the wrong function, and the
+        // contract metadata is reached through the constructor, so the instance
+        // would report one class's contracts while running another's methods.
+        throw new TypeError(
+            'Cannot change the prototype of a Contracted instance: it would detach the instance from the features and contracts it was constructed with.',
+        );
+    },
+    preventExtensions(target) {
+        // Permitted for any property name: it changes no state and shadows no
+        // accessor. The `set` trap reports the write failures that follow.
+        return Reflect.preventExtensions(target);
     },
     deleteProperty(target, prop) {
         if (!Contracted[checkedMode]) return Reflect.deleteProperty(target, prop);
