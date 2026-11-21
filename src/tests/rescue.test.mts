@@ -227,7 +227,7 @@ describe('The `retry` argument of the `rescue` declaration can only be called on
             base.method(0);
             nodeAssert.fail('Expected an error to be thrown');
         } catch (error: any) {
-            nodeAssert.strictEqual(error.message, 'retry can only be called once');
+            nodeAssert.strictEqual(error.message, 'retry can only be called once per rescue execution');
         }
     });
 });
@@ -349,5 +349,444 @@ describe('If an error is raised in an `ensures` then the associated rescue is ex
         nodeAssert.throws(() => A.new().method(-1), /^Error: Invariant violated/);
         nodeAssert.throws(() => A.new().methodEmpty(), /^Error: No ensurances were satisfied for/);
         nodeAssert.throws(() => A.new().methodError(), /^Error: Rescue Error/);
+    });
+});
+/**
+ * https://github.com/final-hill/decorator-contracts/issues/281
+ *
+ * Per docs/order-of-assertions.png a `retry` restarts the lifecycle at
+ * `@invariant`, so the retried invocation is subject to `@demands` and
+ * `@ensures` like any other call.
+ */
+describe('A retried invocation re-enters the contract lifecycle', () => {
+    test('the lifecycle runs in documented order', () => {
+        const log: string[] = [];
+
+        @invariant((_self: Foo) => { log.push('invariant'); return true; })
+        class Foo extends Contracted {
+            protected _n = 0;
+            get n() { return this._n; }
+            set n(v: number) { this._n = v; }
+
+            @demands((self: Foo, [v]: [number]) => { log.push('demands:' + v); return v > 0; })
+            @ensures((self: Foo) => { log.push('ensures:' + self.n); return true; })
+            @rescue((_self, _error, _args, retry) => { log.push('rescue'); retry(5); })
+            method(v: number): number {
+                log.push('body:' + v);
+                if (v == 1) throw new Error('forced');
+
+                this.n = v;
+
+                return v;
+            }
+        }
+
+        const foo = Foo.new();
+        log.length = 0;
+
+        nodeAssert.strictEqual(foo.method(1), 5);
+        nodeAssert.deepStrictEqual(log, [
+            'invariant', 'demands:1', 'body:1', 'rescue',
+            'invariant', 'demands:5', 'body:5', 'ensures:5', 'invariant'
+        ]);
+    });
+
+    test('a retry that violates the demands throws', () => {
+        class Foo extends Contracted {
+            @demands((_self: Foo, [v]: [number]) => v > 0)
+            @rescue((_self, _error, _args, retry) => retry(-99))
+            method(v: number): number {
+                if (v < 0) throw new Error('negative');
+
+                return v;
+            }
+        }
+
+        nodeAssert.throws(() => Foo.new().method(-1), /^Error: No demands were satisfied/);
+    });
+
+    test('a retry that violates the ensures throws', () => {
+        class Foo extends Contracted {
+            protected _n = 0;
+            protected _attempts = 0;
+            get n() { return this._n; }
+
+            @ensures((self: Foo) => self.n == 0)
+            @rescue((self: Foo, _error, _args, retry) => { self.n = 3; retry(); }, { maxRetries: 1 })
+            method(): void {
+                if (this._attempts++ == 0) throw new Error('forced');
+            }
+            set n(v: number) { this._n = v; }
+        }
+
+        nodeAssert.throws(() => Foo.new().method(), /^Error: No ensurances were satisfied/);
+    });
+
+    test('a retry that violates the invariant throws', () => {
+        @invariant((self: Foo) => self.n == 0)
+        class Foo extends Contracted {
+            protected _n = 0;
+            protected _attempts = 0;
+            get n() { return this._n; }
+
+            @rescue((self: Foo, _error, _args, retry) => { self.n = 3; retry(); }, { maxRetries: 1 })
+            method(): void {
+                if (this._attempts++ == 0) throw new Error('forced');
+            }
+            set n(v: number) { this._n = v; }
+        }
+
+        nodeAssert.throws(() => Foo.new().method(), /^Error: Invariant violated/);
+    });
+});
+
+describe('A retried getter and setter re-enter the contract lifecycle', () => {
+    test('getter', () => {
+        const log: string[] = [];
+
+        class Foo extends Contracted {
+            protected _v = 0;
+
+            @demands(() => { log.push('demands'); return true; })
+            @rescue((self: Foo, _error, _args, retry) => { log.push('rescue'); self.warm(); retry(); })
+            get v(): number {
+                log.push('body');
+                if (this._v == 0) throw new Error('cold');
+
+                return this._v;
+            }
+
+            warm(): void { this._v = 7; }
+        }
+
+        const foo = Foo.new();
+        log.length = 0;
+
+        nodeAssert.strictEqual(foo.v, 7);
+        nodeAssert.deepStrictEqual(log, ['demands', 'body', 'rescue', 'demands', 'body']);
+    });
+
+    test('setter', () => {
+        const log: string[] = [];
+
+        class Foo extends Contracted {
+            protected _v = NaN;
+            get v() { return this._v; }
+
+            @demands((self: Foo, [v]: [number]) => { log.push('demands:' + v); return true; })
+            @rescue((_self, _error, _args, retry) => { log.push('rescue'); retry(0); })
+            set v(value: number) {
+                log.push('body:' + value);
+                if (Number.isNaN(value)) throw new Error('NaN');
+
+                this._v = value;
+            }
+        }
+
+        const foo = Foo.new();
+        log.length = 0;
+
+        foo.v = NaN;
+
+        // compare the log before reading `foo.v`, which itself runs the lifecycle
+        nodeAssert.deepStrictEqual(log, ['demands:NaN', 'body:NaN', 'rescue', 'demands:0', 'body:0']);
+        log.length = 0;
+        nodeAssert.strictEqual(foo.v, 0);
+    });
+});
+
+describe('A retried invocation re-enters its `@rescue` so it can select another strategy', () => {
+    test('an always-throwing retry terminates when `maxRetries` is set', () => {
+        let bodyCalls = 0;
+
+        class Foo extends Contracted {
+            @rescue((_self, _error, _args, retry) => retry(), { maxRetries: 1 })
+            method(): number {
+                bodyCalls++;
+                throw new Error('always');
+            }
+        }
+
+        nodeAssert.throws(() => Foo.new().method(), { message: 'always' });
+        nodeAssert.strictEqual(bodyCalls, 2);
+    });
+
+    test('a rescue handler is executed once per attempt', () => {
+        const attempts: number[] = [];
+
+        class Foo extends Contracted {
+            protected _attempt = 0;
+
+            @rescue((self: Foo, _error, _args, retry) => {
+                attempts.push(self._attempt++);
+                retry();
+            }, { maxRetries: 2 })
+            method(): number {
+                throw new Error('always');
+            }
+        }
+
+        nodeAssert.throws(() => Foo.new().method(), { message: 'always' });
+        nodeAssert.deepStrictEqual(attempts, [0, 1]);
+    });
+
+    test('a handler can supply an alternative result instead of retrying', () => {
+        class Foo extends Contracted {
+            @rescue(() => { throw new Error('version B failed'); })
+            method(): string { throw new Error('version A failed'); }
+        }
+
+        nodeAssert.throws(() => Foo.new().method(), { message: 'version B failed' });
+    });
+});
+
+describe('N-Version programming with `@rescue`', () => {
+    test('falls back through successive versions until one succeeds', () => {
+        class Foo extends Contracted {
+            protected _version = 0;
+            protected _tried: string[] = [];
+
+            @rescue((self: Foo, _error, args, retry) => {
+                self._version++;
+                retry(...args);
+            })
+            request(x: number): string {
+                const versions = ['legacy', 'activex', 'xhr'];
+                const version = versions[this._version];
+
+                this._tried.push(version);
+
+                if (version !== 'xhr') throw new Error(version + ' unsupported');
+
+                return 'xhr:' + x;
+            }
+        }
+
+        const foo = Foo.new();
+
+        nodeAssert.strictEqual(foo.request(1), 'xhr:1');
+        nodeAssert.deepStrictEqual((foo as any)._tried, ['legacy', 'activex', 'xhr']);
+    });
+
+    test('surfaces the last error when every version fails', () => {
+        class Foo extends Contracted {
+            protected _version = 0;
+
+            @rescue((self: Foo, _error, _args, retry) => {
+                self._version++;
+                retry();
+            }, { maxRetries: 2 })
+            request(): string {
+                throw new Error('version ' + this._version + ' failed');
+            }
+        }
+
+        nodeAssert.throws(() => Foo.new().request(), { message: 'version 2 failed' });
+    });
+
+    /**
+     * Mirrors the ajax example in the README so the documentation stays accurate.
+     */
+    test('README ajax example', () => {
+        class AjaxRequest extends Contracted {
+            protected _version = 0;
+            protected _versions = ['legacy', 'activex', 'xhr'] as const;
+            protected _tried: string[] = [];
+
+            @rescue((self: AjaxRequest, _error, args, retry) => {
+                self._version++;
+                retry(...args);
+            }, { maxRetries: 2 })
+            get(url: string): string {
+                const version = this._versions[this._version];
+
+                this._tried.push(version);
+
+                if (version !== 'xhr') throw new Error(`${version} unsupported`);
+
+                return 'xhr:' + url;
+            }
+        }
+
+        const request = AjaxRequest.new();
+
+        nodeAssert.strictEqual(request.get('/students'), 'xhr:/students');
+        nodeAssert.deepStrictEqual((request as any)._tried, ['legacy', 'activex', 'xhr']);
+    });
+
+    test('each attempt is subject to the contracts', () => {
+        const demandChecks: number[] = [];
+
+        class Foo extends Contracted {
+            protected _version = 0;
+
+            @demands((_self: Foo, [x]: [number]) => {
+                demandChecks.push(x);
+                return x > 0;
+            })
+            @rescue((self: Foo, _error, _args, retry) => {
+                self._version++;
+                retry(5);
+            })
+            request(x: number): number {
+                if (this._version == 0) throw new Error('unsupported');
+
+                return x;
+            }
+        }
+
+        const foo = Foo.new();
+
+        nodeAssert.strictEqual(foo.request(5), 5);
+        // the retry re-enters `@invariant` -> `@demands`, so the demand is checked again
+        nodeAssert.deepStrictEqual(demandChecks, [5, 5]);
+    });
+
+    test('a retried invocation that violates a demand throws', () => {
+        class Foo extends Contracted {
+            @demands((_self: Foo, [x]: [number]) => x > 0)
+            @rescue((_self, _error, _args, retry) => retry(-1))
+            request(x: number): number {
+                if (x > 0) throw new Error('unsupported');
+
+                return x;
+            }
+        }
+
+        nodeAssert.throws(() => Foo.new().request(1), /^Error: No demands were satisfied/);
+    });
+});
+
+describe('`retry` is explicit about its arguments', () => {
+    test('`retry(...args)` replays the received arguments', () => {
+        const received: number[] = [];
+
+        class Foo extends Contracted {
+            protected _attempts = 0;
+
+            @rescue((_self, _error, args, retry) => retry(...args))
+            method(value: number): number {
+                received.push(value);
+
+                if (this._attempts++ == 0) throw new Error('first call fails');
+
+                return value;
+            }
+        }
+
+        nodeAssert.strictEqual(Foo.new().method(0), 0);
+        nodeAssert.deepStrictEqual(received, [0, 0]);
+    });
+
+    test('`retry()` does not replay the original arguments', () => {
+        const received: (number | undefined)[] = [];
+
+        class Foo extends Contracted {
+            @rescue((_self, _error, _args, retry) => retry())
+            method(value: number): number {
+                received.push(value);
+
+                if (value === undefined) return -1;
+
+                throw new Error('first call fails');
+            }
+        }
+
+        nodeAssert.strictEqual(Foo.new().method(7), -1);
+        nodeAssert.deepStrictEqual(received, [7, undefined]);
+    });
+
+    test('`retry` passes exactly the arguments supplied', () => {
+        class Foo extends Contracted {
+            protected _attempts = 0;
+
+            @rescue((_self, _error, _args, retry) => retry(1, 2, 3))
+            method(...args: number[]): number[] {
+                if (this._attempts++ == 0) throw new Error('retry with more arguments');
+
+                return args;
+            }
+        }
+
+        nodeAssert.deepStrictEqual(Foo.new().method(0), [1, 2, 3]);
+    });
+});
+
+describe('`maxRetries` bounds retries for one invocation', () => {
+    test('a feature may retry exactly `maxRetries` times', () => {
+        let bodyCalls = 0;
+
+        class Foo extends Contracted {
+            @rescue((_self, _error, args, retry) => retry(...args), { maxRetries: 3 })
+            method(): void {
+                bodyCalls++;
+                throw new Error('always');
+            }
+        }
+
+        nodeAssert.throws(() => Foo.new().method(), { message: 'always' });
+        nodeAssert.strictEqual(bodyCalls, 4, 'one initial call plus three retries');
+    });
+
+    test('`maxRetries: 0` disables retrying', () => {
+        let rescueCalls = 0;
+
+        class Foo extends Contracted {
+            @rescue((_self, _error, args, retry) => { rescueCalls++; retry(...args); }, { maxRetries: 0 })
+            method(): void { throw new Error('no retries'); }
+        }
+
+        nodeAssert.throws(() => Foo.new().method(), { message: 'no retries' });
+        nodeAssert.strictEqual(rescueCalls, 0);
+    });
+
+    test('a negative `maxRetries` is rejected at declaration time', () => {
+        nodeAssert.throws(() => {
+            class Foo extends Contracted {
+                @rescue(() => { }, { maxRetries: -1 })
+                method(): void { }
+            }
+
+            return Foo.new();
+        }, /maxRetries must not be negative/);
+    });
+});
+
+/**
+ * https://github.com/final-hill/decorator-contracts/issues/285
+ */
+describe('A `retry` works when the feature is inherited', () => {
+    test('inherited method', () => {
+        class Base extends Contracted {
+            protected _attempts = 0;
+
+            @rescue((_self, _error, _args, retry) => retry(0))
+            method(v: number): number {
+                if (this._attempts++ == 0) throw new Error('bad');
+
+                return v;
+            }
+        }
+
+        class Sub extends Base { }
+
+        nodeAssert.strictEqual(Sub.new().method(0), 0);
+    });
+
+    test('inherited getter', () => {
+        class Base extends Contracted {
+            protected _v = 0;
+            @rescue((self: Base, _error, _args, retry) => { self.warm(); retry(); })
+            get v(): number {
+                if (this._v == 0) throw new Error('cold');
+
+                return this._v;
+            }
+            warm(): void { this._v = 7; }
+        }
+
+        class Sub extends Base { }
+
+        nodeAssert.strictEqual(Sub.new().v, 7);
     });
 });

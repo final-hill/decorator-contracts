@@ -1,7 +1,7 @@
 import { assertInvariants, InvariantPredicate } from './invariant.mjs';
 import { assertDemands, DemandsPredicate } from './demands.mjs';
 import { assertEnsures, EnsuresPredicate } from './ensures.mjs';
-import { applyRescueHandler as applyRescueHandler, RescueHandler } from './rescue.mjs';
+import { applyRescueHandler as applyRescueHandler, getRescueDeclaration, RescueDeclaration } from './rescue.mjs';
 
 // Symbol to store checked mode state
 export const checkedMode = Symbol.for('Contracted.checkedMode');
@@ -33,47 +33,85 @@ function getPropertyDescriptor(obj: object, prop: PropertyKey): PropertyDescript
     return undefined;
 }
 
+/**
+ * Runs the assertion lifecycle for a single invocation:
+ * `@invariant` -> `@demands` -> body -> `@ensures` -> `@invariant`.
+ *
+ * A `@rescue` may call `retry`, which restarts the lifecycle from `@invariant`
+ * with the supplied arguments, so a retried invocation is subject to
+ * `@demands` and `@ensures` like any other invocation
+ * (see `docs/order-of-assertions.png`).
+ *
+ * A retried invocation that fails re-enters `@rescue`, so the handler runs once
+ * per attempt. This is what N-Version programming requires: a handler can
+ * select the next alternative each time it is executed. Retries are bounded by
+ * the optional `maxRetries` option on the `@rescue` declaration.
+ *
+ * @param invokeArgs - The arguments for this invocation. `retry` replaces them.
+ * @param invoke - Performs the feature body with the supplied arguments.
+ */
+function runLifecycle(
+    descriptorType: 'get' | 'set' | 'func',
+    target: Contracted,
+    prop: PropertyKey,
+    invokeArgs: any[],
+    invoke: (args: any[]) => any,
+): any {
+    const Class = target.constructor as typeof Contracted,
+        es = Class[Symbol.metadata]?.ensures?.[prop] ?? [] as EnsuresPredicate<Contracted>[],
+        hasEnsures = es.length > 0;
+
+    let args = invokeArgs,
+        retries = 0;
+
+    for (; ;) {
+        const old = hasEnsures ? populateOld(target) : undefined;
+
+        assertInvariants(Class, target);
+        assertDemands(target, prop, args);
+
+        let result: any
+        try {
+            result = invoke(args);
+            if (hasEnsures)
+                assertEnsures(target, old, prop, descriptorType === 'get' ? [result] : args);
+        } catch (error) {
+            const maxRetries = getRescueDeclaration(target, prop)?.maxRetries ?? Infinity;
+
+            if (retries >= maxRetries) {
+                assertInvariants(Class, target);
+                throw error;
+            }
+
+            retries++;
+            try {
+                args = applyRescueHandler(target, prop, error, descriptorType === 'get' ? [] : args);
+            } catch (rescuedError) {
+                assertInvariants(Class, target);
+                throw rescuedError;
+            }
+            continue;
+        }
+
+        assertInvariants(Class, target);
+        return result;
+    }
+}
+
 const proxyHandler: ProxyHandler<Contracted> = {
     get(target, prop, receiver) {
         if (!Contracted[checkedMode]) return Reflect.get(target, prop, receiver);
 
-        const Class = target.constructor as typeof Contracted,
-            descriptor = getPropertyDescriptor(Object.getPrototypeOf(target), prop),
-            es = Class[Symbol.metadata]?.ensures?.[prop] ?? [] as EnsuresPredicate<Contracted>[],
-            hasEnsures = es.length > 0,
-            old = hasEnsures ? populateOld(target) : undefined;
+        const descriptor = getPropertyDescriptor(Object.getPrototypeOf(target), prop);
 
-        if (typeof descriptor?.value === 'function') {
+        if (typeof descriptor?.value === 'function')
             return function (this: Contracted, ...methodArgs: any[]) {
-                assertInvariants(Class, target);
-                assertDemands(target, prop, methodArgs);
-                let result
-                try {
-                    result = Reflect.apply(descriptor.value, target, methodArgs);
-                    if (hasEnsures) assertEnsures(target, old, prop, methodArgs);
-                } catch (error) {
-                    result = applyRescueHandler('func', target, prop as keyof Contracted, error, methodArgs);
-                } finally {
-                    assertInvariants(Class, target);
-                }
-                return result;
+                return runLifecycle('func', target, prop, methodArgs, (args) => Reflect.apply(descriptor.value!, target, args));
             }
-        } else if (typeof descriptor?.get === 'function') {
-            assertInvariants(Class, target);
-            assertDemands(target, prop, []);
-            let result
-            try {
-                result = Reflect.get(target, prop, receiver);
-                if (hasEnsures) assertEnsures(target, old, prop, [result]);
-            } catch (error) {
-                result = applyRescueHandler('get', target, prop, error, []);
-            } finally {
-                assertInvariants(Class, target);
-            }
-            return result;
-        } else {
+        else if (typeof descriptor?.get === 'function')
+            return runLifecycle('get', target, prop, [], () => Reflect.get(target, prop, receiver));
+        else
             return Reflect.get(target, prop, receiver);
-        }
     },
     set(target, prop, value, receiver) {
         if (!Contracted[checkedMode]) return Reflect.set(target, prop, value, receiver);
@@ -84,23 +122,7 @@ const proxyHandler: ProxyHandler<Contracted> = {
             if (typeof prop === 'string' && !prop.startsWith('_'))
                 throw new TypeError(`Cannot assign to property '${String(prop)}': only properties starting with '_' or with a setter can be set on Contracted instances.`);
 
-        const Class = target.constructor as typeof Contracted,
-            es = Class[Symbol.metadata]?.ensures?.[prop] ?? [] as EnsuresPredicate<Contracted>[],
-            hasEnsures = es.length > 0,
-            old = hasEnsures ? populateOld(target) : undefined;
-        assertInvariants(Class, target);
-        assertDemands(target, prop, [value]);
-        let result
-        try {
-            result = Reflect.set(target, prop, value, receiver);
-            if (hasEnsures) assertEnsures(target, old, prop, [value]);
-        } catch (error) {
-            result = applyRescueHandler('set', target, prop as keyof Contracted, error, [value])
-        } finally {
-            assertInvariants(Class, target);
-        }
-
-        return result;
+        return runLifecycle('set', target, prop, [value], (args) => Reflect.set(target, prop, args[0], receiver));
     },
     deleteProperty(target, prop) {
         throw new TypeError(`Cannot delete property '${String(prop)}' from Contracted instances.`);
@@ -112,7 +134,7 @@ export class Contracted {
         invariants: InvariantPredicate<typeof Contracted>[];
         demands: Record<PropertyKey, DemandsPredicate<Contracted>[]>;
         ensures: Record<PropertyKey, EnsuresPredicate<Contracted>[]>;
-        rescue: Record<PropertyKey, RescueHandler<Contracted>>;
+        rescue: Record<PropertyKey, RescueDeclaration<Contracted>>;
     };
 
     // Prevents direct instantiation of the class
