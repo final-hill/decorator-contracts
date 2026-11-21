@@ -11,13 +11,15 @@ const populateOld = (target: Contracted) => {
 
     Contracted[checkedMode] = false; // Disable checked mode to avoid infinite recursion
 
-    const old = Object.create(target)
-    for (const key in target)
-        Reflect.set(old, key, Reflect.get(target, key));
+    try {
+        const old = Object.create(target)
+        for (const key in target)
+            Reflect.set(old, key, Reflect.get(target, key));
 
-    Contracted[checkedMode] = true;
-
-    return old;
+        return old;
+    } finally {
+        Contracted[checkedMode] = true;
+    }
 }
 
 // Utility to walk up the prototype chain to find a property descriptor
