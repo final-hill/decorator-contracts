@@ -90,23 +90,17 @@ const cloneState = (value: any, seen: WeakMap<object, any>): any => {
 const populateOld = (target: Contracted) => {
     if (!Contracted[checkedMode]) return;
 
-    Contracted[checkedMode] = false; // Disable checked mode to avoid infinite recursion
+    const old = Object.create(target),
+        seen = new WeakMap<object, any>();
 
-    try {
-        const old = Object.create(target),
-            seen = new WeakMap<object, any>();
-
-        for (const key of Reflect.ownKeys(target)) {
-            const descriptor = Object.getOwnPropertyDescriptor(target, key)!;
-            Reflect.defineProperty(old, key, 'value' in descriptor
-                ? { ...descriptor, value: cloneState(descriptor.value, seen) }
-                : descriptor);
-        }
-
-        return old;
-    } finally {
-        Contracted[checkedMode] = true;
+    for (const key of Reflect.ownKeys(target)) {
+        const descriptor = Object.getOwnPropertyDescriptor(target, key)!;
+        Reflect.defineProperty(old, key, 'value' in descriptor
+            ? { ...descriptor, value: cloneState(descriptor.value, seen) }
+            : descriptor);
     }
+
+    return old;
 }
 
 // Caches the contract wrapper per instance and feature so that `f.m === f.m`.
@@ -124,8 +118,17 @@ function getPropertyDescriptor(obj: object, prop: PropertyKey): PropertyDescript
 }
 
 /**
- * Runs the assertion lifecycle for a single invocation:
- * `@invariant` -> `@demands` -> body -> `@ensures` -> `@invariant`.
+ * Runs the assertion lifecycle for a single public invocation.
+ *
+ * The contracts describe the observable boundary of a feature, in the sense of
+ * a Hoare triple `{ P } C { Q }`: `@demands` is `P`, `@ensures` is `Q`, and the
+ * feature body is `C`. Nothing inside `C` is constrained — a body may mutate its
+ * own state, including public properties, and may call its own features without
+ * re-entering the contracts. Correctness is the obligation that `P` and `Q` hold
+ * at the boundary, with the invariant additionally holding on entry and exit.
+ *
+ * Order: `@invariant` -> `@demands` -> body -> `@ensures` -> `@invariant`
+ * (see `docs/happy-path.png`).
  *
  * A `@rescue` may call `retry`, which restarts the lifecycle from `@invariant`
  * with the supplied arguments, so a retried invocation is subject to
@@ -209,8 +212,13 @@ const proxyHandler: ProxyHandler<Contracted> = {
             // The descriptor is resolved from the instance's prototype chain,
             // which is fixed for the lifetime of the instance, so the wrapper
             // can be reused for that feature.
+            //
+            // The body receives the raw target as `this`. A feature body is `C`
+            // in `{ P } C { Q }`: what it does internally is unconstrained, so
+            // internal accesses must not re-enter the traps.
             const wrapper = function (this: Contracted, ...methodArgs: any[]) {
-                return runLifecycle('func', target, prop, methodArgs, (args) => Reflect.apply(descriptor.value!, target, args));
+                return runLifecycle('func', target, prop, methodArgs,
+                    (args) => Reflect.apply(descriptor.value!, target, args));
             };
 
             cache.set(prop, wrapper);
@@ -218,10 +226,6 @@ const proxyHandler: ProxyHandler<Contracted> = {
             return wrapper;
         }
         else if (typeof descriptor?.get === 'function')
-            // Invoke the accessor with the raw target as `this`, matching how
-            // methods are applied. Using `Reflect.get(target, prop, receiver)`
-            // binds `this` to the proxy, so an accessor reading its own state
-            // re-entered the trap and started a nested lifecycle.
             return runLifecycle('get', target, prop, [], () => descriptor.get!.call(target));
         else
             return Reflect.get(target, prop, receiver);
@@ -231,14 +235,13 @@ const proxyHandler: ProxyHandler<Contracted> = {
 
         const descriptor = getPropertyDescriptor(Object.getPrototypeOf(target), prop)
 
+        // Encapsulation governs the external surface only. It exists so a caller
+        // cannot mutate state without a postcondition to catch it; inside a body,
+        // `@ensures` and `@invariant` provide that guarantee instead.
         if (!(descriptor && typeof descriptor.set === 'function'))
             if (typeof prop === 'string' && !prop.startsWith('_'))
                 throw new TypeError(`Cannot assign to property '${String(prop)}': only properties starting with '_' or with a setter can be set on Contracted instances.`);
 
-        // Invoke the setter with the raw target as `this`, for the same reason
-        // as the getter: `Reflect.set` would bind `this` to the proxy and an
-        // internal write would start a nested lifecycle. A plain data property
-        // (an `_`-prefixed field) has no setter to invoke.
         const setter = typeof descriptor?.set === 'function' ? descriptor.set : undefined;
 
         runLifecycle('set', target, prop, [value],

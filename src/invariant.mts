@@ -13,19 +13,13 @@ export type InvariantDecorator = <Class extends typeof Contracted>(
 export function assertInvariants<C extends typeof Contracted, T extends InstanceType<C>>(Class: C, instance: T) {
     if (!Contracted[checkedMode]) return;
 
-    Contracted[checkedMode] = false; // Disable checked mode to avoid infinite recursion 
-
     const invariants = (Class[Symbol.metadata]?.['invariants'] ?? []) as InvariantPredicate<C>[];
 
-    try {
-        for (const [index, inv] of invariants.entries())
-            assert(
-                assertContractResult(inv(instance), '@invariant', Class.name, index),
-                `Invariant violated in class ${Class.name}: ${inv.toString()}`
-            );
-    } finally {
-        Contracted[checkedMode] = true;
-    }
+    for (const [index, inv] of invariants.entries())
+        assert(
+            assertContractResult(inv(instance), '@invariant', Class.name, index),
+            `Invariant violated in class ${Class.name}: ${inv.toString()}`
+        );
 }
 
 export const invariant: InvariantDecorator = (predicate) => (OriginalClass, { kind, metadata }) => {

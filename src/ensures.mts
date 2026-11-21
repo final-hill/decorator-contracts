@@ -41,21 +41,15 @@ export const ensures: EnsuresDecorator = (predicate) => (_feature, ctx) => {
 export function assertEnsures(instance: Contracted, old: Contracted, propertyKey: PropertyKey, args: any) {
     if (!Contracted[checkedMode]) return;
 
-    Contracted[checkedMode] = false; // Disable checked mode to avoid infinite recursion
-
     const Class = instance.constructor as typeof Contracted,
         es = Class[Symbol.metadata]?.ensures?.[propertyKey] ?? [] as EnsuresPredicate<Contracted>[];
 
-    try {
-        if (es.length === 0) return;
+    if (es.length === 0) return;
 
-        // ALL ensures must be true for the obligation to be fulfilled
-        for (const [index, e] of es.entries())
-            if (!assertContractResult(e(instance, args, old), '@ensures', `${instance.constructor.name}.${String(propertyKey)}`, index))
+    // ALL ensures must be true for the obligation to be fulfilled
+    for (const [index, e] of es.entries())
+        if (!assertContractResult(e(instance, args, old), '@ensures', `${instance.constructor.name}.${String(propertyKey)}`, index))
 
-                assert(false, `No ensurances were satisfied for ${instance.constructor.name}.${String(propertyKey)}`);
-        // If we reach here, it means all ensures were true
-    } finally {
-        Contracted[checkedMode] = true;
-    }
+            assert(false, `No ensurances were satisfied for ${instance.constructor.name}.${String(propertyKey)}`);
+    // If we reach here, it means all ensures were true
 }

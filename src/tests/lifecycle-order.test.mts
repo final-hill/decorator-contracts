@@ -179,7 +179,14 @@ describe('The assertions run in the documented order', () => {
         nodeAssert.strictEqual(evaluations, 1);
     });
 
-    test('an accessor body observes the same `this` binding as a method body', () => {
+    /**
+     * Feature bodies are `C` in `{ P } C { Q }`: what they do internally is
+     * unconstrained, so a body may assign to its own public properties. The
+     * invariant and the postcondition are what guarantee correctness.
+     *
+     * See https://github.com/final-hill/decorator-contracts/issues/305
+     */
+    test('a feature body may mutate its own public properties', () => {
         const observed: Record<string, boolean> = {};
 
         class Foo extends Contracted {
@@ -208,8 +215,8 @@ describe('The assertions run in the documented order', () => {
         void foo.value;
         foo.value = 1;
 
-        nodeAssert.strictEqual(observed.method, false);
-        nodeAssert.strictEqual(observed.getter, observed.method);
-        nodeAssert.strictEqual(observed.setter, observed.method);
+        nodeAssert.strictEqual(observed.method, false, 'method body write is allowed');
+        nodeAssert.strictEqual(observed.getter, false, 'getter body write is allowed');
+        nodeAssert.strictEqual(observed.setter, false, 'setter body write is allowed');
     });
 });

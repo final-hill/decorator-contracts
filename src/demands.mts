@@ -39,21 +39,15 @@ export const demands: DemandsDecorator = (predicate) => (_feature, ctx) => {
 export function assertDemands(instance: Contracted, propertyKey: PropertyKey, ...args: any[]) {
     if (!Contracted[checkedMode]) return;
 
-    Contracted[checkedMode] = false; // Disable checked mode to avoid infinite recursion 
-
     const Class = instance.constructor as typeof Contracted,
         ds = Class[Symbol.metadata]?.demands?.[propertyKey] ?? [] as DemandsPredicate<Contracted>[];
 
-    try {
-        if (ds.length === 0) return;
+    if (ds.length === 0) return;
 
-        // If ANY demand is true then the obligation is considered fulfilled
-        for (const [index, d] of ds.entries())
-            if (assertContractResult(d(instance, ...args), '@demands', `${instance.constructor.name}.${String(propertyKey)}`, index)) return;
+    // If ANY demand is true then the obligation is considered fulfilled
+    for (const [index, d] of ds.entries())
+        if (assertContractResult(d(instance, ...args), '@demands', `${instance.constructor.name}.${String(propertyKey)}`, index)) return;
 
-        // If we reach here, it means all demands were false
-        assert(false, `No demands were satisfied for ${instance.constructor.name}.${String(propertyKey)}`);
-    } finally {
-        Contracted[checkedMode] = true;
-    }
+    // If we reach here, it means all demands were false
+    assert(false, `No demands were satisfied for ${instance.constructor.name}.${String(propertyKey)}`);
 }
