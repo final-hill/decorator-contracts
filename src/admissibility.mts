@@ -8,8 +8,19 @@ import type { StandardSchemaV1 } from './standard-schema.mjs';
  * Predicates and schemas are adapted to this shape so that the composition rule
  * in each contract — OR for `@demands`, AND for `@invariant` and `@ensures` — is
  * written once rather than twice.
+ *
+ * An arm that threw reports `ok: false` with the thrown value preserved in
+ * `thrown`. Composition continues past it: an `@demands` arm that throws is one
+ * opinion that the call should not proceed, and a later arm may still permit it.
+ * Keeping the value instead of letting it propagate is what makes an arm's own
+ * error reachable without making the composition rule unreachable.
  */
-export type Admissibility = { ok: boolean; value?: unknown; issues?: ReadonlyArray<StandardSchemaV1.Issue> };
+export type Admissibility = {
+    ok: boolean;
+    value?: unknown;
+    thrown?: unknown;
+    issues?: ReadonlyArray<StandardSchemaV1.Issue>
+};
 
 /** Options a decorator accepts alongside an arm. */
 export interface ArmOptions {
@@ -97,14 +108,14 @@ export const evaluateArm = (
     index: number,
     options?: ArmOptions,
 ): Admissibility => isSchema(arm)
-    ? evaluateSchema(arm, subjects.schema(), contract, label, index, options)
-    : evaluatePredicate(
-        arm as (...args: any[]) => unknown,
-        subjects.predicate(),
-        contract,
-        label,
-        index,
-    );
+        ? evaluateSchema(arm, subjects.schema(), contract, label, index, options)
+        : evaluatePredicate(
+            arm as (...args: any[]) => unknown,
+            subjects.predicate(),
+            contract,
+            label,
+            index,
+        );
 
 /**
  * Applies a predicate arm, reusing the strict-boolean rule from #283.
@@ -134,7 +145,25 @@ const evaluatePredicate = (
             ? readOnlyView(instance)
             : instance;
 
-    return { ok: assertContractResult(predicate(guarded, ...rest), contract, label, index) };
+    // A predicate that throws has answered "no": the call it guards must not be
+    // denied on its say-so when a sibling arm permits it. The value is carried in
+    // `thrown` rather than propagated, so the contract can decide whether it still
+    // matters once every arm has been evaluated.
+    //
+    // The guard covers the predicate **call** only. The verdict is validated
+    // outside it, because a non-boolean return is a defect in the predicate rather
+    // than a decision about the call: a Promise is truthy, so treating it as a
+    // failed arm would let a sibling excuse a contract that never ran. That is the
+    // rule `assertContractResult` exists to enforce, and it stays fatal.
+    let verdict: unknown;
+
+    try {
+        verdict = predicate(guarded, ...rest);
+    } catch (thrown) {
+        return { ok: false, thrown };
+    }
+
+    return { ok: assertContractResult(verdict, contract, label, index) };
 };
 
 /**
@@ -166,6 +195,36 @@ const evaluateSchema = (
 
     return options?.normalize ? { ok: true, value: result.value } : { ok: true };
 }
+
+/**
+ * The arms that rejected a call, gathered across a composition loop.
+ *
+ * The three contracts differ in their composition rule but not in what they
+ * record about a rejected arm: its index, any issues a schema reported, and the
+ * value a throwing predicate raised. Collecting it in one place keeps the loops
+ * about their rule rather than about bookkeeping.
+ */
+export interface ArmFailures {
+    failed: number[];
+    thrown: { index: number, value: unknown }[];
+    issues: StandardSchemaV1.Issue[];
+}
+
+/** Starts an empty record for a composition pass. */
+export const armFailures = (): ArmFailures => ({ failed: [], thrown: [], issues: [] });
+
+/**
+ * Records one rejected arm.
+ *
+ * A throwing arm also lands in `failed`: it rejected the call, and the
+ * distinction the caller needs is `thrown`, not whether the arm was counted.
+ */
+export const recordFailure = (failures: ArmFailures, index: number, result: Admissibility): void => {
+    failures.failed.push(index);
+
+    if (result.issues) failures.issues.push(...result.issues);
+    if ('thrown' in result) failures.thrown.push({ index, value: result.thrown });
+};
 
 /**
  * Renders schema `issues` for a message.

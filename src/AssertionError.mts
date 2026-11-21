@@ -26,6 +26,26 @@ export interface ContractViolation {
      * `@invariant` are AND-composed, so a failure lists the one that broke.
      */
     failedIndices: number[];
+    /**
+     * The indices of the arms that failed by throwing, in evaluation order.
+     *
+     * Absent when every failing arm reported a verdict. An arm that throws is a
+     * failed arm, so it also appears in {@link ContractViolation.failedIndices};
+     * this field separates the arms that threw from the arms that returned
+     * `false`, which is how a deliberate throw is told apart from a predicate bug.
+     */
+    thrownIndices?: number[];
+    /**
+     * Descriptions of the values thrown by the failing arms, aligned with
+     * `thrownIndices`.
+     *
+     * These are strings rather than the values themselves. The rest of this record
+     * is plain data, and a violation is logged, retained, and serialised; holding a
+     * reference to the consumer's error would keep it alive and could make the
+     * record unserialisable. The value the contract re-raised is the error the
+     * caller caught, which is where they read it.
+     */
+    thrown?: string[];
     /** The source text of the failing arms, aligned with `failedIndices`. */
     predicates: string[];
     /**

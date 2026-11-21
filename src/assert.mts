@@ -1,6 +1,6 @@
 import { AssertionError, type ContractKind, type ContractViolation } from "./AssertionError.mjs";
 import type { StandardSchemaV1 } from './standard-schema.mjs';
-import { isSchema } from './admissibility.mjs';
+import { isSchema, type ArmFailures } from './admissibility.mjs';
 
 /**
  * An assertion is an expression of a property that must be true at a particular
@@ -72,6 +72,51 @@ const pluralise = (count: number, total: number, singular: string, plural: strin
     `${count} of ${total} ${total === 1 ? singular : plural}`;
 
 /**
+ * Describes a value an arm threw, for the violation record.
+ *
+ * The record holds a description rather than the value, so that a violation stays
+ * plain data and cannot keep the consumer's error alive or make itself
+ * unserialisable (see {@link ContractViolation.thrown}). An object is named by its
+ * constructor and message, which is what a reader needs to tell a deliberate
+ * `Denied` from a `TypeError` raised by a bug.
+ */
+const describeThrown = (value: unknown): string => {
+    if (typeof value === 'object' && value !== null) {
+        const named = value as { name?: unknown, message?: unknown },
+            name = typeof named.name === 'string' ? named.name : value.constructor?.name ?? 'Object',
+            message = typeof named.message === 'string' ? named.message : '';
+
+        return message ? `${name}: ${message}` : name;
+    }
+
+    return String(value);
+};
+
+/**
+ * Renders the failing arms for a message.
+ *
+ * Predicates and schemas are both arms of the same composition, so each is named
+ * as whichever it actually is. Calling a schema a predicate would be wrong;
+ * calling a predicate an arm would be vaguer than the caller needs. An arm that
+ * threw is marked, so a reader can tell a thrown value from a `false` verdict
+ * without unpacking the violation.
+ */
+const describeArms = (
+    arms: readonly unknown[],
+    failedIndices: number[],
+    predicates: string[],
+    thrownIndices: ReadonlySet<number>,
+): string => predicates
+    .map((source, position) => {
+        const index = failedIndices[position],
+            noun = isSchema(arms[index]) ? 'schema' : 'predicate',
+            how = thrownIndices.has(index) ? ' threw' : '';
+
+        return `${noun} #${index + 1}${how}: ${source}`;
+    })
+    .join('; ');
+
+/**
  * Renders one schema issue, including its path when the provider supplied one.
  *
  * A path is shown as a dotted trail of keys, which is how the providers describe
@@ -111,44 +156,58 @@ export function describeViolation(
     summary: string,
     issues?: ReadonlyArray<StandardSchemaV1.Issue>,
     describe: (arm: unknown) => string = String,
+    thrown?: ReadonlyArray<{ index: number, value: unknown }>,
 ): { message: string, violation: ContractViolation } {
+    const thrownIndices = thrown?.map(entry => entry.index),
+        thrownDescriptions = thrown?.map(entry => describeThrown(entry.value));
+
     const violation: ContractViolation = {
         contract,
         className,
         feature,
         failedIndices,
         predicates: failedIndices.map(index => describe(arms[index])),
+        ...(thrownIndices && thrownIndices.length > 0
+            ? { thrownIndices, thrown: thrownDescriptions }
+            : {}),
         ...(issues && issues.length > 0 ? { issues } : {}),
     };
 
-    const where = feature === undefined ? className : `${className}.${feature}`,
-        // Predicates and schemas are both arms of the same composition, so the
-        // message names whichever the failing one actually is. Calling a schema a
-        // predicate would be wrong; calling a predicate an arm would be vaguer
-        // than the caller needs.
+    return { message: describeMessage(contract, violation, arms, summary, issues), violation };
+}
+
+/**
+ * Assembles the human-readable half of a contract failure.
+ *
+ * The structured `violation` carries the same facts for a caller that will branch
+ * on them; this string exists for the reader who only ever sees the message, so it
+ * names the feature, the unsatisfied arms, anything the failing schemas reported,
+ * and what the failure means for the contract.
+ */
+const describeMessage = (
+    contract: ContractKind,
+    violation: ContractViolation,
+    arms: readonly unknown[],
+    summary: string,
+    issues: ReadonlyArray<StandardSchemaV1.Issue> | undefined,
+): string => {
+    const where = violation.feature === undefined
+        ? violation.className
+        : `${violation.className}.${violation.feature}`,
+        threw: ReadonlySet<number> = new Set(violation.thrownIndices ?? []),
+        detail = describeArms(arms, violation.failedIndices, violation.predicates, threw),
         noun = (arm: unknown) => isSchema(arm) ? 'schema' : 'predicate',
         nounPlural = (arm: unknown) => isSchema(arm) ? 'schemas' : 'predicates',
-        detail = violation.predicates
-            .map((source, position) => {
-                const arm = arms[failedIndices[position]];
+        count = pluralise(violation.failedIndices.length, arms.length, noun(arms[0]), nounPlural(arms[0])),
+        // Schema arms report `issues` rather than a true/false verdict, so the
+        // provider's own explanation is carried into the message. A caller reading
+        // only the message still learns which field was rejected and why.
+        reported = issues && issues.length > 0
+            ? ` Reported: ${issues.map(issue => describeIssue(issue)).join('; ')}.`
+            : '';
 
-                return `${noun(arm)} #${failedIndices[position] + 1}: ${source}`;
-            })
-            .join('; '),
-        count = pluralise(failedIndices.length, arms.length, noun(arms[0]), nounPlural(arms[0]));
-
-    // Schema arms report `issues` rather than a true/false verdict, so the
-    // provider's own explanation is carried into the message. A caller reading
-    // only the message still learns which field was rejected and why.
-    const reported = issues && issues.length > 0
-        ? ` Reported: ${issues.map(issue => describeIssue(issue)).join('; ')}.`
-        : '';
-
-    return {
-        message: `${contract} failed for ${where} (${count} unsatisfied: ${detail}).${reported} ${summary}`,
-        violation,
-    };
-}
+    return `${contract} failed for ${where} (${count} unsatisfied: ${detail}).${reported} ${summary}`;
+};
 
 /**
  * Builds the error for a contract whose arms were not satisfied.
@@ -171,9 +230,102 @@ export function violationError(
     summary: string,
     issues?: ReadonlyArray<StandardSchemaV1.Issue>,
     describe: (arm: unknown) => string = String,
+    thrown?: ReadonlyArray<{ index: number, value: unknown }>,
 ): AssertionError {
     const { message, violation } = describeViolation(
-        contract, className, feature, arms, failedIndices, summary, issues, describe);
+        contract, className, feature, arms, failedIndices, summary, issues, describe, thrown);
 
     return new AssertionError(message, violation);
+}
+
+/**
+ * The errors this module has already annotated.
+ *
+ * Kept so a reused error instance can be recognised as ours and updated, while an
+ * error carrying a `cause` of its own is never overwritten. A `WeakMap`-style
+ * record is used because the error belongs to the consumer: this must not keep it
+ * alive.
+ */
+const annotated = new WeakSet<object>();
+
+/**
+ * Records a contract failure on an error the contract did not create.
+ *
+ * A predicate's error is the consumer's object. Three things follow, and all are
+ * about not damaging it:
+ *
+ * - **The record is only added to an extensible object.** A frozen or non-extensible
+ *   error cannot accept it, and a refusal is silent: the caller still receives the
+ *   error they were waiting for, which is the outcome that matters.
+ * - **A `cause` the consumer set is never overwritten.** An error constructed with
+ *   its own `cause` uses it to record what actually went wrong underneath;
+ *   replacing it with the contract's diagnostic would destroy the information
+ *   `cause` exists to carry. A record this module wrote earlier *is* replaced, so
+ *   that a reused error reports the contract that raised it now rather than the
+ *   first one it was thrown from.
+ * - **`defineProperty` is used rather than assignment**, so the record is
+ *   non-enumerable. A domain error that serialises its own properties for logging
+ *   must not suddenly gain a contract record it never asked for.
+ */
+const annotate = (raised: object, violation: ContractViolation, cause: AssertionError): void => {
+    if (!Object.isExtensible(raised)) return;
+
+    const mine = annotated.has(raised);
+
+    for (const [key, value] of [['violation', violation], ['cause', cause]] as const)
+        if (mine || !Object.hasOwn(raised, key))
+            Object.defineProperty(raised, key, {
+                value,
+                enumerable: false,
+                configurable: true,
+            });
+
+    annotated.add(raised);
+};
+
+/**
+ * Builds the value a contract raises when every arm has failed.
+ *
+ * A thrown arm is a failed arm, so when every arm failed and at least one of them
+ * threw, that value is what the caller receives. A typed error survives the
+ * composition it could not otherwise reach, and a predicate bug still surfaces as
+ * the bug it is rather than as an `AssertionError` describing a contract.
+ *
+ * The **first arm that threw** wins, matching the rule that the first arm
+ * evaluated decides a normalized value. Arm order is the composition list's, which
+ * for one class is reverse source order because decorators evaluate bottom-up, and
+ * which places inherited arms before a subclass's own.
+ *
+ * When no arm threw, the failure is a verdict rather than a fault and an
+ * `AssertionError` carrying the full violation is raised as usual.
+ *
+ * @internal
+ * Exported only because the three contract modules live in their own files and
+ * import it. It takes an `ArmFailures`, which is not part of the published surface,
+ * so a consumer cannot call it without reaching into the library's internals.
+ */
+export function violationFailure(
+    contract: ContractKind,
+    className: string,
+    feature: string | undefined,
+    arms: readonly unknown[],
+    failures: ArmFailures,
+    summary: string,
+    describe: (arm: unknown) => string = String,
+): unknown {
+    const error = violationError(
+        contract, className, feature, arms, failures.failed, summary,
+        failures.issues, describe, failures.thrown);
+
+    if (failures.thrown.length === 0) return error;
+
+    const raised = failures.thrown[0].value,
+        violation = error.violation as ContractViolation;
+
+    // A thrown primitive has nowhere to carry the payload, and replacing it with a
+    // wrapper would change the value the contract chose to raise.
+    if (typeof raised === 'object' && raised !== null)
+        annotate(raised, violation, error);
+
+    return raised;
 }

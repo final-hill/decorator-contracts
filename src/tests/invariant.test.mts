@@ -660,3 +660,59 @@ describe('Third-party features applied to a contracted class are subject to its 
         }, /^AssertionError: @invariant failed/);
     });
 });
+
+/**
+ * https://github.com/final-hill/decorator-contracts/issues/332
+ *
+ * `@invariant` is AND-composed, so a throwing arm rejects on its own. Every arm is
+ * still evaluated, because an instance can violate several invariants at once and a
+ * report naming only the first hides the state the caller has to repair.
+ */
+describe('A throwing `@invariant` arm rejects without hiding its siblings', () => {
+    class Broken extends Error {
+        override name = 'Broken';
+    }
+
+    test('a throwing arm and a falsy arm are both reported', () => {
+        @invariant((_self: Foo) => false)
+        @invariant((_self: Foo) => { throw new Broken('no'); })
+        class Foo extends Contracted { }
+
+        try {
+            Foo.new();
+            nodeAssert.fail('expected the invariant to reject construction');
+        } catch (caught) {
+            const error = caught as any;
+
+            // Compared as a boolean: `nodeAssert.ok(error instanceof Broken)` narrows
+            // `error` to `Broken`, which does not declare `violation`.
+            nodeAssert.strictEqual(error instanceof Broken, true, 'the thrown value reaches the caller');
+            nodeAssert.deepStrictEqual(error.violation.failedIndices, [0, 1]);
+            nodeAssert.deepStrictEqual(error.violation.thrownIndices, [0]);
+            nodeAssert.strictEqual(error.violation.contract, '@invariant');
+            nodeAssert.strictEqual(error.violation.feature, undefined);
+        }
+    });
+
+    test('a throwing arm rejects even when a sibling arm holds', () => {
+        @invariant((_self: Foo) => true)
+        @invariant((_self: Foo) => { throw new Broken('no'); })
+        class Foo extends Contracted { }
+
+        nodeAssert.throws(() => Foo.new(), (error: any) => error instanceof Broken);
+    });
+
+    test('the throw is evaluated on feature entry as well as at construction', () => {
+        let evaluations = 0;
+
+        @invariant((_self: Foo) => true)
+        @invariant((_self: Foo) => { evaluations++; throw new Broken('no'); })
+        class Foo extends Contracted {
+            method(): void { }
+        }
+
+        // Construction itself runs the invariant once.
+        nodeAssert.throws(() => Foo.new(), (error: any) => error instanceof Broken);
+        nodeAssert.strictEqual(evaluations, 1);
+    });
+});

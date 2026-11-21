@@ -231,3 +231,65 @@ describe('ensures has access to the properties of the instance class before its 
         nodeAssert.strictEqual(stack.size, 2);
     });
 });
+
+/**
+ * https://github.com/final-hill/decorator-contracts/issues/332
+ *
+ * `@ensures` is AND-composed, so a throwing arm rejects the invocation on its own.
+ * The difference from `@demands` is what survives: every arm is still evaluated, so
+ * the caller learns about all broken postconditions rather than only the first, and
+ * the thrown value is what reaches them.
+ */
+describe('A throwing `@ensures` arm rejects without hiding its siblings', () => {
+    class Failed extends Error {
+        override name = 'Failed';
+    }
+
+    test('both a throwing arm and a falsy arm are reported', () => {
+        let siblingRan = false;
+
+        class Foo extends Contracted {
+            @ensures((_self: Foo, _args: any[], _old: Foo) => { siblingRan = true; return false; })
+            @ensures((_self: Foo, _args: any[], _old: Foo) => { throw new Failed('no'); })
+            method(): void { }
+        }
+
+        try {
+            (Foo.new() as any).method();
+            nodeAssert.fail('expected a contract failure');
+        } catch (error: any) {
+            // Compared as a boolean: `nodeAssert.ok(error instanceof Failed)` narrows
+            // `error` to `Failed`, which does not declare `violation`.
+            nodeAssert.strictEqual(error instanceof Failed, true, 'the thrown value reaches the caller');
+            nodeAssert.strictEqual(siblingRan, true, 'a throwing arm does not short-circuit the others');
+            nodeAssert.deepStrictEqual(error.violation.failedIndices, [0, 1]);
+            nodeAssert.deepStrictEqual(error.violation.thrownIndices, [0]);
+        }
+    });
+
+    test('a throwing arm and a passing arm still rejects the invocation', () => {
+        class Foo extends Contracted {
+            @ensures((_self: Foo, _args: any[], _old: Foo) => true)
+            @ensures((_self: Foo, _args: any[], _old: Foo) => { throw new Failed('no'); })
+            method(): number { return 1; }
+        }
+
+        // AND-composition: one satisfied arm does not excuse a broken one.
+        nodeAssert.throws(() => (Foo.new() as any).method(), (error: any) => error instanceof Failed);
+    });
+
+    test('no throwing arm means an AssertionError listing the falsy arm', () => {
+        class Foo extends Contracted {
+            @ensures((_self: Foo, _args: any[], _old: Foo) => true)
+            @ensures((_self: Foo, _args: any[], _old: Foo) => false)
+            method(): void { }
+        }
+
+        nodeAssert.throws(
+            () => (Foo.new() as any).method(),
+            (error: any) => error.name === 'AssertionError'
+                && error.violation.thrownIndices === undefined
+                && error.violation.failedIndices.length === 1,
+        );
+    });
+});

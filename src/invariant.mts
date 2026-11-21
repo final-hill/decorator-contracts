@@ -1,6 +1,6 @@
-import { assert, violationError } from './assert.mjs';
+import { assert, violationFailure } from './assert.mjs';
 import { checkedMode, Contracted } from './Contracted.mjs';
-import { describeArm, evaluateArm, type ArmOptions } from './admissibility.mjs';
+import { armFailures, describeArm, evaluateArm, recordFailure, type ArmOptions } from './admissibility.mjs';
 import type { StandardSchemaV1 } from './standard-schema.mjs';
 
 /**
@@ -40,8 +40,7 @@ export function assertInvariants<C extends typeof Contracted, T extends Instance
     if (!Contracted[checkedMode]) return;
 
     const registered = (Class[Symbol.metadata]?.['invariants'] ?? []) as unknown as RegisteredInvariant[],
-        failed: number[] = [],
-        issues: StandardSchemaV1.Issue[] = [];
+        failures = armFailures();
 
     // AND-composed: every arm must hold for the instance to be valid. Invariants
     // are covariant, so a subtype may strengthen the obligation but never weaken
@@ -58,21 +57,21 @@ export function assertInvariants<C extends typeof Contracted, T extends Instance
 
         if (result.ok) continue;
 
-        failed.push(index);
-
-        if (result.issues) issues.push(...result.issues);
+        // Every arm is evaluated even after one rejects, because a report naming
+        // only the first broken invariant hides the others the instance violates
+        // at the same moment.
+        recordFailure(failures, index, result);
     }
 
-    if (failed.length === 0) return;
+    if (failures.failed.length === 0) return;
 
-    throw violationError(
+    throw violationFailure(
         '@invariant',
         Class.name,
         undefined,
         registered.map(entry => entry.arm),
-        failed,
+        failures,
         'The instance left the invariant unsatisfied.',
-        issues,
         describeArm,
     );
 }

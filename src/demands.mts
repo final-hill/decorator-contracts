@@ -1,7 +1,7 @@
-import { violationError } from './assert.mjs';
+import { violationFailure } from './assert.mjs';
 import { checkedMode, Contracted } from "./Contracted.mjs";
 import { assertFeatureContractTarget } from './decorator.mjs';
-import { assertNormalizable, describeArm, evaluateArm, type ArmOptions } from './admissibility.mjs';
+import { armFailures, assertNormalizable, describeArm, evaluateArm, recordFailure, type ArmOptions } from './admissibility.mjs';
 import type { StandardSchemaV1 } from './standard-schema.mjs';
 import type { FeatureDecoratorContext } from './types.mjs';
 
@@ -93,8 +93,7 @@ export function assertDemands(
     if (ds.length === 0) return args;
 
     const label = `${instance.constructor.name}.${String(propertyKey)}`,
-        failed: number[] = [],
-        issues: StandardSchemaV1.Issue[] = [];
+        failures = armFailures();
 
     for (const [index, { arm, options }] of ds.entries()) {
         const result = evaluateArm(
@@ -106,10 +105,11 @@ export function assertDemands(
             options,
         );
 
+        // A later arm may still permit the call, so a rejected arm is recorded
+        // rather than returned from. Propagating a throw here would make a legal
+        // weakening arm unreachable.
         if (!result.ok) {
-            failed.push(index);
-
-            if (result.issues) issues.push(...result.issues);
+            recordFailure(failures, index, result);
 
             continue;
         }
@@ -119,15 +119,15 @@ export function assertDemands(
     }
 
     // Every arm failed. All of them are reported, because OR-composition means
-    // any of them could have permitted the call.
-    throw violationError(
+    // any of them could have permitted the call. A thrown value is raised in place
+    // of the AssertionError when there is one, so a typed error survives.
+    throw violationFailure(
         '@demands',
         instance.constructor.name,
         String(propertyKey),
         ds.map(entry => entry.arm),
-        failed,
+        failures,
         'A precondition was not satisfied, so the feature was not entered.',
-        issues,
         describeArm,
     );
 }
