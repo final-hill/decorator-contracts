@@ -111,3 +111,29 @@ export function describeViolation(
         violation,
     };
 }
+
+/**
+ * Builds the error for a contract whose predicates were not satisfied.
+ *
+ * Every contract reports the same way — a message naming the feature and the
+ * predicates that failed, plus the structured violation — so the identical
+ * `describeViolation` + `throw new AssertionError` tail is produced here instead
+ * of being written in each of `@invariant`, `@demands`, and `@ensures`.
+ *
+ * The composition rule stays with each contract, because it is not shared:
+ * `@demands` is OR-composed (a subtype may weaken a precondition) while
+ * `@invariant` and `@ensures` are AND-composed.
+ */
+export function violationError(
+    contract: ContractKind,
+    className: string,
+    feature: string | undefined,
+    predicates: readonly unknown[],
+    failedIndices: number[],
+    summary: string,
+): AssertionError {
+    const { message, violation } = describeViolation(
+        contract, className, feature, predicates, failedIndices, summary);
+
+    return new AssertionError(message, violation);
+}

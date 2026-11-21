@@ -1,5 +1,6 @@
 import { assert } from './assert.mjs';
-import { checkedMode, Contracted, isGeneratorFunction } from './Contracted.mjs';
+import { checkedMode, Contracted } from './Contracted.mjs';
+import { assertFeatureContractTarget } from './decorator.mjs';
 import type { FeatureDecoratorContext } from './types.mjs';
 
 /**
@@ -49,11 +50,7 @@ export type RescueDecorator = <This extends Contracted>(
 ) => void;
 
 export const rescue: RescueDecorator = (handler, options) => (feature, ctx) => {
-    assert(["method", "getter", "setter"].includes(ctx.kind), '@rescue decorator can only be applied to methods, getters, or setters');
-    assert(ctx.static === false, '@rescue decorator cannot be applied to static features');
-    assert(ctx.private === false, '@rescue decorator cannot be applied to private features');
-    assert(!String(ctx.name).startsWith('_'), '@rescue decorator cannot be applied to private/protected features');
-    assert(!isGeneratorFunction(feature), '@rescue cannot be applied to a generator feature: the contract boundary for generators is not supported yet (see issue #318)');
+    assertFeatureContractTarget('@rescue', feature, ctx);
     assert(options?.maxRetries === undefined || options.maxRetries >= 0, 'maxRetries must not be negative');
 
     // Register at decoration time. `addInitializer` runs once per instance, so

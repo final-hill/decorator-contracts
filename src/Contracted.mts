@@ -108,37 +108,28 @@ const populateOld = (target: Contracted) => {
  * How a feature's body hands its result back to the caller.
  *
  * A Hoare triple `{ P } C { Q }` only means something if `Q` is evaluated after
- * `C` has finished. For an `async` feature, `C` finishes when the promise it
- * returned settles, not when `Reflect.apply` returns it. The kind decides where
- * the exit boundary therefore sits.
- *
- * Generators are their own case and are rejected by the contract decorators for
- * now; see issue #318.
+ * `C` has finished. "Finished" is not the same event for every kind of feature:
+ * an `async` body finishes when its promise settles, and a generator finishes a
+ * *segment* every time it yields. The kind decides where the exit boundary
+ * therefore sits.
  */
-type FeatureKind = 'sync' | 'async';
+type FeatureKind = 'sync' | 'async' | 'generator' | 'async-generator';
 
 /**
- * Classifies a feature body by how it delivers its result.
+ * Classifies a feature body by how it delivers its results.
  *
- * `Reflect.apply` on an `async` function returns its promise immediately, so the
- * only reliable signal is the function's constructor, which is stable across
- * bundling and minification (unlike `Function.prototype.name`).
+ * `Reflect.apply` on an `async` function returns its promise immediately, and on
+ * a generator it returns an iterator, so the only reliable signal is the
+ * function's constructor, which is stable across bundling and minification
+ * (unlike `Function.prototype.name`).
  */
-const featureKindOf = (fn: (...args: any[]) => unknown): FeatureKind =>
-    fn.constructor.name === 'AsyncFunction' ? 'async' : 'sync';
-
-/**
- * True when the feature is a generator or async generator.
- *
- * Exported for the decorators, which refuse generator features until the
- * contract boundary for them is decided (issue #318).
- */
-export const isGeneratorFunction = (fn: unknown): boolean => {
-    if (typeof fn !== 'function') return false;
-
-    const name = fn.constructor.name;
-
-    return name === 'GeneratorFunction' || name === 'AsyncGeneratorFunction';
+const featureKindOf = (fn: (...args: any[]) => unknown): FeatureKind => {
+    switch (fn.constructor.name) {
+        case 'AsyncFunction': return 'async';
+        case 'GeneratorFunction': return 'generator';
+        case 'AsyncGeneratorFunction': return 'async-generator';
+        default: return 'sync';
+    }
 };
 
 // Caches the contract wrapper per instance and feature so that `f.m === f.m`.
@@ -153,6 +144,72 @@ function getPropertyDescriptor(obj: object, prop: PropertyKey): PropertyDescript
         proto = Object.getPrototypeOf(proto);
     }
     return undefined;
+}
+
+/**
+ * The kind of public feature whose boundary is being evaluated.
+ *
+ * `@ensures` and `@rescue` treat a getter differently from every other feature,
+ * and the rule was written out four times: once in the synchronous lifecycle and
+ * once in the asynchronous one, for each contract. Naming it here keeps the two
+ * lifecycles from drifting apart on the one thing they must agree about.
+ */
+type DescriptorType = 'get' | 'set' | 'func' | 'delete';
+
+/**
+ * The arguments an `@ensures` predicate observes.
+ *
+ * A getter delivers its result as the value the caller receives, so that is what
+ * its postcondition describes. Every other feature is described by the arguments
+ * it was invoked with.
+ */
+const ensuresArguments = (descriptorType: DescriptorType, result: unknown, args: any[]): any[] =>
+    descriptorType === 'get' ? [result] : args;
+
+/**
+ * The arguments an `@rescue` retry restarts the lifecycle with.
+ *
+ * A getter has no arguments to replay, so a retry runs it from scratch.
+ */
+const rescueArguments = (descriptorType: DescriptorType, args: any[]): any[] =>
+    descriptorType === 'get' ? [] : args;
+
+/**
+ * Decides what a failed invocation does next.
+ *
+ * Every lifecycle needs the same three decisions at its `@rescue` boundary:
+ * whether another retry is permitted, what the handler asked for, and whether
+ * the invariant has to be re-checked before the error reaches the caller.
+ * Extracted because the sync and async lifecycles had this block verbatim twice.
+ *
+ * The sync and async lifecycles are separate functions on purpose: a lifecycle
+ * that awaited unconditionally would make every synchronous feature return a
+ * promise, which is not a refactor but a change to every caller. What is shared
+ * is the decision, not the boundary.
+ *
+ * @returns The arguments to retry with, or the error is rethrown.
+ */
+function attemptRescue(
+    Class: typeof Contracted,
+    target: Contracted,
+    prop: PropertyKey,
+    error: unknown,
+    retries: number,
+    args: any[],
+): any[] {
+    const maxRetries = getRescueDeclaration(target, prop)?.maxRetries ?? Infinity;
+
+    if (retries >= maxRetries) {
+        assertInvariants(Class, target);
+        throw error;
+    }
+
+    try {
+        return applyRescueHandler(target, prop, error, args);
+    } catch (rescuedError) {
+        assertInvariants(Class, target);
+        throw rescuedError;
+    }
 }
 
 /**
@@ -186,7 +243,7 @@ function getPropertyDescriptor(obj: object, prop: PropertyKey): PropertyDescript
  * @param invoke - Performs the feature body with the supplied arguments.
  */
 function runSyncLifecycle(
-    descriptorType: 'get' | 'set' | 'func' | 'delete',
+    descriptorType: DescriptorType,
     target: Contracted,
     prop: PropertyKey,
     invokeArgs: any[],
@@ -212,22 +269,11 @@ function runSyncLifecycle(
             assertNotThenable(result, target, prop);
 
             if (hasEnsures)
-                assertEnsures(target, old, prop, descriptorType === 'get' ? [result] : args);
+                assertEnsures(target, old, prop, ensuresArguments(descriptorType, result, args));
         } catch (error) {
-            const maxRetries = getRescueDeclaration(target, prop)?.maxRetries ?? Infinity;
-
-            if (retries >= maxRetries) {
-                assertInvariants(Class, target);
-                throw error;
-            }
-
+            args = attemptRescue(Class, target, prop, error, retries,
+                rescueArguments(descriptorType, args));
             retries++;
-            try {
-                args = applyRescueHandler(target, prop, error, descriptorType === 'get' ? [] : args);
-            } catch (rescuedError) {
-                assertInvariants(Class, target);
-                throw rescuedError;
-            }
             continue;
         }
 
@@ -263,7 +309,7 @@ function runSyncLifecycle(
  * subject to every contract like any other invocation.
  */
 async function runAsyncLifecycle(
-    descriptorType: 'get' | 'set' | 'func' | 'delete',
+    descriptorType: DescriptorType,
     target: Contracted,
     prop: PropertyKey,
     invokeArgs: any[],
@@ -286,22 +332,11 @@ async function runAsyncLifecycle(
         try {
             result = await invoke(args);
             if (hasEnsures)
-                assertEnsures(target, old, prop, descriptorType === 'get' ? [result] : args);
+                assertEnsures(target, old, prop, ensuresArguments(descriptorType, result, args));
         } catch (error) {
-            const maxRetries = getRescueDeclaration(target, prop)?.maxRetries ?? Infinity;
-
-            if (retries >= maxRetries) {
-                assertInvariants(Class, target);
-                throw error;
-            }
-
+            args = attemptRescue(Class, target, prop, error, retries,
+                rescueArguments(descriptorType, args));
             retries++;
-            try {
-                args = applyRescueHandler(target, prop, error, descriptorType === 'get' ? [] : args);
-            } catch (rescuedError) {
-                assertInvariants(Class, target);
-                throw rescuedError;
-            }
             continue;
         }
 
@@ -311,18 +346,262 @@ async function runAsyncLifecycle(
 }
 
 /**
+ * Runs the contract lifecycle whose boundary is a generator's iterator.
+ *
+ * A generator does not have one exit boundary: it has a boundary per *step*.
+ * Calling `obj.gen(...)` starts the body but its first line has not run, and each
+ * `next()` runs the body until the following `yield`. A yield is therefore the
+ * observable delivery of a traversal, which is what `@ensures` describes, and the
+ * contracts bracket it accordingly:
+ *
+ * ```
+ * call   -> @invariant, @demands      (the call arguments are `P`)
+ * next() -> body to the next yield
+ *        -> @ensures, @invariant      (the yielded value and the new state are `Q`)
+ * ```
+ *
+ * This is the same sandwich the diagram shows for an ordinary feature
+ * (`docs/order-of-assertions.png`), applied once per step. The exit `@invariant`
+ * is what closes the window between yields: a suspended generator's instance is
+ * publicly reachable, so another feature can be called on it, and that call's
+ * entry check is the guarantee that it never observes an invalid object.
+ *
+ * Checking the invariant *before* handing over a value is not possible — the
+ * segment is not finished at the `yield` — so resuming is where the previous
+ * step's exit check happens. The terminal step resumes into the same point and
+ * then reports `done`, so completion is covered without extra machinery.
+ *
+ * `@demands` describes the call, so it runs once. A later step may also be
+ * *given* a value through `next(value)`, which arrives as the value of the
+ * preceding `yield` expression and is entirely outside the arguments of the
+ * call. That input is checked when it is present and skipped when it is not,
+ * because `for...of` iterates with `next()` and would otherwise re-enter the
+ * precondition with `undefined` and fail it.
+ *
+ * `@rescue` is the outer scope, as it is for an `async` feature: it covers a
+ * throw that escapes a step, and `retry` restarts the traversal. Rescuing a
+ * single step would require resuming a generator that has already been consumed,
+ * which the language cannot express.
+ */
+function runGeneratorLifecycle(
+    target: Contracted,
+    prop: PropertyKey,
+    invokeArgs: any[],
+    invoke: (args: any[]) => any,
+    kind: 'generator' | 'async-generator',
+): any {
+    const Class = target.constructor as typeof Contracted,
+        es = Class[Symbol.metadata]?.ensures?.[prop] ?? [] as EnsuresPredicate<Contracted>[],
+        hasEnsures = es.length > 0;
+
+    /*
+     * A generator has a boundary per *step*, not one per call. Calling the
+     * feature runs nothing, and each `next()` runs the body from where it was
+     * suspended up to the following `yield`. When `next()` returns, the segment
+     * has finished and the instance holds the state it will be observed with, so
+     * the exit contracts run there, before the caller is given the value:
+     *
+     *     call    -> @invariant, @demands          the call arguments are `P`
+     *     next()  -> @invariant                    entry of the step
+     *     segment -> body to the next yield
+     *     next()  -> @ensures, @invariant          the yielded value and state
+     *
+     * This is the sandwich in `docs/order-of-assertions.png` applied once per
+     * step, and it gives the invariant the same guarantee it has elsewhere: no
+     * public interaction leaves the object invalid. That matters more here than
+     * anywhere else, because a suspended generator's instance is publicly
+     * reachable and another feature can be called on it between yields. Checking
+     * only at completion would leave the object knowingly invalid for the whole
+     * traversal, and would never check at all if the iterator were abandoned.
+     */
+
+    // The iterator in play. A `@rescue` that retries replaces it.
+    let iterator: any,
+        args = invokeArgs,
+        retries = 0,
+        // The invariant has not been evaluated since the traversal began.
+        needsEntry = true,
+        // The error a `@rescue` handled by retrying, raised if the retried
+        // traversal then completes without producing a value.
+        retriedError: unknown;
+
+    /**
+     * Runs the entry contracts for a step.
+     *
+     * `@demands` describes the call, so it runs once, on the first step. A later
+     * step may be *given* a value through `next(value)`, which becomes the value
+     * of the preceding `yield` expression and is not an argument of the call;
+     * that input is checked as a precondition when it is present. `for...of`
+     * iterates with `next()` and injects nothing, so it never re-enters the
+     * precondition with `undefined`.
+     */
+    const enter = (stepArgs: any[]) => {
+        assertInvariants(Class, target);
+
+        if (needsEntry) {
+            needsEntry = false;
+            assertDemands(target, prop, ...args);
+
+            return;
+        }
+
+        if (stepArgs.length > 0)
+            assertDemands(target, prop, ...stepArgs);
+    };
+
+    /**
+     * Runs the exit contracts for a step that produced a value.
+     */
+    const exit = (value: any, old: Contracted | undefined) => {
+        if (hasEnsures) assertEnsures(target, old!, prop, [value]);
+
+        assertInvariants(Class, target);
+
+        // A value was delivered, so the retry that recovered the traversal has
+        // been observed and the error it handled no longer needs reporting.
+        retriedError = undefined;
+    };
+
+    /**
+     * Raises the error a retry was recovering from, when the retried traversal
+     * completes without a value. Nothing observed that value, so the caller who
+     * triggered the rescue is told why rather than being handed `undefined`.
+     */
+    const reportRetried = () => {
+        assertInvariants(Class, target);
+
+        if (retriedError === undefined) return;
+
+        const error = retriedError;
+
+        retriedError = undefined;
+
+        throw error;
+    };
+
+    /**
+     * Rebuilds the traversal after a `@rescue` retried.
+     *
+     * A generator that has already been consumed cannot be resumed from the
+     * beginning, so a retry restarts it: `retry` reruns the body, exactly as the
+     * loop back to `@invariant` in `docs/order-of-assertions.png` says it does.
+     */
+    const prepareRetry = (error: unknown) => {
+        args = attemptRescue(Class, target, prop, error, retries, args);
+        retries++;
+        iterator = invoke(args);
+        needsEntry = true;
+        retriedError = error;
+    };
+
+    /**
+     * Drives one step of a synchronous generator.
+     */
+    const drive = (advance: (iterator: any) => any, stepArgs: any[]): any => {
+        for (; ;) {
+            try {
+                enter(stepArgs);
+
+                // `old` describes the state the segment is about to change, so
+                // it is taken before the body advances.
+                const old = hasEnsures ? populateOld(target) : undefined,
+                    result = advance(iterator);
+
+                if (result.done) {
+                    reportRetried();
+
+                    return result;
+                }
+
+                exit(result.value, old);
+
+                return result;
+            } catch (error) {
+                prepareRetry(error);
+            }
+        }
+    };
+
+    /**
+     * Drives one step of an asynchronous generator, awaiting its segment.
+     */
+    const driveAsync = async (advance: (iterator: any) => Promise<any>, stepArgs: any[]): Promise<any> => {
+        for (; ;) {
+            try {
+                enter(stepArgs);
+
+                const old = hasEnsures ? populateOld(target) : undefined,
+                    result = await advance(iterator);
+
+                if (result.done) {
+                    reportRetried();
+
+                    return result;
+                }
+
+                exit(result.value, old);
+
+                return result;
+            } catch (error) {
+                prepareRetry(error);
+            }
+        }
+    };
+
+    // The call's entry contracts run when the feature is called, matching the
+    // arrow out of `obj.feature(...)` in the diagram. The body itself does not
+    // start until the iterator is resumed.
+    assertInvariants(Class, target);
+    assertDemands(target, prop, ...args);
+    needsEntry = false;
+    iterator = invoke(args);
+
+    const wrapper: any = {};
+
+    if (kind === 'generator') {
+        // `arguments.length` distinguishes `next()` from `next(undefined)`, which
+        // the engine treats differently: only an explicit value is injected.
+        wrapper.next = function (...stepArgs: any[]) {
+            return drive(current => current.next(stepArgs[0]), stepArgs);
+        };
+        wrapper.return = function (...stepArgs: any[]) {
+            return drive(current => current.return(stepArgs[0]), []);
+        };
+        wrapper.throw = function (...stepArgs: any[]) {
+            return drive(current => current.throw(stepArgs[0]), []);
+        };
+        wrapper[Symbol.iterator] = function () { return this; };
+    }
+    else {
+        wrapper.next = function (...stepArgs: any[]) {
+            return driveAsync(current => current.next(stepArgs[0]), stepArgs);
+        };
+        wrapper.return = function (...stepArgs: any[]) {
+            return driveAsync(current => current.return(stepArgs[0]), []);
+        };
+        wrapper.throw = function (...stepArgs: any[]) {
+            return driveAsync(current => current.throw(stepArgs[0]), []);
+        };
+        wrapper[Symbol.asyncIterator] = function () { return this; };
+    }
+
+    return wrapper;
+}
+
+/**
  * Selects the lifecycle boundary for a feature body.
  *
- * An `async` body is awaited through `runAsyncLifecycle`; anything else is
- * evaluated synchronously. This is decided from the function itself rather than
- * from whether the result *looks* like a promise, so a synchronous feature that
- * happens to return a thenable is still checked synchronously — the contract
- * describes the feature as written, and such a feature's postcondition cannot
- * hold anyway because its body has not finished. `@demands` therefore fails it
- * with a message naming the feature.
+ * An `async` body is awaited through `runAsyncLifecycle` and a generator is
+ * wrapped by `runGeneratorLifecycle`; anything else is evaluated synchronously.
+ * This is decided from the function itself rather than from whether the result
+ * *looks* like a promise, so a synchronous feature that happens to return a
+ * thenable is still checked synchronously — the contract describes the feature as
+ * written, and such a feature's postcondition cannot hold anyway because its body
+ * has not finished. `@demands` therefore fails it with a message naming the
+ * feature.
  */
 function runLifecycle(
-    descriptorType: 'get' | 'set' | 'func' | 'delete',
+    descriptorType: DescriptorType,
     target: Contracted,
     prop: PropertyKey,
     invokeArgs: any[],
@@ -331,6 +610,9 @@ function runLifecycle(
 ): any {
     if (kind === 'async')
         return runAsyncLifecycle(descriptorType, target, prop, invokeArgs, invoke);
+
+    if (kind === 'generator' || kind === 'async-generator')
+        return runGeneratorLifecycle(target, prop, invokeArgs, invoke, kind);
 
     return runSyncLifecycle(descriptorType, target, prop, invokeArgs, invoke);
 }
@@ -379,16 +661,6 @@ const proxyHandler: ProxyHandler<Contracted> = {
             const cached = cache.get(prop);
 
             if (cached) return cached;
-
-            // Generator features are refused here as well as in the decorators,
-            // because the decorators only run for features that declare a
-            // contract. Refusing at the proxy keeps a bare generator from
-            // appearing to be checked when it is not.
-            if (isGeneratorFunction(descriptor.value))
-                throw new TypeError(
-                    `${target.constructor.name}.${String(prop)} is a generator, and the contract boundary for `
-                    + 'generator features is not supported yet (see issue #318).',
-                );
 
             const kind = featureKindOf(descriptor.value);
 

@@ -1,6 +1,6 @@
-import { assert, assertContractResult, describeViolation } from './assert.mjs';
-import { AssertionError } from './AssertionError.mjs';
-import { checkedMode, Contracted, isGeneratorFunction } from './Contracted.mjs';
+import { assert, assertContractResult, violationError } from './assert.mjs';
+import { checkedMode, Contracted } from './Contracted.mjs';
+import { assertFeatureContractTarget } from './decorator.mjs';
 import type { FeatureDecoratorContext } from './types.mjs';
 
 /**
@@ -24,16 +24,8 @@ export type EnsuresDecorator = <
 ) => void;
 
 export const ensures: EnsuresDecorator = (predicate) => (feature, ctx) => {
-    assert(["method", "getter", "setter"].includes(ctx.kind), '@ensures decorator can only be applied to methods, getters, or setters');
-    assert(ctx.static === false, '@ensures decorator cannot be applied to static features');
-    assert(ctx.private === false, '@ensures decorator cannot be applied to private features');
-    assert(!String(ctx.name).startsWith('_'), '@ensures decorator cannot be applied to private/protected features');
-    assert(!isGeneratorFunction(feature), '@ensures cannot be applied to a generator feature: the contract boundary for generators is not supported yet (see issue #318)');
+    assertFeatureContractTarget('@ensures', feature, ctx);
 
-    // Register at decoration time. `addInitializer` runs once per instance, so
-    // registering there appended the same predicate again on every
-    // instantiation: unbounded metadata growth and a linearly growing predicate
-    // list to evaluate on each call.
     const es = [
         ...(ctx.metadata as any)?.ensures?.[ctx.name] ?? [],
         predicate
@@ -67,7 +59,7 @@ export function assertEnsures(instance: Contracted, old: Contracted, propertyKey
 
     if (failed.length === 0) return;
 
-    const { message, violation } = describeViolation(
+    throw violationError(
         '@ensures',
         instance.constructor.name,
         String(propertyKey),
@@ -75,6 +67,4 @@ export function assertEnsures(instance: Contracted, old: Contracted, propertyKey
         failed,
         'A postcondition was not satisfied after the feature ran.',
     );
-
-    throw new AssertionError(message, violation);
 }
