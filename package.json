@@ -18,6 +18,8 @@
         "lint:fix": "eslint src/ --ext .mts --fix",
         "pretest": "npm run build && npm run typecheck",
         "test": "globstar -- node --import tsx --test ./src/tests/*.test.mts",
+        "pretest:coverage": "npm run build && node -e \"require('node:fs').mkdirSync('coverage',{recursive:true})\"",
+        "test:coverage": "globstar -- node --import tsx --test --experimental-test-coverage --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=coverage/lcov.info ./src/tests/*.test.mts",
         "typecheck": "tsc --noEmit -p tsconfig.json && tsc -p tsconfig.test.json"
     },
     "homepage": "https://github.com/final-hill/decorator-contracts#readme",
@@ -50,6 +52,9 @@
         "requires",
         "SOLID"
     ],
+    "engines": {
+        "node": ">=26"
+    },
     "author": "Michael L Haufe <michael.haufe@final-hill.com> (https://final-hill.com)",
     "license": "AGPL-3.0-only",
     "devDependencies": {

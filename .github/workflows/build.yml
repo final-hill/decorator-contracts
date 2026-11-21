@@ -9,40 +9,48 @@ on:
 
 jobs:
   validate:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     strategy:
+      # A single failing Node version should not hide the others.
+      fail-fast: false
       matrix:
-        node-version: [22.x]
+        # The floor declared in `engines.node`. Testing a lower line would
+        # contradict that declaration, and the next major has no stable release
+        # yet, so only supported lines are listed. Add a version here when
+        # `engines.node` widens.
+        node-version: [26.x]
 
     steps:
     - uses: actions/checkout@v4
-      
+
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v4
       with:
         node-version: ${{ matrix.node-version }}
+        cache: npm
 
-    - name: Cache Node.js modules
-      uses: actions/cache@v4
-      with:
-        path: "%AppData%\npm-cache" # npm cache files are stored under the AppData folder on Windows
-        key: ${{ runner.OS }}-node-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.OS }}-node-
-          ${{ runner.OS }}-    
-    
-    - name: npm install, build, and test
-      run: |
-        npm install
-        npm run build
-        npm run typecheck
-        npm test
+    # `npm ci` installs exactly the lockfile and fails if it disagrees with
+    # `package.json`, which `npm install` silently repairs.
+    - name: Install
+      run: npm ci
+
+    - name: Lint
+      run: npm run lint
+
+    - name: Typecheck
+      run: npm run typecheck
+
+    # `test:coverage` builds first, because the suite imports the package by
+    # name and therefore resolves to `dist/`. That is deliberate: the tests
+    # validate the shipped artifact, which is how a mangled class name and a
+    # wrong `exports.types` were both caught.
+    - name: Test with coverage
+      run: npm run test:coverage
       env:
         CI: true
 
     - name: Verify the working tree is clean after a build
-      shell: bash
       run: |
         # A build must not rewrite tracked files. This catches a linter that
         # fixes sources, a generator that touches them, or a stale artifact
@@ -52,3 +60,13 @@ jobs:
           git --no-pager diff
           exit 1
         fi
+
+    - name: Upload coverage
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-node-${{ matrix.node-version }}
+        path: coverage/
+        if-no-files-found: warn
+        retention-days: 7
+
