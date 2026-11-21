@@ -492,6 +492,38 @@ Asynchronous *predicates* are therefore not supported: a predicate that needs th
 
 Asynchronous *features* are supported; see [Asynchronous features](#asynchronous-features).
 
+### Contract predicates may not change the instance
+
+A predicate answers a question, so it cannot change the state it is asked about. `@invariant`, `@demands`, and `@ensures` receive a **read-only view** of the instance: assigning, deleting, or defining a property raises a `TypeError` naming the property.
+
+```typescript
+@demands((self) => { self._value = 0; return true; })
+// TypeError: A contract predicate may not assign '_value'.
+```
+
+This matters because a predicate runs *between* the entry and exit `@invariant`. A write inside a predicate can therefore hide a violation the invariant would otherwise have reported, turning a detectable bug into a silent one.
+
+```typescript
+@invariant((self) => {
+    self._value = 0;          // would repair the state being checked
+    return self._value >= 0;  // and then pass
+})
+```
+
+`@rescue` is deliberately **not** restricted. Restoring corrupted state is its purpose, so its handler receives the raw instance.
+
+#### What is not blocked
+
+The guard covers the instance's own surface. A mutation *through* a nested value still reaches the shared object:
+
+```typescript
+@demands((self) => { self._items.push(item); return true; })  // not intercepted
+```
+
+Closing that would mean deep-wrapping every value a predicate reads, which changes object identity and would break legitimate comparisons such as `old.child === self.child`. The guarantee is therefore "a predicate cannot assign to the instance", which is the case that corrupts contract evaluation.
+
+The feature body is unaffected: it still receives the instance itself and mutates freely. The view is scoped to the predicate call, which is why a scoped `Proxy` is used rather than `Object.freeze` — freezing is permanent, and would leave the body unable to change anything afterwards.
+
 ### Subcontracting and Invariants
 
 When subclassing, if a subclass defines its own `@invariant`, the resulting invariant is **strengthened**: the subclass invariant and the base class invariant are both enforced (they are logically AND-ed together). This means all invariants in the inheritance chain must hold for the object to be valid.

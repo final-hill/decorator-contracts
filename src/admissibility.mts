@@ -1,4 +1,5 @@
 import { assertContractResult } from './assert.mjs';
+import { readOnlyView } from './read-only.mjs';
 import type { StandardSchemaV1 } from './standard-schema.mjs';
 
 /**
@@ -110,6 +111,12 @@ export const evaluateArm = (
  *
  * Reusing `assertContractResult` keeps the diagnostic identical whether the
  * predicate was declared on its own or alongside a schema.
+ *
+ * The instance is passed as a read-only view. A predicate answers a question, so
+ * it must not be able to change the state it is asked about — see `read-only.mts`
+ * for why this is a scoped proxy rather than `Object.freeze`. The view is applied
+ * here rather than by the caller so that a predicate can never be invoked with
+ * the raw target by mistake.
  */
 const evaluatePredicate = (
     predicate: (...args: any[]) => unknown,
@@ -117,9 +124,18 @@ const evaluatePredicate = (
     contract: string,
     label: string,
     index: number,
-): Admissibility => ({
-    ok: assertContractResult(predicate(...args), contract, label, index),
-});
+): Admissibility => {
+    // Only the instance is guarded, and it is always the first argument:
+    // `(self)`, `(self, args)`, or `(self, args, old)`. The argument tuple and the
+    // `old` snapshot are data the predicate is expected to inspect and mutate
+    // freely — `old` is a detached copy, so writing to it corrupts nothing.
+    const [instance, ...rest] = args,
+        guarded = typeof instance === 'object' && instance !== null
+            ? readOnlyView(instance)
+            : instance;
+
+    return { ok: assertContractResult(predicate(guarded, ...rest), contract, label, index) };
+};
 
 /**
  * Applies a schema arm by calling its `validate`.
