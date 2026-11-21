@@ -3,9 +3,30 @@
 # top-most EditorConfig file
 root = true
 
-[*.{ts,json,config}]
+# The project is developed and deployed on Linux only, so every file uses LF.
+# `.gitattributes` normalises on the way into the repository; this makes an
+# editor agree with it before the file is ever committed.
+[*]
 charset = utf-8
-end_of_line = crlf
+end_of_line = lf
 indent_size = 4
 indent_style = space
+insert_final_newline = true
 trim_trailing_whitespace = true
+
+# Makefiles require tabs. There are none tracked today; the rule is here so that
+# adding one does not silently break it.
+[Makefile]
+indent_style = tab
+
+# Markdown uses two trailing spaces as a hard line break, so the trimmer would
+# change how a paragraph renders.
+[*.md]
+trim_trailing_whitespace = false
+
+# PNGs are binary: no charset, no line endings, no trailing-whitespace rule.
+[*.png]
+charset = unset
+end_of_line = unset
+insert_final_newline = false
+trim_trailing_whitespace = false
