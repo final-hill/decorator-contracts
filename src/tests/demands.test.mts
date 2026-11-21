@@ -204,7 +204,7 @@ describe('`demands` predicates must return a boolean', () => {
         }
 
         nodeAssert.strictEqual(Foo.new().method(3), 3);
-        nodeAssert.throws(() => Foo.new().method(0), /No demands were satisfied/);
+        nodeAssert.throws(() => Foo.new().method(0), /@demands failed/);
     });
 });
 

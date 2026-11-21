@@ -14,6 +14,7 @@
 - [Implies](#implies)
 - [Iff](#iff)
 - [Contracts are Hoare triples](#contracts-are-hoare-triples)
+- [Contract failures](#contract-failures)
 - [Encapsulation](#encapsulation)
 - [Invariants](#invariants)
 - [Demands](#demands)
@@ -210,6 +211,46 @@ $$\{P\}\; C\; \{Q\}$$
 `@demands` is $P$, `@ensures` is $Q$, and the feature body is $C$. Nothing inside $C$ is constrained: a body may assign to its own properties, including public ones, and may call its own features without re-entering the contracts. Correctness is the obligation that $P$ and $Q$ hold at the boundary, with the invariant additionally holding on entry and exit.
 
 This is why there is no need to police what a body does to itself. If a body leaves the object in an invalid state, `@invariant` rejects it on exit. If it produces the wrong result, `@ensures` rejects it. Attempting to enforce correctness *inside* $C$ as well would mean the same guarantee twice, at the cost of forbidding legitimate intermediate states.
+
+## Contract failures
+
+A failed contract throws an `AssertionError`. Its `name` is `AssertionError` regardless of how the bundle was minified, and its message names the contract, the feature, and the predicate(s) that failed:
+
+```text
+@ensures failed for Account.withdraw (1 of 2 predicates unsatisfied: predicate #2: (self,[amount],old)=>self.balance===old.balance-amount). A postcondition was not satisfied after the feature ran.
+```
+
+The predicate text is whatever the predicate's `toString()` returns, which is minified in a bundled build. The structured `violation` below is the reliable way to identify a failure.
+
+The error also carries a `violation` property so callers can react without parsing the message:
+
+```typescript
+import { AssertionError } from '@final-hill/decorator-contracts';
+
+try {
+    account.withdraw({ amount: 500 });
+} catch (error) {
+    if (error instanceof AssertionError && error.violation?.contract === '@demands') {
+        // a precondition failed; the feature was never entered
+    }
+}
+```
+
+`violation` has the shape:
+
+```typescript
+interface ContractViolation {
+    contract: '@invariant' | '@demands' | '@ensures';
+    className: string;
+    feature?: string;        // absent for `@invariant`
+    failedIndices: number[]; // positions in the contract's composition list
+    predicates: string[];    // source text, aligned with `failedIndices`
+}
+```
+
+`@demands` is OR-composed, so a failure lists **every** arm — any of them could have permitted the call. `@ensures` and `@invariant` are AND-composed, so a failure lists only the predicates that broke.
+
+An `AssertionError` thrown by `assert()` itself has no `violation`.
 
 ## Encapsulation
 

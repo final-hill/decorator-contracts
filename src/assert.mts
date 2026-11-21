@@ -1,4 +1,4 @@
-import { AssertionError } from "./AssertionError.mjs";
+import { AssertionError, type ContractKind, type ContractViolation } from "./AssertionError.mjs";
 
 /**
  * An assertion is an expression of a property that must be true at a particular
@@ -64,4 +64,50 @@ export function assertContractResult(
     );
 
     return result;
+}
+
+const pluralise = (count: number, total: number, singular: string, plural: string): string =>
+    `${count} of ${total} ${total === 1 ? singular : plural}`;
+
+/**
+ * Builds a message for a failed contract and describes it structurally.
+ *
+ * Every contract reports the same way: which contract failed, on which feature,
+ * which predicate(s) failed, and the source text of each. A caller can use the
+ * returned violation instead of parsing the message.
+ *
+ * @param contract - Which contract failed.
+ * @param className - The class the contract belongs to.
+ * @param feature - The feature the contract belongs to, absent for `@invariant`.
+ * @param predicates - The full composition list, so indices are meaningful.
+ * @param failedIndices - The indices in `predicates` that failed.
+ * @param summary - A per-contract description of what the failure means.
+ * @returns The message and the structured violation.
+ */
+export function describeViolation(
+    contract: ContractKind,
+    className: string,
+    feature: string | undefined,
+    predicates: readonly unknown[],
+    failedIndices: number[],
+    summary: string,
+): { message: string, violation: ContractViolation } {
+    const violation: ContractViolation = {
+        contract,
+        className,
+        feature,
+        failedIndices,
+        predicates: failedIndices.map(index => String(predicates[index])),
+    };
+
+    const where = feature === undefined ? className : `${className}.${feature}`,
+        detail = violation.predicates
+            .map((source, position) => `predicate #${failedIndices[position] + 1}: ${source}`)
+            .join('; '),
+        count = pluralise(failedIndices.length, predicates.length, 'predicate', 'predicates');
+
+    return {
+        message: `${contract} failed for ${where} (${count} unsatisfied: ${detail}). ${summary}`,
+        violation,
+    };
 }

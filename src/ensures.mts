@@ -1,4 +1,5 @@
-import { assert, assertContractResult } from './assert.mjs';
+import { assert, assertContractResult, describeViolation } from './assert.mjs';
+import { AssertionError } from './AssertionError.mjs';
 import { checkedMode, Contracted } from './Contracted.mjs';
 import type { FeatureDecoratorContext } from './types.mjs';
 
@@ -55,10 +56,24 @@ export function assertEnsures(instance: Contracted, old: Contracted, propertyKey
 
     if (es.length === 0) return;
 
+    const label = `${instance.constructor.name}.${String(propertyKey)}`,
+        failed: number[] = [];
+
     // ALL ensures must be true for the obligation to be fulfilled
     for (const [index, e] of es.entries())
-        if (!assertContractResult(e(instance, args, old), '@ensures', `${instance.constructor.name}.${String(propertyKey)}`, index))
+        if (!assertContractResult(e(instance, args, old), '@ensures', label, index))
+            failed.push(index);
 
-            assert(false, `No ensurances were satisfied for ${instance.constructor.name}.${String(propertyKey)}`);
-    // If we reach here, it means all ensures were true
+    if (failed.length === 0) return;
+
+    const { message, violation } = describeViolation(
+        '@ensures',
+        instance.constructor.name,
+        String(propertyKey),
+        es,
+        failed,
+        'A postcondition was not satisfied after the feature ran.',
+    );
+
+    throw new AssertionError(message, violation);
 }

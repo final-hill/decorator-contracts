@@ -21,8 +21,8 @@ describe('The `rescue` decorator must preserve the invariant after execution', (
         nodeAssert.strictEqual(base.value, 5);
         nodeAssert.throws(() => {
             base.method2();
-        }, /^Error: Invariant violated/);
-        nodeAssert.throws(() => base.value, /^Error: Invariant violated/);
+        }, /^AssertionError: @invariant failed/);
+        nodeAssert.throws(() => base.value, /^AssertionError: @invariant failed/);
     });
 });
 
@@ -288,7 +288,7 @@ describe('If an exception is thrown in a class feature without a `rescue` define
 
     test('Throwing error with `invariant`', () => {
         nodeAssert.throws(() => B.new().method1(), { message: 'I am error' });
-        nodeAssert.throws(() => { B.new().method2(); }, /^Error: Invariant violated/);
+        nodeAssert.throws(() => { B.new().method2(); }, /^AssertionError: @invariant failed/);
     });
 });
 
@@ -316,10 +316,10 @@ describe('If an error is thrown in `demands` the error is raised to the caller',
 
     test('Error pathways', () => {
         nodeAssert.doesNotThrow(() => A.new().method(1));
-        nodeAssert.throws(() => A.new().method(0), /^Error: Invariant violated/);
-        nodeAssert.throws(() => A.new().method(-1), /^Error: No demands were satisfied/);
-        nodeAssert.throws(() => A.new().method(-2), /^Error: No demands were satisfied/);
-        nodeAssert.throws(() => A.new().methodEmpty(), /^Error: No demands were satisfied/);
+        nodeAssert.throws(() => A.new().method(0), /^AssertionError: @invariant failed/);
+        nodeAssert.throws(() => A.new().method(-1), /^AssertionError: @demands failed/);
+        nodeAssert.throws(() => A.new().method(-2), /^AssertionError: @demands failed/);
+        nodeAssert.throws(() => A.new().methodEmpty(), /^AssertionError: @demands failed/);
         nodeAssert.throws(() => A.new().methodError(), /^Error: Rescue Error/);
     });
 });
@@ -345,9 +345,9 @@ describe('If an error is raised in an `ensures` then the associated rescue is ex
 
     test('Error pathways', () => {
         nodeAssert.doesNotThrow(() => A.new().method(1));
-        nodeAssert.throws(() => A.new().method(0), /^Error: No ensurances were satisfied for/);
-        nodeAssert.throws(() => A.new().method(-1), /^Error: Invariant violated/);
-        nodeAssert.throws(() => A.new().methodEmpty(), /^Error: No ensurances were satisfied for/);
+        nodeAssert.throws(() => A.new().method(0), /^AssertionError: @ensures failed/);
+        nodeAssert.throws(() => A.new().method(-1), /^AssertionError: @invariant failed/);
+        nodeAssert.throws(() => A.new().methodEmpty(), /^AssertionError: @ensures failed/);
         nodeAssert.throws(() => A.new().methodError(), /^Error: Rescue Error/);
     });
 });
@@ -402,7 +402,7 @@ describe('A retried invocation re-enters the contract lifecycle', () => {
             }
         }
 
-        nodeAssert.throws(() => Foo.new().method(-1), /^Error: No demands were satisfied/);
+        nodeAssert.throws(() => Foo.new().method(-1), /^AssertionError: @demands failed/);
     });
 
     test('a retry that violates the ensures throws', () => {
@@ -419,7 +419,7 @@ describe('A retried invocation re-enters the contract lifecycle', () => {
             set n(v: number) { this._n = v; }
         }
 
-        nodeAssert.throws(() => Foo.new().method(), /^Error: No ensurances were satisfied/);
+        nodeAssert.throws(() => Foo.new().method(), /^AssertionError: @ensures failed/);
     });
 
     test('a retry that violates the invariant throws', () => {
@@ -436,7 +436,7 @@ describe('A retried invocation re-enters the contract lifecycle', () => {
             set n(v: number) { this._n = v; }
         }
 
-        nodeAssert.throws(() => Foo.new().method(), /^Error: Invariant violated/);
+        nodeAssert.throws(() => Foo.new().method(), /^AssertionError: @invariant failed/);
     });
 });
 
@@ -653,7 +653,7 @@ describe('N-Version programming with `@rescue`', () => {
             }
         }
 
-        nodeAssert.throws(() => Foo.new().request(1), /^Error: No demands were satisfied/);
+        nodeAssert.throws(() => Foo.new().request(1), /^AssertionError: @demands failed/);
     });
 });
 

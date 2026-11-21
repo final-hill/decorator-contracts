@@ -1,4 +1,5 @@
-import { assert, assertContractResult } from './assert.mjs';
+import { assert, assertContractResult, describeViolation } from './assert.mjs';
+import { AssertionError } from './AssertionError.mjs';
 import { checkedMode, Contracted } from "./Contracted.mjs";
 import type { FeatureDecoratorContext } from './types.mjs';
 
@@ -57,10 +58,22 @@ export function assertDemands(instance: Contracted, propertyKey: PropertyKey, ..
 
     if (ds.length === 0) return;
 
+    const label = `${instance.constructor.name}.${String(propertyKey)}`;
+
     // If ANY demand is true then the obligation is considered fulfilled
     for (const [index, d] of ds.entries())
-        if (assertContractResult(d(instance, args), '@demands', `${instance.constructor.name}.${String(propertyKey)}`, index)) return;
+        if (assertContractResult(d(instance, args), '@demands', label, index)) return;
 
-    // If we reach here, it means all demands were false
-    assert(false, `No demands were satisfied for ${instance.constructor.name}.${String(propertyKey)}`);
+    // If we reach here, it means all demands were false. Every arm is reported,
+    // because OR-composition means any of them could have permitted the call.
+    const { message, violation } = describeViolation(
+        '@demands',
+        instance.constructor.name,
+        String(propertyKey),
+        ds,
+        ds.map((_, index) => index),
+        'A precondition was not satisfied, so the feature was not entered.',
+    );
+
+    throw new AssertionError(message, violation);
 }

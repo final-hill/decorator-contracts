@@ -87,7 +87,7 @@ describe('Encapsulation governs the external surface only', () => {
 
         const foo = Foo.new() as any;
 
-        nodeAssert.throws(() => foo.corrupt(), /Invariant violated/);
+        nodeAssert.throws(() => foo.corrupt(), /@invariant failed/);
     });
 
     test('a body producing the wrong result is caught by the postcondition', () => {
@@ -100,7 +100,7 @@ describe('Encapsulation governs the external surface only', () => {
             inc(): void { this._n = this._n + 1; }
         }
 
-        nodeAssert.throws(() => (Counter.new() as any).inc(), /No ensurances were satisfied/);
+        nodeAssert.throws(() => (Counter.new() as any).inc(), /@ensures failed/);
     });
 });
 
@@ -217,6 +217,6 @@ describe('Re-entrancy state is per instance', () => {
             bad(): void { }
         }
 
-        nodeAssert.throws(() => (Bar.new() as any).bad(), /No ensurances were satisfied/);
+        nodeAssert.throws(() => (Bar.new() as any).bad(), /@ensures failed/);
     });
 });
