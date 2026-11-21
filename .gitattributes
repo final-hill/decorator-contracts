@@ -1,0 +1,13 @@
+# Normalise line endings on the way into the repository.
+#
+# Every text file is stored with LF, so a checkout on Linux produces exactly the
+# bytes that are committed and a diff cannot be inflated by line endings. The
+# project targets Linux exclusively, so there is no working copy that wants CRLF.
+#
+# `text=auto` lets git decide which files are text by looking for NUL bytes, which
+# is what keeps the PNGs in `docs/` out of the normalisation without naming them.
+* text=auto eol=lf
+
+# Explicitly binary: normalising these would corrupt them, and the heuristic would
+# only get it right by accident.
+*.png binary
