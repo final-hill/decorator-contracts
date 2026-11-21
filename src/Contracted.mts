@@ -163,7 +163,7 @@ type DescriptorType = 'get' | 'set' | 'func' | 'delete';
  * its postcondition describes. Every other feature is described by the arguments
  * it was invoked with.
  */
-const ensuresArguments = (descriptorType: DescriptorType, result: unknown, args: any[]): any[] =>
+const ensuresArgs = (descriptorType: DescriptorType, result: unknown, args: any[]): any[] =>
     descriptorType === 'get' ? [result] : args;
 
 /**
@@ -260,7 +260,7 @@ function runSyncLifecycle(
         const old = hasEnsures ? populateOld(target) : undefined;
 
         assertInvariants(Class, target);
-        assertDemands(target, prop, ...args);
+        args = assertDemands(target, prop, args);
 
         let result: any
         try {
@@ -269,7 +269,7 @@ function runSyncLifecycle(
             assertNotThenable(result, target, prop);
 
             if (hasEnsures)
-                assertEnsures(target, old, prop, ensuresArguments(descriptorType, result, args));
+                result = assertEnsures(target, old, prop, ensuresArgs(descriptorType, result, args), result);
         } catch (error) {
             args = attemptRescue(Class, target, prop, error, retries,
                 rescueArguments(descriptorType, args));
@@ -326,13 +326,13 @@ async function runAsyncLifecycle(
         const old = hasEnsures ? populateOld(target) : undefined;
 
         assertInvariants(Class, target);
-        assertDemands(target, prop, ...args);
+        args = assertDemands(target, prop, args);
 
         let result: any;
         try {
             result = await invoke(args);
             if (hasEnsures)
-                assertEnsures(target, old, prop, ensuresArguments(descriptorType, result, args));
+                result = assertEnsures(target, old, prop, ensuresArgs(descriptorType, result, args), result);
         } catch (error) {
             args = attemptRescue(Class, target, prop, error, retries,
                 rescueArguments(descriptorType, args));
@@ -435,25 +435,26 @@ function runGeneratorLifecycle(
      * iterates with `next()` and injects nothing, so it never re-enters the
      * precondition with `undefined`.
      */
-    const enter = (stepArgs: any[]) => {
+    const enter = (stepArgs: any[]): any[] => {
         assertInvariants(Class, target);
 
         if (needsEntry) {
             needsEntry = false;
-            assertDemands(target, prop, ...args);
 
-            return;
+            return assertDemands(target, prop, args);
         }
 
-        if (stepArgs.length > 0)
-            assertDemands(target, prop, ...stepArgs);
+        // A value injected with `next(value)` is an input to the step, so it is
+        // the subject a precondition describes. `for...of` injects nothing, so
+        // it never re-enters the precondition with `undefined`.
+        return stepArgs.length > 0 ? assertDemands(target, prop, stepArgs) : stepArgs;
     };
 
     /**
      * Runs the exit contracts for a step that produced a value.
      */
     const exit = (value: any, old: Contracted | undefined) => {
-        if (hasEnsures) assertEnsures(target, old!, prop, [value]);
+        if (hasEnsures) assertEnsures(target, old!, prop, [value], value);
 
         assertInvariants(Class, target);
 
@@ -497,15 +498,18 @@ function runGeneratorLifecycle(
     /**
      * Drives one step of a synchronous generator.
      */
-    const drive = (advance: (iterator: any) => any, stepArgs: any[]): any => {
+    const drive = (advance: (iterator: any, stepArgs: any[]) => any, stepArgs: any[]): any => {
         for (; ;) {
             try {
-                enter(stepArgs);
+                // A normalizing schema on an injected value replaces the
+                // arguments for this step, so the value the body receives is the
+                // one the schema produced.
+                stepArgs = enter(stepArgs);
 
                 // `old` describes the state the segment is about to change, so
                 // it is taken before the body advances.
                 const old = hasEnsures ? populateOld(target) : undefined,
-                    result = advance(iterator);
+                    result = advance(iterator, stepArgs);
 
                 if (result.done) {
                     reportRetried();
@@ -525,13 +529,13 @@ function runGeneratorLifecycle(
     /**
      * Drives one step of an asynchronous generator, awaiting its segment.
      */
-    const driveAsync = async (advance: (iterator: any) => Promise<any>, stepArgs: any[]): Promise<any> => {
+    const driveAsync = async (advance: (iterator: any, stepArgs: any[]) => Promise<any>, stepArgs: any[]): Promise<any> => {
         for (; ;) {
             try {
-                enter(stepArgs);
+                stepArgs = enter(stepArgs);
 
                 const old = hasEnsures ? populateOld(target) : undefined,
-                    result = await advance(iterator);
+                    result = await advance(iterator, stepArgs);
 
                 if (result.done) {
                     reportRetried();
@@ -552,7 +556,7 @@ function runGeneratorLifecycle(
     // arrow out of `obj.feature(...)` in the diagram. The body itself does not
     // start until the iterator is resumed.
     assertInvariants(Class, target);
-    assertDemands(target, prop, ...args);
+    args = assertDemands(target, prop, args);
     needsEntry = false;
     iterator = invoke(args);
 
@@ -562,25 +566,25 @@ function runGeneratorLifecycle(
         // `arguments.length` distinguishes `next()` from `next(undefined)`, which
         // the engine treats differently: only an explicit value is injected.
         wrapper.next = function (...stepArgs: any[]) {
-            return drive(current => current.next(stepArgs[0]), stepArgs);
+            return drive((current, args) => current.next(args[0]), stepArgs);
         };
-        wrapper.return = function (...stepArgs: any[]) {
-            return drive(current => current.return(stepArgs[0]), []);
+        wrapper.return = function (...returnArgs: any[]) {
+            return drive((current, args) => current.return(returnArgs[0] ?? args[0]), []);
         };
-        wrapper.throw = function (...stepArgs: any[]) {
-            return drive(current => current.throw(stepArgs[0]), []);
+        wrapper.throw = function (...errorArgs: any[]) {
+            return drive((current, args) => current.throw(errorArgs[0] ?? args[0]), []);
         };
         wrapper[Symbol.iterator] = function () { return this; };
     }
     else {
         wrapper.next = function (...stepArgs: any[]) {
-            return driveAsync(current => current.next(stepArgs[0]), stepArgs);
+            return driveAsync((current, args) => current.next(args[0]), stepArgs);
         };
-        wrapper.return = function (...stepArgs: any[]) {
-            return driveAsync(current => current.return(stepArgs[0]), []);
+        wrapper.return = function (...returnArgs: any[]) {
+            return driveAsync((current, args) => current.return(returnArgs[0] ?? args[0]), []);
         };
-        wrapper.throw = function (...stepArgs: any[]) {
-            return driveAsync(current => current.throw(stepArgs[0]), []);
+        wrapper.throw = function (...errorArgs: any[]) {
+            return driveAsync((current, args) => current.throw(errorArgs[0] ?? args[0]), []);
         };
         wrapper[Symbol.asyncIterator] = function () { return this; };
     }

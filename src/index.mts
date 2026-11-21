@@ -1,4 +1,5 @@
 export * from './types.mjs'
+export * from './standard-schema.mjs'
 export * from "./AssertionError.mjs"
 export * from "./assert.mjs"
 export * from './iff.mjs'
