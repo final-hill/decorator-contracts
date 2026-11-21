@@ -469,11 +469,17 @@ When `obj.feature` is called the happy path is:
 
 ![image](./docs/happy-path.png)
 
+The invariant is evaluated **twice** per successful call: once on entry and once on exit. Each of `@demands`, the feature body, and `@ensures` runs once. Accessors follow the same lifecycle as methods, and an accessor that reads another accessor or calls a method does not start a nested lifecycle.
+
+The entry check is not redundant with `Contracted.new()`. Object state can be corrupted without going through a checked feature — via `Object.defineProperty`, by running with checked mode disabled and re-enabling it, or internally from a feature body. The entry check is what turns that into a precise error at the next public interaction rather than letting an invalid object keep operating.
+
+Because the invariant is checked first, an invalid object reports its invariant violation rather than a precondition failure. That ordering is deliberate: the object is broken in a way that makes the caller's arguments moot.
+
 If an error is thrown and there is no `@rescue` defined then the `@invariant` is checked before the error is raised to the caller.
 
 If an error is thrown in the `@invariant` then it is raised to the caller.
 
-If an error is thrown in the `@demands` then the error is raised to the caller. In this case the `@invariant` is not checked because the feature body has not been entered and the assertion cannot modify the state of the class without calling another method which is governed by its own contracts.
+If an error is thrown in the `@demands` then the error is raised to the caller. In this case the exit `@invariant` is not checked because the feature body has not been entered and the assertion cannot modify the state of the class without calling another method which is governed by its own contracts.
 
 If an error is thrown by the feature body or the `@ensures` then the `@rescue` is executed. If `retry` is called then the process starts from the beginning.
 
