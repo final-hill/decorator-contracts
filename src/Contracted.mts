@@ -704,15 +704,67 @@ const proxyHandler: ProxyHandler<Contracted> = {
 
         const setter = typeof descriptor?.set === 'function' ? descriptor.set : undefined;
 
-        runLifecycle('set', target, prop, [value],
+        // `Reflect.set` is called without a receiver on purpose. Passing the
+        // proxy would route the write back through this handler's
+        // `defineProperty` trap, which then sees an external definition of a
+        // public property and refuses the very write this trap just authorised.
+        // The name has already been checked above, so writing the target
+        // directly performs exactly the mutation that was permitted.
+        const assigned = runLifecycle('set', target, prop, [value],
             (args) => setter
                 ? (setter.call(target, args[0]), true)
-                : Reflect.set(target, prop, args[0], receiver));
+                : Reflect.set(target, prop, args[0]));
 
-        // A `set` trap must report success or the assignment throws in strict
-        // mode. Accessors do not return a meaningful value, so success is
-        // implicit once the lifecycle completes.
-        return true;
+        // Propagate the outcome rather than assuming success. A target that
+        // cannot accept the write — because `Object.freeze` or
+        // `Object.preventExtensions` was applied — must surface as a `TypeError`
+        // in strict mode instead of being swallowed as a successful assignment.
+        return assigned !== false;
+    },
+    defineProperty(target, prop, descriptor) {
+        if (!Contracted[checkedMode]) return Reflect.defineProperty(target, prop, descriptor);
+
+        // Defining a property is the same class of external mutation as
+        // assigning one, and it was previously unguarded, which made the
+        // encapsulation guarantee false: a caller could redefine a public field
+        // or replace a contracted method with an arbitrary function.
+        //
+        // Only `_`-prefixed names are permitted, and unlike `set` a prototype
+        // setter does not widen this: defining an own data property shadows the
+        // accessor instead of invoking it, so allowing it would be a bypass
+        // rather than an equivalent route.
+        //
+        // A definition that carries no value and no accessor cannot change or
+        // shadow state, so it is permitted for any name. This is what
+        // `Object.freeze` and `Object.seal` perform for each existing property;
+        // refusing it would make an instance impossible to freeze for a reason
+        // that has nothing to do with encapsulation.
+        const freezesOnly = !('value' in descriptor) && !('get' in descriptor) && !('set' in descriptor);
+
+        if (!freezesOnly && typeof prop === 'string' && !prop.startsWith('_'))
+            throw new TypeError(
+                `Cannot define property '${String(prop)}' on Contracted instances: only properties starting with '_' can be defined.`
+                + ' A feature body may change its own state, but an external caller must go through a method or a setter.',
+            );
+
+        return Reflect.defineProperty(target, prop, descriptor);
+    },
+    setPrototypeOf(target, prototype) {
+        if (!Contracted[checkedMode]) return Reflect.setPrototypeOf(target, prototype);
+
+        // Replacing the prototype swaps which descriptors a feature resolves to.
+        // The per-feature wrappers are cached against `prop` for the lifetime of
+        // the instance and would then dispatch to the wrong function, and the
+        // contract metadata is reached through the constructor, so the instance
+        // would report one class's contracts while running another's methods.
+        throw new TypeError(
+            'Cannot change the prototype of a Contracted instance: it would detach the instance from the features and contracts it was constructed with.',
+        );
+    },
+    preventExtensions(target) {
+        // Permitted, but see the `set` trap: it reports failure instead of
+        // pretending the write succeeded once the target can no longer accept it.
+        return Reflect.preventExtensions(target);
     },
     deleteProperty(target, prop) {
         if (!Contracted[checkedMode]) return Reflect.deleteProperty(target, prop);

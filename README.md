@@ -345,7 +345,34 @@ Deletion is an external mutation, so it follows exactly the same rule as assignm
 
 The last row surprises people, but it is the same rule `set` applies to an assignment of a property that does not exist: the restriction is on the *name*, not on whether the property is present. Once checked mode is disabled the proxy steps aside and `delete` behaves as it does on a plain object.
 
-`Object.defineProperty`, `Reflect.defineProperty`, and `Reflect.deleteProperty` operate below the proxy and are not intercepted.
+### Property definition
+
+Defining a property is the same kind of external mutation as assigning one, so it follows the same rule: only `_`-prefixed names may be defined, and `Object.defineProperty`, `Reflect.defineProperty`, and `Object.defineProperties` are all intercepted.
+
+This matters because definition can do more than assignment. Redefining a public field escapes the postcondition that would have caught the change, and replacing a contracted **method** routes callers around its `@demands` and `@ensures` entirely:
+
+```typescript
+const example = Example.new();
+
+Object.defineProperty(example, 'publicProp', { value: 3 }); // TypeError
+Object.defineProperty(example, 'guard', { value: () => 1 }); // TypeError
+```
+
+A **prototype setter does not authorise defining the same name**, unlike assignment. Assignment invokes the setter, which is the sanctioned route; defining an own property shadows the accessor instead of invoking it, so it is refused.
+
+Two operations remain available for every property name, because neither changes nor shadows state:
+
+| Expression | Result |
+| --- | --- |
+| `Object.freeze(example)` | allowed (seals each existing property) |
+| `Object.seal(example)` | allowed |
+| `Object.preventExtensions(example)` | allowed (no property definition involved) |
+
+Once an instance is frozen, a write it cannot accept **throws**, rather than being reported as a successful assignment.
+
+### Replacing the prototype
+
+`Object.setPrototypeOf` and `Reflect.setPrototypeOf` throw. A replacement changes which descriptors a feature resolves to, which would leave the instance running methods that do not match the contracts it reports.
 
 ## Asynchronous features
 
