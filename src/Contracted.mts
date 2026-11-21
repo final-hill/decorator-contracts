@@ -161,7 +161,7 @@ function runLifecycle(
         const old = hasEnsures ? populateOld(target) : undefined;
 
         assertInvariants(Class, target);
-        assertDemands(target, prop, args);
+        assertDemands(target, prop, ...args);
 
         let result: any
         try {

@@ -2,10 +2,23 @@ import { assert, assertContractResult } from './assert.mjs';
 import { checkedMode, Contracted } from "./Contracted.mjs";
 import type { FeatureDecoratorContext } from './types.mjs';
 
-export type DemandsPredicate<This extends Contracted> = (self: This, ...args: any[]) => boolean;
+/**
+ * A precondition predicate.
+ *
+ * `args` is the argument list of the invocation, matching `EnsuresPredicate`,
+ * so a predicate destructures it: `(_self, [x]) => x > 0`.
+ *
+ * The type is generic over the argument tuple so the element types are inferred
+ * from the predicate. Writing `(_self, x: number) => x > 0` does not compile:
+ * the second parameter is the array, not the first argument, and a predicate
+ * that compares against the array passes only through coercion, which is how
+ * the previous documentation ended up describing contracts that never held.
+ */
+export type DemandsPredicate<This extends Contracted, Args extends any[] = any[]> =
+    (self: This, args: Args) => boolean;
 
-export type DemandsDecorator = <This extends Contracted, Feature = unknown>(
-    predicate: DemandsPredicate<This>
+export type DemandsDecorator = <This extends Contracted, Args extends any[], Feature = unknown>(
+    predicate: (self: This, args: Args) => boolean
 ) => (
     value: Feature,
     context: FeatureDecoratorContext
@@ -46,7 +59,7 @@ export function assertDemands(instance: Contracted, propertyKey: PropertyKey, ..
 
     // If ANY demand is true then the obligation is considered fulfilled
     for (const [index, d] of ds.entries())
-        if (assertContractResult(d(instance, ...args), '@demands', `${instance.constructor.name}.${String(propertyKey)}`, index)) return;
+        if (assertContractResult(d(instance, args), '@demands', `${instance.constructor.name}.${String(propertyKey)}`, index)) return;
 
     // If we reach here, it means all demands were false
     assert(false, `No demands were satisfied for ${instance.constructor.name}.${String(propertyKey)}`);
