@@ -356,6 +356,14 @@ class Example extends Contracted {
 }
 ```
 
+`retry` passes **only** the arguments you give it — it does not replay the original arguments. To retry with the same arguments, forward the `args` you received:
+
+```typescript
+@rescue((_self, _error, args, retry) => retry(...args))
+```
+
+Calling `retry()` retries with no arguments.
+
 ### Robustness, Organized Panic, and the Benefits of `@rescue`
 
 The `@rescue` decorator enables a mechanism for **Robustness** in your code. It allows your implementation to respond to situations not specified, providing the ability to handle exceptions in a structured way. This is sometimes called **Organized Panic**.
@@ -395,8 +403,10 @@ class AjaxRequest extends Contracted {
 Because a rescue handler may retry unconditionally, retries are unbounded by default. Set the `maxRetries` option on the `@rescue` declaration to bound them; when the limit is reached the last error is raised to the caller:
 
 ```typescript
-@rescue((_self, _error, _args, retry) => retry(), { maxRetries: 3 })
+@rescue((_self, _error, args, retry) => retry(...args), { maxRetries: 3 })
 ```
+
+The option belongs to the declaration because the number of alternatives is a property of the feature, not of an individual failure. It is enforced per invocation of the feature, so a single call performs at most `maxRetries` retries however many `@rescue` executions that involves.
 
 Unlike traditional `try/catch`, where exceptions are non-resumable and often handled far from the source (leading to scattered and redundant error handling), `@rescue` allows for **resumable exceptions** and localized, declarative error handling. This means:
 

@@ -657,6 +657,101 @@ describe('N-Version programming with `@rescue`', () => {
     });
 });
 
+describe('`retry` is explicit about its arguments', () => {
+    test('`retry(...args)` replays the received arguments', () => {
+        const received: number[] = [];
+
+        class Foo extends Contracted {
+            protected _attempts = 0;
+
+            @rescue((_self, _error, args, retry) => retry(...args))
+            method(value: number): number {
+                received.push(value);
+
+                if (this._attempts++ == 0) throw new Error('first call fails');
+
+                return value;
+            }
+        }
+
+        nodeAssert.strictEqual(Foo.new().method(0), 0);
+        nodeAssert.deepStrictEqual(received, [0, 0]);
+    });
+
+    test('`retry()` does not replay the original arguments', () => {
+        const received: (number | undefined)[] = [];
+
+        class Foo extends Contracted {
+            @rescue((_self, _error, _args, retry) => retry())
+            method(value: number): number {
+                received.push(value);
+
+                if (value === undefined) return -1;
+
+                throw new Error('first call fails');
+            }
+        }
+
+        nodeAssert.strictEqual(Foo.new().method(7), -1);
+        nodeAssert.deepStrictEqual(received, [7, undefined]);
+    });
+
+    test('`retry` passes exactly the arguments supplied', () => {
+        class Foo extends Contracted {
+            protected _attempts = 0;
+
+            @rescue((_self, _error, _args, retry) => retry(1, 2, 3))
+            method(...args: number[]): number[] {
+                if (this._attempts++ == 0) throw new Error('retry with more arguments');
+
+                return args;
+            }
+        }
+
+        nodeAssert.deepStrictEqual(Foo.new().method(0), [1, 2, 3]);
+    });
+});
+
+describe('`maxRetries` bounds retries for one invocation', () => {
+    test('a feature may retry exactly `maxRetries` times', () => {
+        let bodyCalls = 0;
+
+        class Foo extends Contracted {
+            @rescue((_self, _error, args, retry) => retry(...args), { maxRetries: 3 })
+            method(): void {
+                bodyCalls++;
+                throw new Error('always');
+            }
+        }
+
+        nodeAssert.throws(() => Foo.new().method(), { message: 'always' });
+        nodeAssert.strictEqual(bodyCalls, 4, 'one initial call plus three retries');
+    });
+
+    test('`maxRetries: 0` disables retrying', () => {
+        let rescueCalls = 0;
+
+        class Foo extends Contracted {
+            @rescue((_self, _error, args, retry) => { rescueCalls++; retry(...args); }, { maxRetries: 0 })
+            method(): void { throw new Error('no retries'); }
+        }
+
+        nodeAssert.throws(() => Foo.new().method(), { message: 'no retries' });
+        nodeAssert.strictEqual(rescueCalls, 0);
+    });
+
+    test('a negative `maxRetries` is rejected at declaration time', () => {
+        nodeAssert.throws(() => {
+            class Foo extends Contracted {
+                @rescue(() => { }, { maxRetries: -1 })
+                method(): void { }
+            }
+
+            return Foo.new();
+        }, /maxRetries must not be negative/);
+    });
+});
+
 /**
  * https://github.com/final-hill/decorator-contracts/issues/285
  */

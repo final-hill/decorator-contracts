@@ -21,6 +21,17 @@ export interface RescueDeclaration<This extends Contracted> {
     maxRetries?: number;
 }
 
+/**
+ * Declares a rescue handler for a feature.
+ *
+ * `retry` is explicit: it passes only the arguments it is given and never
+ * replays the original arguments. Forward the `args` parameter to retry with
+ * the same arguments (`retry(...args)`); calling `retry()` retries with none.
+ *
+ * Options are declaration level because they describe the feature rather than an
+ * individual failure. `maxRetries` bounds how many times `retry` may restart the
+ * lifecycle for one invocation; it defaults to unbounded.
+ */
 export type RescueDecorator = <This extends Contracted>(
     handler: RescueHandler<This>,
     options?: RescueOptions,
