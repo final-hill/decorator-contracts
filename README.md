@@ -320,6 +320,36 @@ class Foo extends Contracted {
 }
 ```
 
+### The `old` instance
+
+A postcondition receives `old`, a snapshot of the instance taken immediately before the feature ran. `old` inherits from the instance, so prototype getters and methods remain usable, and reading a prototype getter on `old` returns the historical value:
+
+```typescript
+class Counter extends Contracted {
+    protected _n = 0;
+    get n() { return this._n; }
+
+    @ensures((self, _args, old) => self.n === old.n + 1)
+    inc(): void { this._n++; }
+}
+```
+
+Own state is copied, so mutations made by the feature body are not visible through `old`. The copy is deep for the containers contracts routinely compare:
+
+| Value | Behaviour in `old` |
+| --- | --- |
+| Primitives | copied |
+| Arrays | cloned recursively |
+| `Date` | cloned |
+| `Map`, `Set` | cloned (keys and values recursively) |
+| Plain objects | cloned recursively, including cycles |
+| Class instances | **shared by reference** |
+| Functions | **shared by reference** |
+
+Class instances and functions are shared deliberately. They carry behaviour, so a structural copy would produce an object that is not a real instance of its class, and many cannot be cloned meaningfully at all. The consequence is that mutating a class instance held in a field *is* visible through `old`; if a postcondition depends on such an object's previous state, copy it explicitly in the predicate.
+
+Accessors are copied as descriptors rather than evaluated, so snapshotting never invokes a getter.
+
 ### Subcontracting and Ensures
 
 When subclassing, if a subclass defines its own `@ensures` for a method, the resulting postcondition is **strengthened**: the subclass and base class ensures are AND-ed together. The method's result must satisfy **all** ensures in the inheritance chain.
