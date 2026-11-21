@@ -5,27 +5,61 @@ import type { FeatureDecoratorContext } from './types.mjs';
 export type RescueHandler<This extends Contracted> =
     (self: This, error: unknown, args: any[], retry: (this: This, ...args: any[]) => any) => void
 
+export interface RescueOptions {
+    /**
+     * The maximum number of times `retry` may restart the lifecycle for a single
+     * invocation. Defaults to `Infinity`, which allows a `@rescue` to implement
+     * N-Version programming with any number of alternative strategies.
+     *
+     * Set this when a rescue handler always retries, to bound recursion.
+     */
+    maxRetries?: number;
+}
+
+export interface RescueDeclaration<This extends Contracted> {
+    handler: RescueHandler<This>;
+    maxRetries?: number;
+}
+
 export type RescueDecorator = <This extends Contracted>(
-    handler: RescueHandler<This>
+    handler: RescueHandler<This>,
+    options?: RescueOptions,
 ) => (
     value: unknown,
     context: FeatureDecoratorContext
 ) => void;
 
-export const rescue: RescueDecorator = (handler) => (_feature, ctx) => {
+export const rescue: RescueDecorator = (handler, options) => (_feature, ctx) => {
     assert(["method", "getter", "setter"].includes(ctx.kind), '@rescue decorator can only be applied to methods, getters, or setters');
     assert(ctx.static === false, '@rescue decorator cannot be applied to static features');
     assert(ctx.private === false, '@rescue decorator cannot be applied to private features');
     assert(!String(ctx.name).startsWith('_'), '@rescue decorator cannot be applied to private/protected features');
+    assert(options?.maxRetries === undefined || options.maxRetries >= 0, 'maxRetries must not be negative');
 
     ctx.addInitializer(function () {
         assert(this instanceof Contracted, '@rescue decorator can only be applied to classes that extend Contracted');
 
         ctx.metadata.rescue = {
             ...(ctx.metadata?.rescue ?? {}),
-            [ctx.name]: handler
+            [ctx.name]: { handler, maxRetries: options?.maxRetries }
         }
     })
+}
+
+/**
+ * Resolves the `@rescue` declaration for `propertyKey`, walking the prototype
+ * chain so that a declaration on an ancestor feature is inherited.
+ */
+export function getRescueDeclaration(instance: Contracted, propertyKey: PropertyKey): RescueDeclaration<Contracted> | undefined {
+    let proto: any = instance.constructor;
+    while (proto && proto !== Function.prototype) {
+        const declaration = proto[Symbol.metadata]?.rescue?.[propertyKey] as RescueDeclaration<Contracted> | undefined;
+
+        if (declaration) return declaration;
+        proto = Object.getPrototypeOf(proto);
+    }
+
+    return undefined;
 }
 
 /**
@@ -37,6 +71,10 @@ export const rescue: RescueDecorator = (handler) => (_feature, ctx) => {
  * ensures a retried invocation is subject to `@invariant`, `@demands`, and
  * `@ensures` like any other invocation.
  *
+ * `retry` may be called at most once per rescue execution. Because the lifecycle
+ * re-enters `@rescue` when a retried invocation fails, a handler is executed
+ * once per attempt, which is what N-Version programming requires.
+ *
  * @returns The arguments to retry with.
  * @throws The original error if the handler does not call `retry`, or whatever
  *   the handler throws.
@@ -44,18 +82,17 @@ export const rescue: RescueDecorator = (handler) => (_feature, ctx) => {
 export const applyRescueHandler = (instance: Contracted, propertyKey: PropertyKey, error: unknown, args: any): any[] => {
     if (!Contracted[checkedMode]) throw error;
 
-    const Class = instance.constructor as typeof Contracted,
-        r = Class[Symbol.metadata]?.rescue?.[propertyKey] as RescueHandler<Contracted> | undefined;
+    const declaration = getRescueDeclaration(instance, propertyKey);
 
-    if (!r) throw error;
+    if (!declaration) throw error;
 
     let hasRetried = false;
     let retryArgs: any[] = [];
     Contracted[checkedMode] = false; // Disable checked mode to avoid infinite recursion
 
     try {
-        r.call(instance, instance, error, args, (...args: any[]) => {
-            assert(!hasRetried, 'retry can only be called once');
+        declaration.handler.call(instance, instance, error, args, (...args: any[]) => {
+            assert(!hasRetried, 'retry can only be called once per rescue execution');
             hasRetried = true;
             retryArgs = args;
         })

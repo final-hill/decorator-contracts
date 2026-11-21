@@ -362,6 +362,42 @@ The `@rescue` decorator enables a mechanism for **Robustness** in your code. It 
 
 In addition, `@rescue` provides a foundation for **N-Version programming**, **Fault-Tolerance**, and **Redundancy**. You can implement multiple strategies for handling errors, retrying with alternative logic or data, and ensuring your application can recover from unexpected failures.
 
+A retried invocation re-enters the full assertion lifecycle (`@invariant` -> `@demands` -> body -> `@ensures`), and if it fails again the `@rescue` handler runs again. This means the handler is executed once per attempt, which is what N-Version programming requires: each invocation of the handler can select the next alternative.
+
+A dated example of this is performing ajax requests in a multi-browser environment:
+
+```typescript
+class AjaxRequest extends Contracted {
+    private _version = 0;
+    private _versions = ['legacy', 'activex', 'xhr'] as const;
+
+    @rescue((self: AjaxRequest, _error, args, retry) => {
+        self._version++;
+        retry(...args);
+    }, { maxRetries: 2 })
+    get(url: string): string {
+        const version = this._versions[this._version];
+
+        switch (version) {
+            case 'legacy':
+                if (!window.XMLHttpRequest) throw new Error(`${version} unsupported`);
+                return legacyGet(url);
+            case 'activex':
+                if (!window.ActiveXObject) throw new Error(`${version} unsupported`);
+                return activeXGet(url);
+            default:
+                return xhrGet(url);
+        }
+    }
+}
+```
+
+Because a rescue handler may retry unconditionally, retries are unbounded by default. Set the `maxRetries` option on the `@rescue` declaration to bound them; when the limit is reached the last error is raised to the caller:
+
+```typescript
+@rescue((_self, _error, _args, retry) => retry(), { maxRetries: 3 })
+```
+
 Unlike traditional `try/catch`, where exceptions are non-resumable and often handled far from the source (leading to scattered and redundant error handling), `@rescue` allows for **resumable exceptions** and localized, declarative error handling. This means:
 
 - You can lexically determine where exception handling occurs.
@@ -388,6 +424,8 @@ If an error is thrown in the `@invariant` then it is raised to the caller.
 If an error is thrown in the `@demands` then the error is raised to the caller. In this case the `@invariant` is not checked because the feature body has not been entered and the assertion cannot modify the state of the class without calling another method which is governed by its own contracts.
 
 If an error is thrown by the feature body or the `@ensures` then the `@rescue` is executed. If `retry` is called then the process starts from the beginning.
+
+If the retried invocation fails, its `@rescue` is executed again, so the handler runs once per attempt. Retries are bounded by the `maxRetries` option; without it they are unbounded.
 
 If `@rescue` throws an error or does not call `retry` then the `@invariant` is checked before the error is raised to the caller.
 

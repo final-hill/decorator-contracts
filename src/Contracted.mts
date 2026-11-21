@@ -1,7 +1,7 @@
 import { assertInvariants, InvariantPredicate } from './invariant.mjs';
 import { assertDemands, DemandsPredicate } from './demands.mjs';
 import { assertEnsures, EnsuresPredicate } from './ensures.mjs';
-import { applyRescueHandler as applyRescueHandler, RescueHandler } from './rescue.mjs';
+import { applyRescueHandler as applyRescueHandler, getRescueDeclaration, RescueDeclaration } from './rescue.mjs';
 
 // Symbol to store checked mode state
 export const checkedMode = Symbol.for('Contracted.checkedMode');
@@ -42,8 +42,10 @@ function getPropertyDescriptor(obj: object, prop: PropertyKey): PropertyDescript
  * `@demands` and `@ensures` like any other invocation
  * (see `docs/order-of-assertions.png`).
  *
- * A retried invocation is not rescued a second time, which guarantees that a
- * `@rescue` cannot loop forever.
+ * A retried invocation that fails re-enters `@rescue`, so the handler runs once
+ * per attempt. This is what N-Version programming requires: a handler can
+ * select the next alternative each time it is executed. Retries are bounded by
+ * the optional `maxRetries` option on the `@rescue` declaration.
  *
  * @param invokeArgs - The arguments for this invocation. `retry` replaces them.
  * @param invoke - Performs the feature body with the supplied arguments.
@@ -60,7 +62,7 @@ function runLifecycle(
         hasEnsures = es.length > 0;
 
     let args = invokeArgs,
-        isRetry = false;
+        retries = 0;
 
     for (; ;) {
         const old = hasEnsures ? populateOld(target) : undefined;
@@ -74,12 +76,14 @@ function runLifecycle(
             if (hasEnsures)
                 assertEnsures(target, old, prop, descriptorType === 'get' ? [result] : args);
         } catch (error) {
-            if (isRetry) {
+            const maxRetries = getRescueDeclaration(target, prop)?.maxRetries ?? Infinity;
+
+            if (retries >= maxRetries) {
                 assertInvariants(Class, target);
                 throw error;
             }
 
-            isRetry = true;
+            retries++;
             try {
                 args = applyRescueHandler(target, prop, error, descriptorType === 'get' ? [] : args);
             } catch (rescuedError) {
@@ -130,7 +134,7 @@ export class Contracted {
         invariants: InvariantPredicate<typeof Contracted>[];
         demands: Record<PropertyKey, DemandsPredicate<Contracted>[]>;
         ensures: Record<PropertyKey, EnsuresPredicate<Contracted>[]>;
-        rescue: Record<PropertyKey, RescueHandler<Contracted>>;
+        rescue: Record<PropertyKey, RescueDeclaration<Contracted>>;
     };
 
     // Prevents direct instantiation of the class

@@ -227,7 +227,7 @@ describe('The `retry` argument of the `rescue` declaration can only be called on
             base.method(0);
             nodeAssert.fail('Expected an error to be thrown');
         } catch (error: any) {
-            nodeAssert.strictEqual(error.message, 'retry can only be called once');
+            nodeAssert.strictEqual(error.message, 'retry can only be called once per rescue execution');
         }
     });
 });
@@ -412,7 +412,7 @@ describe('A retried invocation re-enters the contract lifecycle', () => {
             get n() { return this._n; }
 
             @ensures((self: Foo) => self.n == 0)
-            @rescue((self: Foo, _error, _args, retry) => { self.n = 3; retry(); })
+            @rescue((self: Foo, _error, _args, retry) => { self.n = 3; retry(); }, { maxRetries: 1 })
             method(): void {
                 if (this._attempts++ == 0) throw new Error('forced');
             }
@@ -429,7 +429,7 @@ describe('A retried invocation re-enters the contract lifecycle', () => {
             protected _attempts = 0;
             get n() { return this._n; }
 
-            @rescue((self: Foo, _error, _args, retry) => { self.n = 3; retry(); })
+            @rescue((self: Foo, _error, _args, retry) => { self.n = 3; retry(); }, { maxRetries: 1 })
             method(): void {
                 if (this._attempts++ == 0) throw new Error('forced');
             }
@@ -495,12 +495,12 @@ describe('A retried getter and setter re-enter the contract lifecycle', () => {
     });
 });
 
-describe('A retried invocation is not rescued a second time', () => {
-    test('an always-throwing retry terminates and surfaces its error', () => {
+describe('A retried invocation re-enters its `@rescue` so it can select another strategy', () => {
+    test('an always-throwing retry terminates when `maxRetries` is set', () => {
         let bodyCalls = 0;
 
         class Foo extends Contracted {
-            @rescue((_self, _error, _args, retry) => retry())
+            @rescue((_self, _error, _args, retry) => retry(), { maxRetries: 1 })
             method(): number {
                 bodyCalls++;
                 throw new Error('always');
@@ -509,6 +509,151 @@ describe('A retried invocation is not rescued a second time', () => {
 
         nodeAssert.throws(() => Foo.new().method(), { message: 'always' });
         nodeAssert.strictEqual(bodyCalls, 2);
+    });
+
+    test('a rescue handler is executed once per attempt', () => {
+        const attempts: number[] = [];
+
+        class Foo extends Contracted {
+            protected _attempt = 0;
+
+            @rescue((self: Foo, _error, _args, retry) => {
+                attempts.push(self._attempt++);
+                retry();
+            }, { maxRetries: 2 })
+            method(): number {
+                throw new Error('always');
+            }
+        }
+
+        nodeAssert.throws(() => Foo.new().method(), { message: 'always' });
+        nodeAssert.deepStrictEqual(attempts, [0, 1]);
+    });
+
+    test('a handler can supply an alternative result instead of retrying', () => {
+        class Foo extends Contracted {
+            @rescue(() => { throw new Error('version B failed'); })
+            method(): string { throw new Error('version A failed'); }
+        }
+
+        nodeAssert.throws(() => Foo.new().method(), { message: 'version B failed' });
+    });
+});
+
+describe('N-Version programming with `@rescue`', () => {
+    test('falls back through successive versions until one succeeds', () => {
+        class Foo extends Contracted {
+            protected _version = 0;
+            protected _tried: string[] = [];
+
+            @rescue((self: Foo, _error, args, retry) => {
+                self._version++;
+                retry(...args);
+            })
+            request(x: number): string {
+                const versions = ['legacy', 'activex', 'xhr'];
+                const version = versions[this._version];
+
+                this._tried.push(version);
+
+                if (version !== 'xhr') throw new Error(version + ' unsupported');
+
+                return 'xhr:' + x;
+            }
+        }
+
+        const foo = Foo.new();
+
+        nodeAssert.strictEqual(foo.request(1), 'xhr:1');
+        nodeAssert.deepStrictEqual((foo as any)._tried, ['legacy', 'activex', 'xhr']);
+    });
+
+    test('surfaces the last error when every version fails', () => {
+        class Foo extends Contracted {
+            protected _version = 0;
+
+            @rescue((self: Foo, _error, _args, retry) => {
+                self._version++;
+                retry();
+            }, { maxRetries: 2 })
+            request(): string {
+                throw new Error('version ' + this._version + ' failed');
+            }
+        }
+
+        nodeAssert.throws(() => Foo.new().request(), { message: 'version 2 failed' });
+    });
+
+    /**
+     * Mirrors the ajax example in the README so the documentation stays accurate.
+     */
+    test('README ajax example', () => {
+        class AjaxRequest extends Contracted {
+            protected _version = 0;
+            protected _versions = ['legacy', 'activex', 'xhr'] as const;
+            protected _tried: string[] = [];
+
+            @rescue((self: AjaxRequest, _error, args, retry) => {
+                self._version++;
+                retry(...args);
+            }, { maxRetries: 2 })
+            get(url: string): string {
+                const version = this._versions[this._version];
+
+                this._tried.push(version);
+
+                if (version !== 'xhr') throw new Error(`${version} unsupported`);
+
+                return 'xhr:' + url;
+            }
+        }
+
+        const request = AjaxRequest.new();
+
+        nodeAssert.strictEqual(request.get('/students'), 'xhr:/students');
+        nodeAssert.deepStrictEqual((request as any)._tried, ['legacy', 'activex', 'xhr']);
+    });
+
+    test('each attempt is subject to the contracts', () => {
+        const demandChecks: number[] = [];
+
+        class Foo extends Contracted {
+            protected _version = 0;
+
+            @demands((_self: Foo, [x]: [number]) => {
+                demandChecks.push(x);
+                return x > 0;
+            })
+            @rescue((self: Foo, _error, _args, retry) => {
+                self._version++;
+                retry(5);
+            })
+            request(x: number): number {
+                if (this._version == 0) throw new Error('unsupported');
+
+                return x;
+            }
+        }
+
+        const foo = Foo.new();
+
+        nodeAssert.strictEqual(foo.request(5), 5);
+        // the retry re-enters `@invariant` -> `@demands`, so the demand is checked again
+        nodeAssert.deepStrictEqual(demandChecks, [5, 5]);
+    });
+
+    test('a retried invocation that violates a demand throws', () => {
+        class Foo extends Contracted {
+            @demands((_self: Foo, [x]: [number]) => x > 0)
+            @rescue((_self, _error, _args, retry) => retry(-1))
+            request(x: number): number {
+                if (x > 0) throw new Error('unsupported');
+
+                return x;
+            }
+        }
+
+        nodeAssert.throws(() => Foo.new().request(1), /^Error: No demands were satisfied/);
     });
 });
 
