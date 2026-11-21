@@ -7,7 +7,10 @@
  *
  * @param p - The first boolean value (the antecedent).
  * @param q - The second boolean value (the consequent).
- * @returns - The result (material implication) of p and q.
+ * @returns - The result (material implication) of p and q, always a `boolean`.
+ *
+ * A non-boolean consequent is coerced rather than rejected, for the same reason
+ * as {@link iff}.
  *
  * @example
  * ```ts
@@ -19,5 +22,7 @@
  */
 
 export function implies(p: boolean, q: boolean): boolean {
-    return !p || q;
+    // Coerced for the same reason as `iff`: `!p || q` returns the operand `q`
+    // when `p` is falsy, so a truthy non-boolean would escape a `boolean` return.
+    return !p || Boolean(q);
 }

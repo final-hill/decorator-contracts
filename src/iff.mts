@@ -7,7 +7,12 @@
  *
  * @param p - The first boolean value (the antecedent).
  * @param q - The second boolean value (the consequent).
- * @returns - The result (biconditional) of p and q.
+ * @returns - The result (biconditional) of p and q, always a `boolean`.
+ *
+ * A non-boolean operand is coerced rather than rejected, because this is a
+ * general-purpose logical helper. Inside a contract the coercion is redundant:
+ * `@demands` and the other contracts already require a literal `true` or `false`
+ * and will report a non-boolean result by name.
  *
  * @example
  * ```ts
@@ -19,5 +24,11 @@
  */
 
 export function iff(p: boolean, q: boolean): boolean {
-    return (p && q) || (!p && !q);
+    // Coerced rather than returned directly. `(p && q) || (!p && !q)` is
+    // logically correct but returns an *operand* rather than a boolean, so a
+    // truthy non-boolean operand (`iff(true, someObject)`) would leak through a
+    // signature that promises `boolean`. The leak only appears when the
+    // non-boolean sits on the returned side of the short-circuit, which is why it
+    // is easy to miss in testing.
+    return Boolean((p && q) || (!p && !q));
 }

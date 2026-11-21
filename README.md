@@ -218,8 +218,10 @@ When defining predicates it is a common use case to encode [material implication
 import { implies } from '@final-hill/decorator-contracts';
 
 implies(weather.isSunny, person.visitsBeach);
-// Equivalent to: !weather.isSunny || person.visitsBeach
+// Logically equivalent to: !weather.isSunny || person.visitsBeach
 ```
+
+Both functions always return a `boolean`, even when an operand is not a boolean: a truthy object is coerced rather than passed through. Inside a contract this is redundant, because `@demands` and friends already require a literal `true` or `false` and name the offending feature.
 
 ## Iff
 
@@ -229,8 +231,10 @@ When defining predicates it is a common use case to encode [if and only if](http
 import { iff } from '@final-hill/decorator-contracts';
 
 iff(person.hasTicket, person.ridesTrain);
-// Equivalent to: implies(p, q) && implies(q, p)
+// Logically equivalent to: implies(p, q) && implies(q, p)
 ```
+
+Both functions always return a `boolean`, even when an operand is not a boolean: a truthy object is coerced rather than passed through. Inside a contract this is redundant, because `@demands` and friends already require a literal `true` or `false` and name the offending feature.
 
 ## Contracts are Hoare triples
 
