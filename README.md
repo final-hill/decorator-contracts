@@ -386,9 +386,57 @@ thenable(): Promise<void> {           // AssertionError: not declared 'async'
 
 Declare the feature `async` instead. Awaiting arbitrary thenables was rejected as a rule because it would make the `async` keyword optional while silently changing when failures are reported: a plain function cannot return pending work *and* raise the resulting failure itself.
 
-### Generators are not supported yet
+### Generators
 
-`@demands`, `@ensures`, and `@rescue` refuse generator features at decoration time, and a generator reachable through the proxy is refused when called. The contract boundary for a generator is a genuine design decision — whether contracts wrap the whole iteration or each `next()` — and until it is settled, enforcing nothing would be worse than refusing. See issue #318.
+A generator has a contract boundary per **step**, not one per call. Calling the feature runs nothing; each `next()` runs the body from where it was suspended up to the following `yield`. When `next()` returns the segment has finished and the instance holds the state it will be observed with, so the contracts bracket each step:
+
+```
+call    -> @invariant, @demands      the call arguments are P
+next()  -> @invariant                entry of the step
+segment -> body up to the next yield
+next()  -> @ensures, @invariant      the yielded value and the new state are Q
+```
+
+This is the same sandwich shown above, applied once per step. A yield is the observable delivery of a traversal, which is what `@ensures` describes, so every yielded value must satisfy it:
+
+```typescript
+class Counter extends Contracted {
+    protected _count = 0;
+
+    @ensures((self, [_value]: [number], old) => self._count === old._count + 1)
+    *tick(): Generator<number> {
+        this._count++; yield this._count;   // each step is checked
+        this._count++; yield this._count;
+    }
+}
+```
+
+The `old` snapshot is per step, not per traversal: it describes the state the segment is about to change. A `return` value is not covered by `@ensures`, because nothing is yielded.
+
+#### Why the invariant runs on every resume
+
+A suspended generator's instance is publicly reachable, so another feature can be called on it between yields. Checking the invariant only at completion would leave the object knowingly invalid for the whole traversal, and would never check at all if the iterator were abandoned or only partially drained. Evaluating it on each resume is what keeps the guarantee every other feature already has: no public interaction leaves the object invalid.
+
+```typescript
+const iterator = ledger.payments();
+iterator.next();         // segment 1 checked on exit
+ledger.audit();          // a public call, and it sees a valid object
+```
+
+#### `@demands` describes the call
+
+`@demands` runs once, on the first step: there is one call, so there is one precondition. A later step may also be *given* a value through `next(value)`, which becomes the value of the preceding `yield` expression and is not an argument of the call; that input is checked as a precondition **when it is present**. `for...of` iterates with `next()` and injects nothing, so it never re-enters the precondition with `undefined`:
+
+```typescript
+@demands((_self, [count]: [number]) => count > 0)
+*gen(count: number): Generator<number> { /* ... */ }
+
+for (const value of obj.gen(3)) { /* works: no value is injected */ }
+```
+
+#### `@rescue` covers the traversal
+
+A generator that has already been consumed cannot be resumed from the beginning, so `retry` restarts the traversal, rerunning the body exactly as it does for an ordinary feature. A throw escaping a step is what the handler observes.
 
 ## Note on Private Fields and Accessors
 
@@ -669,6 +717,8 @@ When `obj.feature` is called the happy path is:
 ![image](./docs/happy-path.png)
 
 The invariant is evaluated **twice** per successful call: once on entry and once on exit. Each of `@demands`, the feature body, and `@ensures` runs once. Accessors follow the same lifecycle as methods, and an accessor that reads another accessor or calls a method does not start a nested lifecycle.
+
+An `async` feature follows the same order with the exit checks moved after the promise settles, so they observe the state the body actually reached; its failures reach the caller as a rejection. A generator applies the same order **once per step**, as described in [Generators](#generators).
 
 The entry check is not redundant with `Contracted.new()`. Object state can be corrupted without going through a checked feature — via `Object.defineProperty`, by running with checked mode disabled and re-enabling it, or internally from a feature body. The entry check is what turns that into a precise error at the next public interaction rather than letting an invalid object keep operating.
 

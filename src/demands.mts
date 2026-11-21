@@ -1,6 +1,6 @@
 import { assert, assertContractResult, describeViolation } from './assert.mjs';
 import { AssertionError } from './AssertionError.mjs';
-import { checkedMode, Contracted, isGeneratorFunction } from "./Contracted.mjs";
+import { checkedMode, Contracted } from "./Contracted.mjs";
 import type { FeatureDecoratorContext } from './types.mjs';
 
 /**
@@ -30,7 +30,6 @@ export const demands: DemandsDecorator = (predicate) => (feature, ctx) => {
     assert(ctx.static === false, '@demands decorator cannot be applied to static features');
     assert(ctx.private === false, '@demands decorator cannot be applied to private features');
     assert(!String(ctx.name).startsWith('_'), '@demands decorator cannot be applied to private/protected features');
-    assert(!isGeneratorFunction(feature), '@demands cannot be applied to a generator feature: the contract boundary for generators is not supported yet (see issue #318)');
 
     // Register at decoration time. `addInitializer` runs once per instance, so
     // registering there appended the same predicate again on every
