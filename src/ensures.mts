@@ -1,4 +1,4 @@
-import { assert } from './assert.mjs';
+import { assert, assertContractResult } from './assert.mjs';
 import { checkedMode, Contracted } from './Contracted.mjs';
 import type { FeatureDecoratorContext } from './types.mjs';
 
@@ -50,8 +50,8 @@ export function assertEnsures(instance: Contracted, old: Contracted, propertyKey
         if (es.length === 0) return;
 
         // ALL ensures must be true for the obligation to be fulfilled
-        for (const e of es)
-            if (!e(instance, args, old))
+        for (const [index, e] of es.entries())
+            if (!assertContractResult(e(instance, args, old), '@ensures', `${instance.constructor.name}.${String(propertyKey)}`, index))
 
                 assert(false, `No ensurances were satisfied for ${instance.constructor.name}.${String(propertyKey)}`);
         // If we reach here, it means all ensures were true

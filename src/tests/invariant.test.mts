@@ -2,6 +2,58 @@ import { describe, test } from 'node:test';
 import nodeAssert from 'node:assert/strict';
 import { AssertionError, checkedMode, Contracted, invariant } from '@final-hill/decorator-contracts';
 
+/**
+ * https://github.com/final-hill/decorator-contracts/issues/283
+ */
+describe('`invariant` predicates must return a boolean', () => {
+    test('an asynchronous predicate is rejected instead of silently passing', () => {
+        @invariant(() => Promise.resolve(true) as any)
+        class Foo extends Contracted {
+            m(): void { }
+        }
+
+        // a Promise is truthy, so coercion would have treated the invariant as satisfied
+        nodeAssert.throws(
+            () => Foo.new(),
+            /@invariant predicate #1 for Foo returned a Promise/
+        );
+    });
+
+    test('a truthy non-boolean is rejected', () => {
+        @invariant(() => 1 as any)
+        class Foo extends Contracted {
+            m(): void { }
+        }
+
+        nodeAssert.throws(() => Foo.new(), /returned a number \(1\)/);
+    });
+
+    test('the message identifies which invariant in a composition failed', () => {
+        @invariant(() => true)
+        @invariant(() => 'invalid' as any)
+        class Foo extends Contracted {
+            m(): void { }
+        }
+
+        // the last decorator applied is evaluated first
+        nodeAssert.throws(
+            () => Foo.new(),
+            /@invariant predicate #1 for Foo returned the string "invalid"/
+        );
+    });
+
+    test('boolean predicates continue to work', () => {
+        @invariant((self: Foo) => self.value >= 0)
+        class Foo extends Contracted {
+            protected _value = 0;
+            get value() { return this._value; }
+            set value(v: number) { this._value = v; }
+        }
+
+        nodeAssert.doesNotThrow(() => Foo.new());
+    });
+});
+
 describe('The subclasses of a contracted class must obey the invariants', () => {
     @invariant((instance) => instance.value >= 0)
     class Foo extends Contracted {

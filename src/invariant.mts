@@ -1,4 +1,4 @@
-import { assert } from './assert.mjs';
+import { assert, assertContractResult } from './assert.mjs';
 import { checkedMode, Contracted } from './Contracted.mjs';
 
 export type InvariantPredicate<Class extends typeof Contracted> = (self: InstanceType<Class>) => boolean;
@@ -18,9 +18,9 @@ export function assertInvariants<C extends typeof Contracted, T extends Instance
     const invariants = (Class[Symbol.metadata]?.['invariants'] ?? []) as InvariantPredicate<C>[];
 
     try {
-        for (const inv of invariants)
+        for (const [index, inv] of invariants.entries())
             assert(
-                inv(instance),
+                assertContractResult(inv(instance), '@invariant', Class.name, index),
                 `Invariant violated in class ${Class.name}: ${inv.toString()}`
             );
     } finally {
