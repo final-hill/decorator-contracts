@@ -2,12 +2,21 @@ import { assert, assertContractResult } from './assert.mjs';
 import { checkedMode, Contracted } from './Contracted.mjs';
 import type { FeatureDecoratorContext } from './types.mjs';
 
-export type EnsuresPredicate<This extends Contracted> = (self: This, args: any[], old: This) => boolean;
+/**
+ * A postcondition predicate.
+ *
+ * `args` is the argument list of the invocation and `old` is the snapshot of
+ * the instance from before the feature ran, so a predicate reads
+ * `(self, [x], old) => ...`. See `DemandsPredicate` for why the tuple is generic.
+ */
+export type EnsuresPredicate<This extends Contracted, Args extends any[] = any[]> =
+    (self: This, args: Args, old: This) => boolean;
 
 export type EnsuresDecorator = <
-    This extends Contracted
+    This extends Contracted,
+    Args extends any[]
 >(
-    predicate: EnsuresPredicate<This>
+    predicate: (self: This, args: Args, old: This) => boolean
 ) => (
     value: unknown,
     context: FeatureDecoratorContext

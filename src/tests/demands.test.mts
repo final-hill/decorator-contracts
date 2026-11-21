@@ -311,7 +311,7 @@ describe('Predicates are registered once, not once per instantiation', () => {
 
 describe('`demands` assertions cannot be strengthened in a subtype', () => {
     class Base extends Contracted {
-        @demands((_self, value) => 10 <= value && value <= 30)
+        @demands((_self, [value]: [number]) => 10 <= value && value <= 30)
         method(value: number): number { return value; }
     }
 
@@ -324,7 +324,7 @@ describe('`demands` assertions cannot be strengthened in a subtype', () => {
     });
 
     class Weaker extends Base {
-        @demands((_self, value) => 1 <= value && value <= 50)
+        @demands((_self, [value]: [number]) => 1 <= value && value <= 50)
         override method(value: number): number { return value; }
     }
 
@@ -339,7 +339,7 @@ describe('`demands` assertions cannot be strengthened in a subtype', () => {
     });
 
     class Stronger extends Base {
-        @demands((_self, value) => 15 <= value && value <= 20)
+        @demands((_self, [value]: [number]) => 15 <= value && value <= 20)
         override method(value: number): number { return value; }
     }
 

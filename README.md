@@ -345,16 +345,18 @@ When subclassing, if a subclass defines its own `@demands` for a method, the res
 
 ```typescript
 class Base extends Contracted {
-    @demands((_self, x: number) => x >= 0)
+    @demands((_self, [x]: [number]) => x >= 0)
     foo(x: number) { /* ... */ }
 }
 
 class Sub extends Base {
-    @demands((_self, x: number) => x === 42)
+    @demands((_self, [x]: [number]) => x === 42)
     override foo(x: number) { /* ... */ }
 }
 // The effective demand for Sub#foo is: (x >= 0) || (x === 42)
 ```
+
+A demand receives the **argument list**, so destructure it: `(_self, [x])`. Writing `(_self, x: number) => x >= 0` does not compile, because the second parameter is the array rather than the first argument.
 
 ## Ensures
 
@@ -407,16 +409,18 @@ When subclassing, if a subclass defines its own `@ensures` for a method, the res
 
 ```typescript
 class Base extends Contracted {
-    @ensures((_self, _args, x: number) => x >= 0)
+    @ensures((_self, [x]: [number]) => x >= 0)
     foo(x: number) { /* ... */ }
 }
 
 class Sub extends Base {
-    @ensures((_self, _args, x: number) => x <= 10)
+    @ensures((_self, [x]: [number]) => x <= 10)
     override foo(x: number) { /* ... */ }
 }
 // The effective ensures for Sub#foo is: (x >= 0) && (x <= 10)
 ```
+
+The signature is `(self, args, old)`: the argument list, then the snapshot of the instance from before the feature ran. Writing `(_self, _args, x: number) => x >= 0` does not compile — the third parameter is `old`, and comparing it to a number is always `false`.
 
 ## Rescue
 
