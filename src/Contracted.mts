@@ -6,21 +6,111 @@ import { applyRescueHandler as applyRescueHandler, getRescueDeclaration, RescueD
 // Symbol to store checked mode state
 export const checkedMode = Symbol.for('Contracted.checkedMode');
 
+/**
+ * Type of value that `cloneState` copies rather than shares.
+ *
+ * The list is deliberately closed: arrays, dates, maps, sets, and plain objects
+ * are cloned because they are the containers contracts routinely compare. Every
+ * other object — class instances, functions, regular expressions, buffers — is
+ * shared by reference. See the `@ensures` documentation for the rationale.
+ */
+const isPlainObject = (value: object): boolean => {
+    const proto = Object.getPrototypeOf(value);
+
+    return proto === Object.prototype || proto === null;
+}
+
+/**
+ * Copies a value for use in an `old` snapshot.
+ *
+ * Plain data containers are cloned recursively so that mutations performed by
+ * the feature body are not visible through `old`. Anything else is returned by
+ * reference, which preserves identity and avoids attempting to clone values that
+ * cannot be cloned meaningfully (functions, class instances, buffers).
+ *
+ * Own property descriptors are copied rather than values, so accessors are not
+ * invoked while snapshotting. An accessor on `old` therefore reads the
+ * historical state through `this`, which is what a postcondition expects.
+ */
+const cloneState = (value: any, seen: WeakMap<object, any>): any => {
+    if (typeof value !== 'object' || value === null) return value;
+
+    const already = seen.get(value);
+    if (already !== undefined) return already;
+
+    if (value instanceof Date) return new Date(value.getTime());
+
+    if (Array.isArray(value)) {
+        const copy: any[] = [];
+        seen.set(value, copy);
+        for (const item of value) copy.push(cloneState(item, seen));
+
+        return copy;
+    }
+
+    if (value instanceof Map) {
+        const copy = new Map<any, any>();
+        seen.set(value, copy);
+        for (const [k, v] of value) copy.set(cloneState(k, seen), cloneState(v, seen));
+
+        return copy;
+    }
+
+    if (value instanceof Set) {
+        const copy = new Set<any>();
+        seen.set(value, copy);
+        for (const item of value) copy.add(cloneState(item, seen));
+
+        return copy;
+    }
+
+    if (!isPlainObject(value)) return value;
+
+    const copy = Object.create(Object.getPrototypeOf(value));
+    seen.set(value, copy);
+
+    for (const key of Reflect.ownKeys(value)) {
+        const descriptor = Object.getOwnPropertyDescriptor(value, key)!;
+        Reflect.defineProperty(copy, key, 'value' in descriptor
+            ? { ...descriptor, value: cloneState(descriptor.value, seen) }
+            : descriptor);
+    }
+
+    return copy;
+}
+
+/**
+ * Builds the `old` instance passed to `@ensures`.
+ *
+ * The result inherits from `target`, so prototype members (including getters and
+ * methods) remain reachable, while own state is a copy taken at this moment.
+ * Getters defined on the prototype therefore read the historical own state
+ * through `this`.
+ */
 const populateOld = (target: Contracted) => {
     if (!Contracted[checkedMode]) return;
 
     Contracted[checkedMode] = false; // Disable checked mode to avoid infinite recursion
 
     try {
-        const old = Object.create(target)
-        for (const key in target)
-            Reflect.set(old, key, Reflect.get(target, key));
+        const old = Object.create(target),
+            seen = new WeakMap<object, any>();
+
+        for (const key of Reflect.ownKeys(target)) {
+            const descriptor = Object.getOwnPropertyDescriptor(target, key)!;
+            Reflect.defineProperty(old, key, 'value' in descriptor
+                ? { ...descriptor, value: cloneState(descriptor.value, seen) }
+                : descriptor);
+        }
 
         return old;
     } finally {
         Contracted[checkedMode] = true;
     }
 }
+
+// Caches the contract wrapper per instance and feature so that `f.m === f.m`.
+const wrapperCache = new WeakMap<object, Map<PropertyKey, (...args: any[]) => any>>();
 
 // Utility to walk up the prototype chain to find a property descriptor
 function getPropertyDescriptor(obj: object, prop: PropertyKey): PropertyDescriptor | undefined {
@@ -104,10 +194,29 @@ const proxyHandler: ProxyHandler<Contracted> = {
 
         const descriptor = getPropertyDescriptor(Object.getPrototypeOf(target), prop);
 
-        if (typeof descriptor?.value === 'function')
-            return function (this: Contracted, ...methodArgs: any[]) {
-                return runLifecycle('func', target, prop, methodArgs, (args) => Reflect.apply(descriptor.value!, target, args));
+        if (typeof descriptor?.value === 'function') {
+            let cache = wrapperCache.get(target);
+
+            if (!cache) {
+                cache = new Map();
+                wrapperCache.set(target, cache);
             }
+
+            const cached = cache.get(prop);
+
+            if (cached) return cached;
+
+            // The descriptor is resolved from the instance's prototype chain,
+            // which is fixed for the lifetime of the instance, so the wrapper
+            // can be reused for that feature.
+            const wrapper = function (this: Contracted, ...methodArgs: any[]) {
+                return runLifecycle('func', target, prop, methodArgs, (args) => Reflect.apply(descriptor.value!, target, args));
+            };
+
+            cache.set(prop, wrapper);
+
+            return wrapper;
+        }
         else if (typeof descriptor?.get === 'function')
             return runLifecycle('get', target, prop, [], () => Reflect.get(target, prop, receiver));
         else

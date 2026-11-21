@@ -10,13 +10,15 @@ describe('A failure while snapshotting the `old` instance must not disable check
         class Foo extends Contracted {
             constructor() {
                 super();
-                // An own enumerable getter is visited by `populateOld` while building `old`.
-                Object.defineProperty(this, 'boom', {
-                    enumerable: true,
-                    configurable: true,
-                    get() { throw new Error('snapshot boom'); }
+                // `populateOld` clones own state, so a field that cannot be
+                // inspected makes snapshotting fail. A Proxy with a throwing
+                // `getPrototypeOf` trap stands in for such a value.
+                this._boom = new Proxy({}, {
+                    getPrototypeOf() { throw new Error('snapshot boom'); }
                 });
             }
+
+            protected _boom: any;
 
             @ensures(() => true)
             m(): void { }
