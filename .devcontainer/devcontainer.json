@@ -1,1 +1,26 @@
-{"name":"decorator-contracts","image":"mcr.microsoft.com/devcontainers/typescript-node:26","features":{"ghcr.io/devcontainers/features/common-utils:2":{"installZsh":false,"installOhMyZsh":false,"upgradePackages":false}},"postCreateCommand":"npm ci","customizations":{"vscode":{"extensions":["editorconfig.editorconfig","dbaeumer.vscode-eslint","davidanson.vscode-markdownlint"],"settings":{"files.eol":"\r\n","typescript.tsdk":"node_modules/typescript/lib"}}},"remoteUser":"node"}
+{
+    "name": "decorator-contracts",
+    "image": "mcr.microsoft.com/devcontainers/typescript-node:26",
+    "features": {
+        "ghcr.io/devcontainers/features/common-utils:2": {
+            "installZsh": false,
+            "installOhMyZsh": false,
+            "upgradePackages": false
+        }
+    },
+    "postCreateCommand": "npm ci",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "editorconfig.editorconfig",
+                "dbaeumer.vscode-eslint",
+                "davidanson.vscode-markdownlint"
+            ],
+            "settings": {
+                "files.eol": "\r\n",
+                "typescript.tsdk": "node_modules/typescript/lib"
+            }
+        }
+    },
+    "remoteUser": "node"
+}
