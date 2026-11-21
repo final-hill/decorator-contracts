@@ -28,29 +28,36 @@ export const rescue: RescueDecorator = (handler) => (_feature, ctx) => {
     })
 }
 
-export const applyRescueHandler = (descriptorType: 'get' | 'set' | 'func', instance: Contracted, propertyKey: PropertyKey, error: unknown, args: any) => {
-    if (!Contracted[checkedMode]) return error;
+/**
+ * Applies the `@rescue` handler declared for `propertyKey`, if any.
+ *
+ * When the handler calls `retry`, the arguments passed to `retry` are returned
+ * so that the caller can restart the contract lifecycle with them. This keeps
+ * the lifecycle in one place (see `runLifecycle` in `Contracted.mts`) and
+ * ensures a retried invocation is subject to `@invariant`, `@demands`, and
+ * `@ensures` like any other invocation.
+ *
+ * @returns The arguments to retry with.
+ * @throws The original error if the handler does not call `retry`, or whatever
+ *   the handler throws.
+ */
+export const applyRescueHandler = (instance: Contracted, propertyKey: PropertyKey, error: unknown, args: any): any[] => {
+    if (!Contracted[checkedMode]) throw error;
 
     const Class = instance.constructor as typeof Contracted,
-        descriptor = Object.getOwnPropertyDescriptor(Class.prototype, propertyKey)!,
         r = Class[Symbol.metadata]?.rescue?.[propertyKey] as RescueHandler<Contracted> | undefined;
 
     if (!r) throw error;
 
     let hasRetried = false;
+    let retryArgs: any[] = [];
     Contracted[checkedMode] = false; // Disable checked mode to avoid infinite recursion
-    let result: any
+
     try {
         r.call(instance, instance, error, args, (...args: any[]) => {
             assert(!hasRetried, 'retry can only be called once');
             hasRetried = true;
-            Contracted[checkedMode] = true;
-            if (descriptorType == 'get')
-                result = Reflect.get(instance, propertyKey, instance);
-            else if (descriptorType == 'set')
-                result = Reflect.set(instance, propertyKey, args[0], instance);
-            else if (descriptorType == 'func')
-                result = Reflect.apply(descriptor.value, instance, args);
+            retryArgs = args;
         })
         if (!hasRetried)
             throw error;
@@ -58,5 +65,5 @@ export const applyRescueHandler = (descriptorType: 'get' | 'set' | 'func', insta
         Contracted[checkedMode] = true;
     }
 
-    return result;
+    return retryArgs;
 }

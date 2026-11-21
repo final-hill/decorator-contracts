@@ -351,3 +351,202 @@ describe('If an error is raised in an `ensures` then the associated rescue is ex
         nodeAssert.throws(() => A.new().methodError(), /^Error: Rescue Error/);
     });
 });
+/**
+ * https://github.com/final-hill/decorator-contracts/issues/281
+ *
+ * Per docs/order-of-assertions.png a `retry` restarts the lifecycle at
+ * `@invariant`, so the retried invocation is subject to `@demands` and
+ * `@ensures` like any other call.
+ */
+describe('A retried invocation re-enters the contract lifecycle', () => {
+    test('the lifecycle runs in documented order', () => {
+        const log: string[] = [];
+
+        @invariant((_self: Foo) => { log.push('invariant'); return true; })
+        class Foo extends Contracted {
+            protected _n = 0;
+            get n() { return this._n; }
+            set n(v: number) { this._n = v; }
+
+            @demands((self: Foo, [v]: [number]) => { log.push('demands:' + v); return v > 0; })
+            @ensures((self: Foo) => { log.push('ensures:' + self.n); return true; })
+            @rescue((_self, _error, _args, retry) => { log.push('rescue'); retry(5); })
+            method(v: number): number {
+                log.push('body:' + v);
+                if (v == 1) throw new Error('forced');
+
+                this.n = v;
+
+                return v;
+            }
+        }
+
+        const foo = Foo.new();
+        log.length = 0;
+
+        nodeAssert.strictEqual(foo.method(1), 5);
+        nodeAssert.deepStrictEqual(log, [
+            'invariant', 'demands:1', 'body:1', 'rescue',
+            'invariant', 'demands:5', 'body:5', 'ensures:5', 'invariant'
+        ]);
+    });
+
+    test('a retry that violates the demands throws', () => {
+        class Foo extends Contracted {
+            @demands((_self: Foo, [v]: [number]) => v > 0)
+            @rescue((_self, _error, _args, retry) => retry(-99))
+            method(v: number): number {
+                if (v < 0) throw new Error('negative');
+
+                return v;
+            }
+        }
+
+        nodeAssert.throws(() => Foo.new().method(-1), /^Error: No demands were satisfied/);
+    });
+
+    test('a retry that violates the ensures throws', () => {
+        class Foo extends Contracted {
+            protected _n = 0;
+            protected _attempts = 0;
+            get n() { return this._n; }
+
+            @ensures((self: Foo) => self.n == 0)
+            @rescue((self: Foo, _error, _args, retry) => { self.n = 3; retry(); })
+            method(): void {
+                if (this._attempts++ == 0) throw new Error('forced');
+            }
+            set n(v: number) { this._n = v; }
+        }
+
+        nodeAssert.throws(() => Foo.new().method(), /^Error: No ensurances were satisfied/);
+    });
+
+    test('a retry that violates the invariant throws', () => {
+        @invariant((self: Foo) => self.n == 0)
+        class Foo extends Contracted {
+            protected _n = 0;
+            protected _attempts = 0;
+            get n() { return this._n; }
+
+            @rescue((self: Foo, _error, _args, retry) => { self.n = 3; retry(); })
+            method(): void {
+                if (this._attempts++ == 0) throw new Error('forced');
+            }
+            set n(v: number) { this._n = v; }
+        }
+
+        nodeAssert.throws(() => Foo.new().method(), /^Error: Invariant violated/);
+    });
+});
+
+describe('A retried getter and setter re-enter the contract lifecycle', () => {
+    test('getter', () => {
+        const log: string[] = [];
+
+        class Foo extends Contracted {
+            protected _v = 0;
+
+            @demands(() => { log.push('demands'); return true; })
+            @rescue((self: Foo, _error, _args, retry) => { log.push('rescue'); self.warm(); retry(); })
+            get v(): number {
+                log.push('body');
+                if (this._v == 0) throw new Error('cold');
+
+                return this._v;
+            }
+
+            warm(): void { this._v = 7; }
+        }
+
+        const foo = Foo.new();
+        log.length = 0;
+
+        nodeAssert.strictEqual(foo.v, 7);
+        nodeAssert.deepStrictEqual(log, ['demands', 'body', 'rescue', 'demands', 'body']);
+    });
+
+    test('setter', () => {
+        const log: string[] = [];
+
+        class Foo extends Contracted {
+            protected _v = NaN;
+            get v() { return this._v; }
+
+            @demands((self: Foo, [v]: [number]) => { log.push('demands:' + v); return true; })
+            @rescue((_self, _error, _args, retry) => { log.push('rescue'); retry(0); })
+            set v(value: number) {
+                log.push('body:' + value);
+                if (Number.isNaN(value)) throw new Error('NaN');
+
+                this._v = value;
+            }
+        }
+
+        const foo = Foo.new();
+        log.length = 0;
+
+        foo.v = NaN;
+
+        // compare the log before reading `foo.v`, which itself runs the lifecycle
+        nodeAssert.deepStrictEqual(log, ['demands:NaN', 'body:NaN', 'rescue', 'demands:0', 'body:0']);
+        log.length = 0;
+        nodeAssert.strictEqual(foo.v, 0);
+    });
+});
+
+describe('A retried invocation is not rescued a second time', () => {
+    test('an always-throwing retry terminates and surfaces its error', () => {
+        let bodyCalls = 0;
+
+        class Foo extends Contracted {
+            @rescue((_self, _error, _args, retry) => retry())
+            method(): number {
+                bodyCalls++;
+                throw new Error('always');
+            }
+        }
+
+        nodeAssert.throws(() => Foo.new().method(), { message: 'always' });
+        nodeAssert.strictEqual(bodyCalls, 2);
+    });
+});
+
+/**
+ * https://github.com/final-hill/decorator-contracts/issues/285
+ */
+describe('A `retry` works when the feature is inherited', () => {
+    test('inherited method', () => {
+        class Base extends Contracted {
+            protected _attempts = 0;
+
+            @rescue((_self, _error, _args, retry) => retry(0))
+            method(v: number): number {
+                if (this._attempts++ == 0) throw new Error('bad');
+
+                return v;
+            }
+        }
+
+        class Sub extends Base { }
+
+        nodeAssert.strictEqual(Sub.new().method(0), 0);
+    });
+
+    test('inherited getter', () => {
+        class Base extends Contracted {
+            protected _v = 0;
+            @rescue((self: Base, _error, _args, retry) => { self.warm(); retry(); })
+            get v(): number {
+                if (this._v == 0) throw new Error('cold');
+
+                return this._v;
+            }
+            warm(): void { this._v = 7; }
+        }
+
+        class Sub extends Base { }
+
+        nodeAssert.strictEqual(Sub.new().v, 7);
+    });
+});
