@@ -47,13 +47,15 @@ export const rescue: RescueDecorator = (handler, options) => (_feature, ctx) => 
     assert(!String(ctx.name).startsWith('_'), '@rescue decorator cannot be applied to private/protected features');
     assert(options?.maxRetries === undefined || options.maxRetries >= 0, 'maxRetries must not be negative');
 
+    // Register at decoration time. `addInitializer` runs once per instance, so
+    // registering there rewrote the same declaration on every instantiation.
+    ctx.metadata.rescue = {
+        ...(ctx.metadata?.rescue ?? {}),
+        [ctx.name]: { handler, maxRetries: options?.maxRetries }
+    }
+
     ctx.addInitializer(function () {
         assert(this instanceof Contracted, '@rescue decorator can only be applied to classes that extend Contracted');
-
-        ctx.metadata.rescue = {
-            ...(ctx.metadata?.rescue ?? {}),
-            [ctx.name]: { handler, maxRetries: options?.maxRetries }
-        }
     })
 }
 

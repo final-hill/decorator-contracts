@@ -19,17 +19,22 @@ export const ensures: EnsuresDecorator = (predicate) => (_feature, ctx) => {
     assert(ctx.private === false, '@ensures decorator cannot be applied to private features');
     assert(!String(ctx.name).startsWith('_'), '@ensures decorator cannot be applied to private/protected features');
 
+    // Register at decoration time. `addInitializer` runs once per instance, so
+    // registering there appended the same predicate again on every
+    // instantiation: unbounded metadata growth and a linearly growing predicate
+    // list to evaluate on each call.
+    const es = [
+        ...(ctx.metadata as any)?.ensures?.[ctx.name] ?? [],
+        predicate
+    ]
+
+    ctx.metadata.ensures = {
+        ...(ctx.metadata?.ensures ?? {}),
+        [ctx.name]: es
+    };
+
     ctx.addInitializer(function () {
         assert(this instanceof Contracted, '@ensures decorator can only be applied to classes that extend Contracted');
-        const es = [
-            ...(ctx.metadata as any)?.ensures?.[ctx.name] ?? [],
-            predicate
-        ]
-
-        ctx.metadata.ensures = {
-            ...(ctx.metadata?.ensures ?? {}),
-            [ctx.name]: es
-        };
     })
 }
 

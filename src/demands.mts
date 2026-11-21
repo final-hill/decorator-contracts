@@ -17,17 +17,22 @@ export const demands: DemandsDecorator = (predicate) => (_feature, ctx) => {
     assert(ctx.private === false, '@demands decorator cannot be applied to private/protected features');
     assert(!String(ctx.name).startsWith('_'), '@demands decorator cannot be applied to private/protected features');
 
+    // Register at decoration time. `addInitializer` runs once per instance, so
+    // registering there appended the same predicate again on every
+    // instantiation: unbounded metadata growth and a linearly growing predicate
+    // list to evaluate on each call.
+    const ds = [
+        ...(ctx.metadata as any)?.demands?.[ctx.name] ?? [],
+        predicate
+    ]
+
+    ctx.metadata.demands = {
+        ...(ctx.metadata?.demands ?? {}),
+        [ctx.name]: ds
+    };
+
     ctx.addInitializer(function () {
         assert(this instanceof Contracted, '@demands decorator can only be applied to classes that extend Contracted');
-        const ds = [
-            ...(ctx.metadata as any)?.demands?.[ctx.name] ?? [],
-            predicate
-        ]
-
-        ctx.metadata.demands = {
-            ...(ctx.metadata?.demands ?? {}),
-            [ctx.name]: ds
-        };
     })
 }
 
