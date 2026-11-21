@@ -1,6 +1,6 @@
-import { assert, assertContractResult, describeViolation } from './assert.mjs';
-import { AssertionError } from './AssertionError.mjs';
+import { assert, assertContractResult, violationError } from './assert.mjs';
 import { checkedMode, Contracted } from "./Contracted.mjs";
+import { assertFeatureContractTarget } from './decorator.mjs';
 import type { FeatureDecoratorContext } from './types.mjs';
 
 /**
@@ -26,15 +26,8 @@ export type DemandsDecorator = <This extends Contracted, Args extends any[], Fea
 ) => Feature | void;
 
 export const demands: DemandsDecorator = (predicate) => (feature, ctx) => {
-    assert(["method", "getter", "setter"].includes(ctx.kind), '@demands decorator can only be applied to methods, getters, or setters');
-    assert(ctx.static === false, '@demands decorator cannot be applied to static features');
-    assert(ctx.private === false, '@demands decorator cannot be applied to private features');
-    assert(!String(ctx.name).startsWith('_'), '@demands decorator cannot be applied to private/protected features');
+    assertFeatureContractTarget('@demands', feature, ctx);
 
-    // Register at decoration time. `addInitializer` runs once per instance, so
-    // registering there appended the same predicate again on every
-    // instantiation: unbounded metadata growth and a linearly growing predicate
-    // list to evaluate on each call.
     const ds = [
         ...(ctx.metadata as any)?.demands?.[ctx.name] ?? [],
         predicate
@@ -66,7 +59,7 @@ export function assertDemands(instance: Contracted, propertyKey: PropertyKey, ..
 
     // If we reach here, it means all demands were false. Every arm is reported,
     // because OR-composition means any of them could have permitted the call.
-    const { message, violation } = describeViolation(
+    throw violationError(
         '@demands',
         instance.constructor.name,
         String(propertyKey),
@@ -74,6 +67,4 @@ export function assertDemands(instance: Contracted, propertyKey: PropertyKey, ..
         ds.map((_, index) => index),
         'A precondition was not satisfied, so the feature was not entered.',
     );
-
-    throw new AssertionError(message, violation);
 }

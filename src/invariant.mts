@@ -1,5 +1,4 @@
-import { assert, assertContractResult, describeViolation } from './assert.mjs';
-import { AssertionError } from './AssertionError.mjs';
+import { assert, assertContractResult, violationError } from './assert.mjs';
 import { checkedMode, Contracted } from './Contracted.mjs';
 
 export type InvariantPredicate<Class extends typeof Contracted> = (self: InstanceType<Class>) => boolean;
@@ -23,7 +22,7 @@ export function assertInvariants<C extends typeof Contracted, T extends Instance
 
     if (failed.length === 0) return;
 
-    const { message, violation } = describeViolation(
+    throw violationError(
         '@invariant',
         Class.name,
         undefined,
@@ -31,8 +30,6 @@ export function assertInvariants<C extends typeof Contracted, T extends Instance
         failed,
         'The instance left the invariant unsatisfied.',
     );
-
-    throw new AssertionError(message, violation);
 }
 
 export const invariant: InvariantDecorator = (predicate) => (OriginalClass, { kind, metadata }) => {

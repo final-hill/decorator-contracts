@@ -147,6 +147,72 @@ function getPropertyDescriptor(obj: object, prop: PropertyKey): PropertyDescript
 }
 
 /**
+ * The kind of public feature whose boundary is being evaluated.
+ *
+ * `@ensures` and `@rescue` treat a getter differently from every other feature,
+ * and the rule was written out four times: once in the synchronous lifecycle and
+ * once in the asynchronous one, for each contract. Naming it here keeps the two
+ * lifecycles from drifting apart on the one thing they must agree about.
+ */
+type DescriptorType = 'get' | 'set' | 'func' | 'delete';
+
+/**
+ * The arguments an `@ensures` predicate observes.
+ *
+ * A getter delivers its result as the value the caller receives, so that is what
+ * its postcondition describes. Every other feature is described by the arguments
+ * it was invoked with.
+ */
+const ensuresArguments = (descriptorType: DescriptorType, result: unknown, args: any[]): any[] =>
+    descriptorType === 'get' ? [result] : args;
+
+/**
+ * The arguments an `@rescue` retry restarts the lifecycle with.
+ *
+ * A getter has no arguments to replay, so a retry runs it from scratch.
+ */
+const rescueArguments = (descriptorType: DescriptorType, args: any[]): any[] =>
+    descriptorType === 'get' ? [] : args;
+
+/**
+ * Decides what a failed invocation does next.
+ *
+ * Every lifecycle needs the same three decisions at its `@rescue` boundary:
+ * whether another retry is permitted, what the handler asked for, and whether
+ * the invariant has to be re-checked before the error reaches the caller.
+ * Extracted because the sync and async lifecycles had this block verbatim twice.
+ *
+ * The sync and async lifecycles are separate functions on purpose: a lifecycle
+ * that awaited unconditionally would make every synchronous feature return a
+ * promise, which is not a refactor but a change to every caller. What is shared
+ * is the decision, not the boundary.
+ *
+ * @returns The arguments to retry with, or the error is rethrown.
+ */
+function attemptRescue(
+    Class: typeof Contracted,
+    target: Contracted,
+    prop: PropertyKey,
+    error: unknown,
+    retries: number,
+    args: any[],
+): any[] {
+    const maxRetries = getRescueDeclaration(target, prop)?.maxRetries ?? Infinity;
+
+    if (retries >= maxRetries) {
+        assertInvariants(Class, target);
+        throw error;
+    }
+
+    try {
+        return applyRescueHandler(target, prop, error, args);
+    } catch (rescuedError) {
+        assertInvariants(Class, target);
+        throw rescuedError;
+    }
+}
+
+/**
  * Runs the assertion lifecycle for a single public invocation.
  *
  * The contracts describe the observable boundary of a feature, in the sense of
@@ -177,7 +243,7 @@ function getPropertyDescriptor(obj: object, prop: PropertyKey): PropertyDescript
  * @param invoke - Performs the feature body with the supplied arguments.
  */
 function runSyncLifecycle(
-    descriptorType: 'get' | 'set' | 'func' | 'delete',
+    descriptorType: DescriptorType,
     target: Contracted,
     prop: PropertyKey,
     invokeArgs: any[],
@@ -203,22 +269,11 @@ function runSyncLifecycle(
             assertNotThenable(result, target, prop);
 
             if (hasEnsures)
-                assertEnsures(target, old, prop, descriptorType === 'get' ? [result] : args);
+                assertEnsures(target, old, prop, ensuresArguments(descriptorType, result, args));
         } catch (error) {
-            const maxRetries = getRescueDeclaration(target, prop)?.maxRetries ?? Infinity;
-
-            if (retries >= maxRetries) {
-                assertInvariants(Class, target);
-                throw error;
-            }
-
+            args = attemptRescue(Class, target, prop, error, retries,
+                rescueArguments(descriptorType, args));
             retries++;
-            try {
-                args = applyRescueHandler(target, prop, error, descriptorType === 'get' ? [] : args);
-            } catch (rescuedError) {
-                assertInvariants(Class, target);
-                throw rescuedError;
-            }
             continue;
         }
 
@@ -254,7 +309,7 @@ function runSyncLifecycle(
  * subject to every contract like any other invocation.
  */
 async function runAsyncLifecycle(
-    descriptorType: 'get' | 'set' | 'func' | 'delete',
+    descriptorType: DescriptorType,
     target: Contracted,
     prop: PropertyKey,
     invokeArgs: any[],
@@ -277,22 +332,11 @@ async function runAsyncLifecycle(
         try {
             result = await invoke(args);
             if (hasEnsures)
-                assertEnsures(target, old, prop, descriptorType === 'get' ? [result] : args);
+                assertEnsures(target, old, prop, ensuresArguments(descriptorType, result, args));
         } catch (error) {
-            const maxRetries = getRescueDeclaration(target, prop)?.maxRetries ?? Infinity;
-
-            if (retries >= maxRetries) {
-                assertInvariants(Class, target);
-                throw error;
-            }
-
+            args = attemptRescue(Class, target, prop, error, retries,
+                rescueArguments(descriptorType, args));
             retries++;
-            try {
-                args = applyRescueHandler(target, prop, error, descriptorType === 'get' ? [] : args);
-            } catch (rescuedError) {
-                assertInvariants(Class, target);
-                throw rescuedError;
-            }
             continue;
         }
 
@@ -443,12 +487,8 @@ function runGeneratorLifecycle(
      * loop back to `@invariant` in `docs/order-of-assertions.png` says it does.
      */
     const prepareRetry = (error: unknown) => {
-        const maxRetries = getRescueDeclaration(target, prop)?.maxRetries ?? Infinity;
-
-        if (retries >= maxRetries) throw error;
-
+        args = attemptRescue(Class, target, prop, error, retries, args);
         retries++;
-        args = applyRescueHandler(target, prop, error, args);
         iterator = invoke(args);
         needsEntry = true;
         retriedError = error;
@@ -561,7 +601,7 @@ function runGeneratorLifecycle(
  * feature.
  */
 function runLifecycle(
-    descriptorType: 'get' | 'set' | 'func' | 'delete',
+    descriptorType: DescriptorType,
     target: Contracted,
     prop: PropertyKey,
     invokeArgs: any[],
