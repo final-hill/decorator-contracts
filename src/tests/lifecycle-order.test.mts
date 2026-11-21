@@ -180,12 +180,13 @@ describe('The assertions run in the documented order', () => {
     });
 
     /**
-     * Feature bodies run with `this` bound to the proxy, so the encapsulation
-     * guarantee applies from inside a feature and not only from outside.
+     * Feature bodies are `C` in `{ P } C { Q }`: what they do internally is
+     * unconstrained, so a body may assign to its own public properties. The
+     * invariant and the postcondition are what guarantee correctness.
      *
      * See https://github.com/final-hill/decorator-contracts/issues/305
      */
-    test('a feature body cannot assign to a public property', () => {
+    test('a feature body may mutate its own public properties', () => {
         const observed: Record<string, boolean> = {};
 
         class Foo extends Contracted {
@@ -214,9 +215,8 @@ describe('The assertions run in the documented order', () => {
         void foo.value;
         foo.value = 1;
 
-        nodeAssert.strictEqual(observed.method, true, 'method body write is rejected');
-        nodeAssert.strictEqual(observed.getter, true, 'getter body write is rejected');
-        nodeAssert.strictEqual(observed.setter, true, 'setter body write is rejected');
-        nodeAssert.strictEqual(foo.publicProp, 1, 'the public property is unchanged');
+        nodeAssert.strictEqual(observed.method, false, 'method body write is allowed');
+        nodeAssert.strictEqual(observed.getter, false, 'getter body write is allowed');
+        nodeAssert.strictEqual(observed.setter, false, 'setter body write is allowed');
     });
 });

@@ -7,23 +7,6 @@ import { applyRescueHandler as applyRescueHandler, getRescueDeclaration, RescueD
 export const checkedMode = Symbol.for('Contracted.checkedMode');
 
 /**
- * Instances whose contract lifecycle is currently running.
- *
- * Feature bodies execute with `this` bound to the proxy so that encapsulation is
- * enforced from inside a feature, not only from outside. That means an access
- * made by a body (or by a predicate) re-enters the traps. Those nested accesses
- * must not start a second lifecycle, or a single public invocation would nest
- * one lifecycle per internal access.
- *
- * This replaces the previous global `checkedMode` toggle, which disabled
- * contracts for every instance in the process while a nested access was
- * evaluated.
- */
-const activeInstances = new WeakSet<object>();
-
-const isActive = (instance: object): boolean => activeInstances.has(instance);
-
-/**
  * Type of value that `cloneState` copies rather than shares.
  *
  * The list is deliberately closed: arrays, dates, maps, sets, and plain objects
@@ -135,32 +118,17 @@ function getPropertyDescriptor(obj: object, prop: PropertyKey): PropertyDescript
 }
 
 /**
- * Runs contract evaluation with this instance marked as active.
+ * Runs the assertion lifecycle for a single public invocation.
  *
- * While marked, the traps still enforce encapsulation (so a body writing to a
- * non-`_` property is rejected) but no longer start a nested lifecycle, so a
- * single public invocation runs exactly one lifecycle regardless of how many
- * internal accesses its body performs.
+ * The contracts describe the observable boundary of a feature, in the sense of
+ * a Hoare triple `{ P } C { Q }`: `@demands` is `P`, `@ensures` is `Q`, and the
+ * feature body is `C`. Nothing inside `C` is constrained — a body may mutate its
+ * own state, including public properties, and may call its own features without
+ * re-entering the contracts. Correctness is the obligation that `P` and `Q` hold
+ * at the boundary, with the invariant additionally holding on entry and exit.
  *
- * The mark is only cleared by the invocation that set it, so a body entering
- * another contracted feature cannot clear it while the outer lifecycle is still
- * running.
- */
-function runActive<T>(target: Contracted, action: () => T): T {
-    const wasActive = activeInstances.has(target);
-
-    activeInstances.add(target);
-
-    try {
-        return action();
-    } finally {
-        if (!wasActive) activeInstances.delete(target);
-    }
-}
-
-/**
- * Runs the assertion lifecycle for a single invocation:
- * `@invariant` -> `@demands` -> body -> `@ensures` -> `@invariant`.
+ * Order: `@invariant` -> `@demands` -> body -> `@ensures` -> `@invariant`
+ * (see `docs/happy-path.png`).
  *
  * A `@rescue` may call `retry`, which restarts the lifecycle from `@invariant`
  * with the supplied arguments, so a retried invocation is subject to
@@ -192,35 +160,33 @@ function runLifecycle(
     for (; ;) {
         const old = hasEnsures ? populateOld(target) : undefined;
 
-        runActive(target, () => {
-            assertInvariants(Class, target);
-            assertDemands(target, prop, args);
-        });
+        assertInvariants(Class, target);
+        assertDemands(target, prop, args);
 
         let result: any
         try {
             result = invoke(args);
             if (hasEnsures)
-                runActive(target, () => assertEnsures(target, old, prop, descriptorType === 'get' ? [result] : args));
+                assertEnsures(target, old, prop, descriptorType === 'get' ? [result] : args);
         } catch (error) {
             const maxRetries = getRescueDeclaration(target, prop)?.maxRetries ?? Infinity;
 
             if (retries >= maxRetries) {
-                runActive(target, () => assertInvariants(Class, target));
+                assertInvariants(Class, target);
                 throw error;
             }
 
             retries++;
             try {
-                args = runActive(target, () => applyRescueHandler(target, prop, error, descriptorType === 'get' ? [] : args));
+                args = applyRescueHandler(target, prop, error, descriptorType === 'get' ? [] : args);
             } catch (rescuedError) {
-                runActive(target, () => assertInvariants(Class, target));
+                assertInvariants(Class, target);
                 throw rescuedError;
             }
             continue;
         }
 
-        runActive(target, () => assertInvariants(Class, target));
+        assertInvariants(Class, target);
         return result;
     }
 }
@@ -230,18 +196,6 @@ const proxyHandler: ProxyHandler<Contracted> = {
         if (!Contracted[checkedMode]) return Reflect.get(target, prop, receiver);
 
         const descriptor = getPropertyDescriptor(Object.getPrototypeOf(target), prop);
-
-        // A feature entered while a lifecycle is already running on this
-        // instance, such as a method called from a getter body, must not start a
-        // second lifecycle. The enclosing invocation owns the assertions, and
-        // nesting one lifecycle per internal access would multiply predicate
-        // evaluations without adding a guarantee.
-        if (isActive(target))
-            return typeof descriptor?.value === 'function'
-                ? (...methodArgs: any[]) => Reflect.apply(descriptor.value!, receiver, methodArgs)
-                : typeof descriptor?.get === 'function'
-                    ? descriptor.get.call(receiver)
-                    : Reflect.get(target, prop, receiver);
 
         if (typeof descriptor?.value === 'function') {
             let cache = wrapperCache.get(target);
@@ -258,9 +212,13 @@ const proxyHandler: ProxyHandler<Contracted> = {
             // The descriptor is resolved from the instance's prototype chain,
             // which is fixed for the lifetime of the instance, so the wrapper
             // can be reused for that feature.
+            //
+            // The body receives the raw target as `this`. A feature body is `C`
+            // in `{ P } C { Q }`: what it does internally is unconstrained, so
+            // internal accesses must not re-enter the traps.
             const wrapper = function (this: Contracted, ...methodArgs: any[]) {
                 return runLifecycle('func', target, prop, methodArgs,
-                    (args) => runActive(target, () => Reflect.apply(descriptor.value!, receiver, args)));
+                    (args) => Reflect.apply(descriptor.value!, target, args));
             };
 
             cache.set(prop, wrapper);
@@ -268,12 +226,7 @@ const proxyHandler: ProxyHandler<Contracted> = {
             return wrapper;
         }
         else if (typeof descriptor?.get === 'function')
-            // Invoke the accessor with the proxy as `this` so encapsulation is
-            // enforced from inside the body. `runBody` records that a lifecycle
-            // is already running, so the body's own property accesses do not
-            // start a nested one.
-            return runLifecycle('get', target, prop, [],
-                () => runActive(target, () => descriptor.get!.call(receiver)));
+            return runLifecycle('get', target, prop, [], () => descriptor.get!.call(target));
         else
             return Reflect.get(target, prop, receiver);
     },
@@ -282,24 +235,19 @@ const proxyHandler: ProxyHandler<Contracted> = {
 
         const descriptor = getPropertyDescriptor(Object.getPrototypeOf(target), prop)
 
+        // Encapsulation governs the external surface only. It exists so a caller
+        // cannot mutate state without a postcondition to catch it; inside a body,
+        // `@ensures` and `@invariant` provide that guarantee instead.
         if (!(descriptor && typeof descriptor.set === 'function'))
             if (typeof prop === 'string' && !prop.startsWith('_'))
                 throw new TypeError(`Cannot assign to property '${String(prop)}': only properties starting with '_' or with a setter can be set on Contracted instances.`);
 
-        // A nested write made by a running lifecycle through the proxy is plain
-        // state mutation: the enclosing lifecycle already owns the assertions
-        // for this invocation. Encapsulation above still applies, so a body
-        // cannot bypass it.
-        if (isActive(target)) return Reflect.set(target, prop, value, receiver);
-
-        // Invoke the setter with the proxy as `this`, for the same reason as the
-        // getter. A plain data property (an `_`-prefixed field) has no setter.
         const setter = typeof descriptor?.set === 'function' ? descriptor.set : undefined;
 
         runLifecycle('set', target, prop, [value],
-            (args) => runActive(target, () => setter
-                ? (setter.call(receiver, args[0]), true)
-                : Reflect.set(target, prop, args[0], receiver)));
+            (args) => setter
+                ? (setter.call(target, args[0]), true)
+                : Reflect.set(target, prop, args[0], receiver));
 
         // A `set` trap must report success or the assignment throws in strict
         // mode. Accessors do not return a meaningful value, so success is

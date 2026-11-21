@@ -5,27 +5,50 @@ import { Contracted, demands, ensures, invariant } from '@final-hill/decorator-c
 /**
  * https://github.com/final-hill/decorator-contracts/issues/305
  *
- * Feature bodies run with `this` bound to the proxy, so encapsulation is
- * enforced from inside a feature and not only from outside. A nested access
- * does not start a second lifecycle, because the enclosing invocation already
- * owns the assertions.
+ * Contracts describe the observable boundary of a feature, in the sense of a
+ * Hoare triple `{ P } C { Q }`. `C` — the feature body — is unconstrained:
+ * what it does to internal or even public state is irrelevant, because
+ * correctness is the obligation that `P` and `Q` hold at the boundary.
+ *
+ * Encapsulation therefore governs the external surface only. It exists so a
+ * caller cannot mutate state without a postcondition to catch it. Inside a
+ * body, `@ensures` and `@invariant` provide that guarantee instead.
  */
-describe('Encapsulation is enforced inside a feature body', () => {
-    test('a method body cannot assign to a public property', () => {
+describe('Encapsulation governs the external surface only', () => {
+    test('an external caller cannot assign to a public property', () => {
         class Foo extends Contracted {
             publicProp = 1;
-
-            @demands(() => true)
-            write(): void { (this as any).publicProp = 2; }
         }
 
         const foo = Foo.new() as any;
 
-        nodeAssert.throws(() => foo.write(), TypeError);
+        nodeAssert.throws(() => { foo.publicProp = 2; }, TypeError);
         nodeAssert.strictEqual(foo.publicProp, 1);
     });
 
-    test('a getter body cannot assign to a public property', () => {
+    test('an external caller cannot add a public property', () => {
+        class Foo extends Contracted { }
+
+        const foo = Foo.new() as any;
+
+        nodeAssert.throws(() => { foo.injected = 1; }, TypeError);
+    });
+
+    test('a method body may assign to its own public property', () => {
+        class Foo extends Contracted {
+            publicProp = 1;
+
+            @demands(() => true)
+            write(): void { this.publicProp = 2; }
+        }
+
+        const foo = Foo.new() as any;
+        foo.write();
+
+        nodeAssert.strictEqual(foo.publicProp, 2);
+    });
+
+    test('a getter body may assign to its own public property', () => {
         class Foo extends Contracted {
             publicProp = 1;
 
@@ -33,12 +56,12 @@ describe('Encapsulation is enforced inside a feature body', () => {
         }
 
         const foo = Foo.new() as any;
+        void foo.value;
 
-        nodeAssert.throws(() => void foo.value, TypeError);
-        nodeAssert.strictEqual(foo.publicProp, 1);
+        nodeAssert.strictEqual(foo.publicProp, 2);
     });
 
-    test('a setter body cannot assign to a public property', () => {
+    test('a setter body may assign to its own public property', () => {
         class Foo extends Contracted {
             publicProp = 1;
             protected _value = 0;
@@ -48,39 +71,36 @@ describe('Encapsulation is enforced inside a feature body', () => {
         }
 
         const foo = Foo.new() as any;
+        foo.value = 1;
 
-        nodeAssert.throws(() => { foo.value = 1; }, TypeError);
-        nodeAssert.strictEqual(foo.publicProp, 1);
+        nodeAssert.strictEqual(foo.publicProp, 2);
     });
 
-    test('a feature body may still assign to an `_`-prefixed field', () => {
-        class Foo extends Contracted {
-            protected _value = 0;
-            get value() { return this._value; }
-
-            @demands(() => true)
-            bump(): void { this._value += 1; }
-        }
-
-        const foo = Foo.new() as any;
-        foo.bump();
-
-        nodeAssert.strictEqual(foo.value, 1);
-    });
-
-    test('encapsulation is restored after a feature body throws', () => {
+    test('a body leaving an invalid state is caught by the invariant', () => {
+        @invariant((self: Foo) => self.publicProp === 1)
         class Foo extends Contracted {
             publicProp = 1;
 
             @demands(() => true)
-            boom(): void { throw new Error('boom'); }
+            corrupt(): void { this.publicProp = 2; }
         }
 
         const foo = Foo.new() as any;
-        nodeAssert.throws(() => foo.boom(), /boom/);
 
-        nodeAssert.throws(() => { foo.publicProp = 2; }, TypeError);
-        nodeAssert.strictEqual(foo.publicProp, 1);
+        nodeAssert.throws(() => foo.corrupt(), /Invariant violated/);
+    });
+
+    test('a body producing the wrong result is caught by the postcondition', () => {
+        class Counter extends Contracted {
+            protected _n = 0;
+            get n() { return this._n; }
+
+            @ensures((self: Counter) => self.n === 2)
+            @demands(() => true)
+            inc(): void { this._n = this._n + 1; }
+        }
+
+        nodeAssert.throws(() => (Counter.new() as any).inc(), /No ensurances were satisfied/);
     });
 });
 

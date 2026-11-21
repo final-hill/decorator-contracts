@@ -101,19 +101,14 @@ export const applyRescueHandler = (instance: Contracted, propertyKey: PropertyKe
 
     let hasRetried = false;
     let retryArgs: any[] = [];
-    Contracted[checkedMode] = false; // Disable checked mode to avoid infinite recursion
 
-    try {
-        declaration.handler.call(instance, instance, error, args, (...args: any[]) => {
-            assert(!hasRetried, 'retry can only be called once per rescue execution');
-            hasRetried = true;
-            retryArgs = args;
-        })
-        if (!hasRetried)
-            throw error;
-    } finally {
-        Contracted[checkedMode] = true;
-    }
+    declaration.handler.call(instance, instance, error, args, (...args: any[]) => {
+        assert(!hasRetried, 'retry can only be called once per rescue execution');
+        hasRetried = true;
+        retryArgs = args;
+    })
+    if (!hasRetried)
+        throw error;
 
     return retryArgs;
 }

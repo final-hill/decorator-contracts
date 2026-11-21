@@ -13,6 +13,7 @@
 - [Assertions](#assertions)
 - [Implies](#implies)
 - [Iff](#iff)
+- [Contracts are Hoare triples](#contracts-are-hoare-triples)
 - [Encapsulation](#encapsulation)
 - [Invariants](#invariants)
 - [Demands](#demands)
@@ -135,6 +136,8 @@ This is required so that the instance is wrapped in a Proxy and invariants are a
 
 Checked Mode controls whether contract checking (invariants, demands, ensures, and rescue) is enabled or disabled at runtime. This feature allows you to turn off contract enforcement in production environments for maximum performance, while keeping it enabled during development and testing to catch bugs and contract violations early.
 
+Checked Mode is a coarse switch over the whole library, not a re-entrancy mechanism. When it is disabled, contract evaluation is skipped entirely and external encapsulation is not enforced either, so an instance behaves like a plain object.
+
 By default, Checked Mode is enabled. You can control it via the static `[checkedMode]` symbol property of Contracted:
 
 ```typescript
@@ -198,30 +201,50 @@ iff(person.hasTicket, person.ridesTrain);
 // Equivalent to: implies(p, q) && implies(q, p)
 ```
 
+## Contracts are Hoare triples
+
+A contract describes the **observable boundary** of a feature, in the sense of a [Hoare triple](https://en.wikipedia.org/wiki/Hoare_logic):
+
+$$\{P\}\; C\; \{Q\}$$
+
+`@demands` is $P$, `@ensures` is $Q$, and the feature body is $C$. Nothing inside $C$ is constrained: a body may assign to its own properties, including public ones, and may call its own features without re-entering the contracts. Correctness is the obligation that $P$ and $Q$ hold at the boundary, with the invariant additionally holding on entry and exit.
+
+This is why there is no need to police what a body does to itself. If a body leaves the object in an invalid state, `@invariant` rejects it on exit. If it produces the wrong result, `@ensures` rejects it. Attempting to enforce correctness *inside* $C$ as well would mean the same guarantee twice, at the cost of forbidding legitimate intermediate states.
+
 ## Encapsulation
 
-To guarantee invariants remain valid for classes, public property definitions are forbidden. All interactions with a contracted class must be done through a method or getter/setter. Only properties that start with `_` (conventionally private) can be assigned to after construction.
+Encapsulation governs the **external surface**. Public property assignment is forbidden from outside a contracted class, so a caller cannot mutate state without a postcondition to catch it. All interactions must go through a method or getter/setter, and only properties starting with `_` (conventionally private) can be assigned to after construction.
 
 ```typescript
 class Example extends Contracted {
     _private = 1; // Allowed
-    publicProp = 2; // Not allowed
+    publicProp = 2; // Not allowed from outside
 }
 ```
 
-The rule applies **inside** a feature body as well as outside it. A method, getter, or setter that assigns to a public property raises a `TypeError`, so a class cannot bypass its own encapsulation:
+An external write to a public property raises a `TypeError`:
+
+```typescript
+const example = Example.new();
+
+example.publicProp = 3; // TypeError
+```
+
+A feature body is $C$ and is **not** subject to this rule. It runs against the instance directly, so internal state — public or private — is its own business:
 
 ```typescript
 class Example extends Contracted {
-    publicProp = 2;
+    publicProp = 1;
 
-    break(): void {
-        this.publicProp = 3; // TypeError
+    update(): void {
+        this.publicProp = 2; // allowed; `@ensures` and `@invariant` are the guarantee
     }
 }
 ```
 
-A nested access, such as a method calling another method of the same instance, does not start a second contract lifecycle. The enclosing invocation owns the assertions for that call, so the invariant is evaluated once on entry and once on exit regardless of how many internal accesses the body performs.
+A method calling another method of the same instance likewise does not start a second contract lifecycle. The enclosing invocation owns the assertions, so the invariant is evaluated once on entry and once on exit regardless of how many internal accesses the body performs.
+
+One consequence: a body that leaks `this` outward — passing it to a callback, storing it in a module-level variable, or returning it — hands out a reference that bypasses the traps. Do not do that; expose an explicit API instead.
 
 `Object.defineProperty` and `Reflect.defineProperty` operate below the proxy and are not intercepted.
 
@@ -495,7 +518,7 @@ If an error is thrown and there is no `@rescue` defined then the `@invariant` is
 
 If an error is thrown in the `@invariant` then it is raised to the caller.
 
-If an error is thrown in the `@demands` then the error is raised to the caller. In this case the exit `@invariant` is not checked because the feature body has not been entered and the assertion cannot modify the state of the class without calling another method which is governed by its own contracts.
+If an error is thrown in the `@demands` then the error is raised to the caller. In this case the exit `@invariant` is not checked because the feature body has not been entered and the instance cannot have changed.
 
 If an error is thrown by the feature body or the `@ensures` then the `@rescue` is executed. If `retry` is called then the process starts from the beginning.
 
