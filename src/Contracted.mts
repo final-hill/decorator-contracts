@@ -1,3 +1,4 @@
+import { AssertionError } from './AssertionError.mjs';
 import { assertInvariants, InvariantPredicate } from './invariant.mjs';
 import { assertDemands, DemandsPredicate } from './demands.mjs';
 import { assertEnsures, EnsuresPredicate } from './ensures.mjs';
@@ -103,6 +104,43 @@ const populateOld = (target: Contracted) => {
     return old;
 }
 
+/**
+ * How a feature's body hands its result back to the caller.
+ *
+ * A Hoare triple `{ P } C { Q }` only means something if `Q` is evaluated after
+ * `C` has finished. For an `async` feature, `C` finishes when the promise it
+ * returned settles, not when `Reflect.apply` returns it. The kind decides where
+ * the exit boundary therefore sits.
+ *
+ * Generators are their own case and are rejected by the contract decorators for
+ * now; see issue #318.
+ */
+type FeatureKind = 'sync' | 'async';
+
+/**
+ * Classifies a feature body by how it delivers its result.
+ *
+ * `Reflect.apply` on an `async` function returns its promise immediately, so the
+ * only reliable signal is the function's constructor, which is stable across
+ * bundling and minification (unlike `Function.prototype.name`).
+ */
+const featureKindOf = (fn: (...args: any[]) => unknown): FeatureKind =>
+    fn.constructor.name === 'AsyncFunction' ? 'async' : 'sync';
+
+/**
+ * True when the feature is a generator or async generator.
+ *
+ * Exported for the decorators, which refuse generator features until the
+ * contract boundary for them is decided (issue #318).
+ */
+export const isGeneratorFunction = (fn: unknown): boolean => {
+    if (typeof fn !== 'function') return false;
+
+    const name = fn.constructor.name;
+
+    return name === 'GeneratorFunction' || name === 'AsyncGeneratorFunction';
+};
+
 // Caches the contract wrapper per instance and feature so that `f.m === f.m`.
 const wrapperCache = new WeakMap<object, Map<PropertyKey, (...args: any[]) => any>>();
 
@@ -140,10 +178,14 @@ function getPropertyDescriptor(obj: object, prop: PropertyKey): PropertyDescript
  * select the next alternative each time it is executed. Retries are bounded by
  * the optional `maxRetries` option on the `@rescue` declaration.
  *
+ * The exit boundary sits wherever the body's result becomes observable, so a
+ * synchronous and an asynchronous body are run by separate functions below and
+ * dispatched by `runLifecycle`.
+ *
  * @param invokeArgs - The arguments for this invocation. `retry` replaces them.
  * @param invoke - Performs the feature body with the supplied arguments.
  */
-function runLifecycle(
+function runSyncLifecycle(
     descriptorType: 'get' | 'set' | 'func' | 'delete',
     target: Contracted,
     prop: PropertyKey,
@@ -166,6 +208,9 @@ function runLifecycle(
         let result: any
         try {
             result = invoke(args);
+
+            assertNotThenable(result, target, prop);
+
             if (hasEnsures)
                 assertEnsures(target, old, prop, descriptorType === 'get' ? [result] : args);
         } catch (error) {
@@ -191,6 +236,132 @@ function runLifecycle(
     }
 }
 
+/**
+ * Runs the contract lifecycle whose exit boundary is a promise settlement.
+ *
+ * An `async` body returns its promise from `Reflect.apply` before a single line
+ * of it has run, so evaluating `@ensures` there would test a body that has not
+ * executed. The exit boundary must therefore *follow* the value: the lifecycle
+ * waits for the promise to settle and then runs `@ensures` and the exit
+ * `@invariant` against the settled state.
+ *
+ * Two consequences shape the code below.
+ *
+ * The first is failure surface. A contract that is violated on entry is a
+ * synchronous throw in `runSyncLifecycle`, but that would be a lie here: an
+ * `async` function never throws synchronously, so a caller that adds a
+ * precondition must not change how a failure is observed. Entry violations are
+ * therefore delivered as a rejection, exactly as the undecorated body's own
+ * throws are. Substituting a contracted implementation for a plain one is
+ * transparent to the caller, which is the substitutability Liskov requires and
+ * which the type system already enforces in both directions (`() => T` and
+ * `() => Promise<T>` are mutually non-assignable, so neither is a subtype of the
+ * other and no conversion is implied).
+ *
+ * The second is that `@rescue` must observe rejections, not just synchronous
+ * throws. A rescue that retries restarts the lifecycle, so a retried attempt is
+ * subject to every contract like any other invocation.
+ */
+async function runAsyncLifecycle(
+    descriptorType: 'get' | 'set' | 'func' | 'delete',
+    target: Contracted,
+    prop: PropertyKey,
+    invokeArgs: any[],
+    invoke: (args: any[]) => any,
+): Promise<any> {
+    const Class = target.constructor as typeof Contracted,
+        es = Class[Symbol.metadata]?.ensures?.[prop] ?? [] as EnsuresPredicate<Contracted>[],
+        hasEnsures = es.length > 0;
+
+    let args = invokeArgs,
+        retries = 0;
+
+    for (; ;) {
+        const old = hasEnsures ? populateOld(target) : undefined;
+
+        assertInvariants(Class, target);
+        assertDemands(target, prop, ...args);
+
+        let result: any;
+        try {
+            result = await invoke(args);
+            if (hasEnsures)
+                assertEnsures(target, old, prop, descriptorType === 'get' ? [result] : args);
+        } catch (error) {
+            const maxRetries = getRescueDeclaration(target, prop)?.maxRetries ?? Infinity;
+
+            if (retries >= maxRetries) {
+                assertInvariants(Class, target);
+                throw error;
+            }
+
+            retries++;
+            try {
+                args = applyRescueHandler(target, prop, error, descriptorType === 'get' ? [] : args);
+            } catch (rescuedError) {
+                assertInvariants(Class, target);
+                throw rescuedError;
+            }
+            continue;
+        }
+
+        assertInvariants(Class, target);
+        return result;
+    }
+}
+
+/**
+ * Selects the lifecycle boundary for a feature body.
+ *
+ * An `async` body is awaited through `runAsyncLifecycle`; anything else is
+ * evaluated synchronously. This is decided from the function itself rather than
+ * from whether the result *looks* like a promise, so a synchronous feature that
+ * happens to return a thenable is still checked synchronously — the contract
+ * describes the feature as written, and such a feature's postcondition cannot
+ * hold anyway because its body has not finished. `@demands` therefore fails it
+ * with a message naming the feature.
+ */
+function runLifecycle(
+    descriptorType: 'get' | 'set' | 'func' | 'delete',
+    target: Contracted,
+    prop: PropertyKey,
+    invokeArgs: any[],
+    invoke: (args: any[]) => any,
+    kind: FeatureKind = 'sync',
+): any {
+    if (kind === 'async')
+        return runAsyncLifecycle(descriptorType, target, prop, invokeArgs, invoke);
+
+    return runSyncLifecycle(descriptorType, target, prop, invokeArgs, invoke);
+}
+
+/**
+ * Rejects a thenable returned by a feature that is not declared `async`.
+ *
+ * A synchronous feature's contracts are evaluated when its body returns, so a
+ * body that defers its work through a promise is checked before it has done
+ * anything. `@ensures` would then describe a state the feature has not reached
+ * yet, and the caller would receive a promise whose outcome no contract ever
+ * observed.
+ *
+ * The alternative — awaiting any thenable — was rejected because it would make
+ * `async` optional while silently changing when failure is reported: a plain
+ * function cannot return a settled value for a rejection to accompany, so the
+ * feature would have to become `async` for its errors to be observable anyway.
+ * Failing closed keeps the declaration and the boundary in agreement, and the
+ * message says what to do.
+ */
+const assertNotThenable = (result: unknown, target: Contracted, prop: PropertyKey): void => {
+    if (result === null || typeof result !== 'object' && typeof result !== 'function') return;
+
+    if (typeof (result as any).then !== 'function') return;
+
+    throw new AssertionError(
+        `${target.constructor.name}.${String(prop)} returned a promise but is not declared 'async', `
+        + "so its contracts were evaluated before its body finished. Declare the feature 'async'.",
+    );
+}
+
 const proxyHandler: ProxyHandler<Contracted> = {
     get(target, prop, receiver) {
         if (!Contracted[checkedMode]) return Reflect.get(target, prop, receiver);
@@ -209,6 +380,18 @@ const proxyHandler: ProxyHandler<Contracted> = {
 
             if (cached) return cached;
 
+            // Generator features are refused here as well as in the decorators,
+            // because the decorators only run for features that declare a
+            // contract. Refusing at the proxy keeps a bare generator from
+            // appearing to be checked when it is not.
+            if (isGeneratorFunction(descriptor.value))
+                throw new TypeError(
+                    `${target.constructor.name}.${String(prop)} is a generator, and the contract boundary for `
+                    + 'generator features is not supported yet (see issue #318).',
+                );
+
+            const kind = featureKindOf(descriptor.value);
+
             // The descriptor is resolved from the instance's prototype chain,
             // which is fixed for the lifetime of the instance, so the wrapper
             // can be reused for that feature.
@@ -218,7 +401,7 @@ const proxyHandler: ProxyHandler<Contracted> = {
             // internal accesses must not re-enter the traps.
             const wrapper = function (this: Contracted, ...methodArgs: any[]) {
                 return runLifecycle('func', target, prop, methodArgs,
-                    (args) => Reflect.apply(descriptor.value!, target, args));
+                    (args) => Reflect.apply(descriptor.value!, target, args), kind);
             };
 
             cache.set(prop, wrapper);
@@ -226,7 +409,8 @@ const proxyHandler: ProxyHandler<Contracted> = {
             return wrapper;
         }
         else if (typeof descriptor?.get === 'function')
-            return runLifecycle('get', target, prop, [], () => descriptor.get!.call(target));
+            return runLifecycle('get', target, prop, [],
+                () => descriptor.get!.call(target), featureKindOf(descriptor.get!));
         else
             return Reflect.get(target, prop, receiver);
     },

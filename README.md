@@ -342,6 +342,54 @@ The last row surprises people, but it is the same rule `set` applies to an assig
 
 `Object.defineProperty`, `Reflect.defineProperty`, and `Reflect.deleteProperty` operate below the proxy and are not intercepted.
 
+## Asynchronous features
+
+A feature declared `async` is fully contracted. Because an `async` body returns its promise before a single line of it has run, the exit boundary follows the value: `@ensures` and the exit `@invariant` are evaluated after the promise settles, against the state the body actually reached.
+
+```typescript
+class Account extends Contracted {
+    protected _balance = 0;
+    public _ledger!: Ledger;                 // a collaborator the caller sets
+    get balance() { return this._balance; }
+
+    @demands((self, [amount]: [number]) => self.balance + amount >= 0)
+    @ensures((self, [amount]: [number], old) => self.balance === old.balance + amount)
+    async deposit(amount: number): Promise<void> {
+        await this._ledger.record(amount);   // suspension happens here
+        this._balance += amount;              // observed by @ensures
+    }
+}
+```
+
+The lifecycle is unchanged in order and in count: `@invariant` -> `@demands` -> body -> `@ensures` -> `@invariant`, with the invariant evaluated twice per call. Only the *position* of the exit checks differs, because the body has not finished until the promise settles. A `@rescue` observes rejections as it observes synchronous throws, and `retry` restarts the lifecycle for an asynchronous feature too.
+
+### Failure is delivered as a rejection
+
+A contract violation on an `async` feature reaches the caller as a rejected promise, never as a synchronous throw — the same way the feature's own errors reach it. Adding a contract to a feature must not change how its failures are observed.
+
+```typescript
+await assert.rejects(() => account.deposit(-5));  // AssertionError, not a sync throw
+```
+
+This follows from substitutability. `() => T` and `() => Promise<T>` are mutually non-assignable in TypeScript, so neither is a subtype of the other and no sync/async conversion is implied. What must hold is the observable surface: a caller of the undecorated feature receives a promise that may reject, so a caller of the contracted feature must receive the same.
+
+### A synchronous feature must not return a promise
+
+Contracts on a feature that is not declared `async` are evaluated when its body returns. A body that defers its work through a promise would therefore be checked before it has done anything, so this is rejected:
+
+```typescript
+@ensures(...)
+thenable(): Promise<void> {           // AssertionError: not declared 'async'
+    return (async () => { await work(); this._value++; })();
+}
+```
+
+Declare the feature `async` instead. Awaiting arbitrary thenables was rejected as a rule because it would make the `async` keyword optional while silently changing when failures are reported: a plain function cannot return pending work *and* raise the resulting failure itself.
+
+### Generators are not supported yet
+
+`@demands`, `@ensures`, and `@rescue` refuse generator features at decoration time, and a generator reachable through the proxy is refused when called. The contract boundary for a generator is a genuine design decision — whether contracts wrap the whole iteration or each `next()` — and until it is settled, enforcing nothing would be worse than refusing. See issue #318.
+
 ## Note on Private Fields and Accessors
 
 Due to the use of JavaScript `Proxy` in the implementation of this library, native `#private` fields and the `accessor` keyword are **not supported**. Instead, use conventional private fields (e.g., `_private`) and define explicit getter/setter pairs for encapsulation:
@@ -387,7 +435,9 @@ class Foo extends Contracted {
 
 This is deliberate. A `Promise` is always truthy, so coercing the result would silently treat an accidentally asynchronous predicate — one that has not actually checked anything yet — as a satisfied contract. Failing closed is the only safe option, and the message points at the mistake.
 
-This also means asynchronous validation is not supported yet; see the note on asynchronous contracts.
+Asynchronous *predicates* are therefore not supported: a predicate that needs the result of an asynchronous operation cannot be expressed as a boolean.
+
+Asynchronous *features* are supported; see [Asynchronous features](#asynchronous-features).
 
 ### Subcontracting and Invariants
 
