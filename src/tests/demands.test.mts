@@ -149,6 +149,84 @@ describe('`demands` assertions are enabled in `checkedMode` and disabled otherwi
     });
 });
 
+/**
+ * https://github.com/final-hill/decorator-contracts/issues/284
+ */
+describe('Predicates are registered once, not once per instantiation', () => {
+    const predicatesOf = (Class: any, key: 'demands' | 'ensures', name: string): unknown[] =>
+        Class[Symbol.metadata][key][name] ?? [];
+
+    test('the predicate list does not grow with instantiation count', () => {
+        class Foo extends Contracted {
+            @demands(() => true)
+            method(): void { }
+        }
+
+        Foo.new();
+        const initial = predicatesOf(Foo, 'demands', 'method').length;
+
+        for (let i = 0; i < 100; i++) Foo.new();
+
+        nodeAssert.strictEqual(predicatesOf(Foo, 'demands', 'method').length, initial);
+    });
+
+    test('a predicate is evaluated once per call regardless of instance count', () => {
+        let evaluations = 0;
+
+        class Foo extends Contracted {
+            @demands(() => { evaluations++; return true; })
+            method(): void { }
+        }
+
+        for (let i = 0; i < 50; i++) Foo.new();
+
+        evaluations = 0;
+        Foo.new().method();
+
+        nodeAssert.strictEqual(evaluations, 1);
+    });
+
+    test('stacked declarations are all retained', () => {
+        class Foo extends Contracted {
+            @demands(() => false)
+            @demands(() => true)
+            method(): void { }
+        }
+
+        nodeAssert.strictEqual(predicatesOf(Foo, 'demands', 'method').length, 2);
+        // demands are OR-composed, so the true one satisfies the obligation
+        nodeAssert.doesNotThrow(() => Foo.new().method());
+    });
+
+    test('a subclass still composes its predicates with the base class', () => {
+        const evaluated: string[] = [];
+
+        class Base extends Contracted {
+            @demands((_self: Base, [v]: [number]) => { evaluated.push('base:' + v); return false; })
+            foo(v: number): number { return v; }
+        }
+
+        class Sub extends Base {
+            @demands((_self: Sub, [v]: [number]) => { evaluated.push('sub:' + v); return false; })
+            override foo(v: number): number { return v; }
+        }
+
+        nodeAssert.throws(() => Sub.new().foo(1));
+        nodeAssert.deepStrictEqual(evaluated, ['base:1', 'sub:1']);
+    });
+
+    test('decorating a class that does not extend Contracted is rejected', () => {
+        nodeAssert.throws(() => {
+            class NotContracted {
+                @demands(() => true)
+                method(): void { }
+            }
+
+            return new NotContracted();
+        }, /can only be applied to classes that extend Contracted/);
+    });
+});
+
 
 describe('`demands` assertions cannot be strengthened in a subtype', () => {
     class Base extends Contracted {
