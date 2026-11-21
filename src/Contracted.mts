@@ -218,7 +218,11 @@ const proxyHandler: ProxyHandler<Contracted> = {
             return wrapper;
         }
         else if (typeof descriptor?.get === 'function')
-            return runLifecycle('get', target, prop, [], () => Reflect.get(target, prop, receiver));
+            // Invoke the accessor with the raw target as `this`, matching how
+            // methods are applied. Using `Reflect.get(target, prop, receiver)`
+            // binds `this` to the proxy, so an accessor reading its own state
+            // re-entered the trap and started a nested lifecycle.
+            return runLifecycle('get', target, prop, [], () => descriptor.get!.call(target));
         else
             return Reflect.get(target, prop, receiver);
     },
@@ -231,7 +235,21 @@ const proxyHandler: ProxyHandler<Contracted> = {
             if (typeof prop === 'string' && !prop.startsWith('_'))
                 throw new TypeError(`Cannot assign to property '${String(prop)}': only properties starting with '_' or with a setter can be set on Contracted instances.`);
 
-        return runLifecycle('set', target, prop, [value], (args) => Reflect.set(target, prop, args[0], receiver));
+        // Invoke the setter with the raw target as `this`, for the same reason
+        // as the getter: `Reflect.set` would bind `this` to the proxy and an
+        // internal write would start a nested lifecycle. A plain data property
+        // (an `_`-prefixed field) has no setter to invoke.
+        const setter = typeof descriptor?.set === 'function' ? descriptor.set : undefined;
+
+        runLifecycle('set', target, prop, [value],
+            (args) => setter
+                ? (setter.call(target, args[0]), true)
+                : Reflect.set(target, prop, args[0], receiver));
+
+        // A `set` trap must report success or the assignment throws in strict
+        // mode. Accessors do not return a meaningful value, so success is
+        // implicit once the lifecycle completes.
+        return true;
     },
     deleteProperty(target, prop) {
         throw new TypeError(`Cannot delete property '${String(prop)}' from Contracted instances.`);
