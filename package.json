@@ -14,7 +14,8 @@
     "scripts": {
         "prebuild": "npm run lint",
         "build": "webpack",
-        "lint": "eslint src/ --ext .mts --fix",
+        "lint": "eslint src/ --ext .mts --max-warnings 0",
+        "lint:fix": "eslint src/ --ext .mts --fix",
         "pretest": "npm run build && npm run typecheck",
         "test": "globstar -- node --import tsx --test ./src/tests/*.test.mts",
         "typecheck": "tsc --noEmit -p tsconfig.json && tsc -p tsconfig.test.json"

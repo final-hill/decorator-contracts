@@ -24,10 +24,8 @@ export default {
   resolve: {
     extensions: ['.mts', '.mjs', '.js', '.ts', '.json'],
     extensionAlias: {
-      /* eslint-disable @typescript-eslint/naming-convention */
       '.js': ['.js', '.ts'],
       '.mjs': ['.mjs', '.mts']
-      /* eslint-enable @typescript-eslint/naming-convention */
     }
   },
   output: {
@@ -40,10 +38,14 @@ export default {
     path: path.resolve(dirName, 'dist'),
   },
   plugins: [
+    // Lint during the build, but never rewrite source. A build that silently
+    // fixes files makes the working tree disagree with what was committed and
+    // masks findings that should fail the pipeline. With `fix` off, a violation
+    // fails the build instead of being corrected quietly.
     new ESLintWebpackPlugin({
       extensions: ['.mts', '.mjs', '.js', '.ts', '.json'],
       exclude: ['node_modules', 'dist', 'coverage'],
-      fix: true
+      fix: false
     })
   ]
 };
