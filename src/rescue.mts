@@ -2,8 +2,16 @@ import { assert } from './assert.mjs';
 import { checkedMode, Contracted } from './Contracted.mjs';
 import type { FeatureDecoratorContext } from './types.mjs';
 
+/**
+ * A handler for `@rescue`.
+ *
+ * `retry` is an ordinary function, called as `retry(...)`, so it has no
+ * meaningful `this`. Declaring `this: This` on it made every consumer-written
+ * handler fail to type-check, because the `this` context of a bare call is
+ * `void`.
+ */
 export type RescueHandler<This extends Contracted> =
-    (self: This, error: unknown, args: any[], retry: (this: This, ...args: any[]) => any) => void
+    (self: This, error: unknown, args: any[], retry: (...args: any[]) => any) => void
 
 export interface RescueOptions {
     /**
