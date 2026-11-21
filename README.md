@@ -246,7 +246,19 @@ A method calling another method of the same instance likewise does not start a s
 
 One consequence: a body that leaks `this` outward — passing it to a callback, storing it in a module-level variable, or returning it — hands out a reference that bypasses the traps. Do not do that; expose an explicit API instead.
 
-`Object.defineProperty` and `Reflect.defineProperty` operate below the proxy and are not intercepted.
+### Deletion
+
+Deletion is an external mutation, so it follows exactly the same rule as assignment: `_`-prefixed properties may be deleted, public properties may not, and the invariant is evaluated around the deletion.
+
+| Expression | Result |
+| --- | --- |
+| `delete example._private` | allowed |
+| `delete example.publicProp` | `TypeError` |
+| `delete example.nonexistent` | `TypeError` (the name is not `_`-prefixed) |
+
+The last row surprises people, but it is the same rule `set` applies to an assignment of a property that does not exist: the restriction is on the *name*, not on whether the property is present. Once checked mode is disabled the proxy steps aside and `delete` behaves as it does on a plain object.
+
+`Object.defineProperty`, `Reflect.defineProperty`, and `Reflect.deleteProperty` operate below the proxy and are not intercepted.
 
 ## Note on Private Fields and Accessors
 

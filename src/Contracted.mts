@@ -144,7 +144,7 @@ function getPropertyDescriptor(obj: object, prop: PropertyKey): PropertyDescript
  * @param invoke - Performs the feature body with the supplied arguments.
  */
 function runLifecycle(
-    descriptorType: 'get' | 'set' | 'func',
+    descriptorType: 'get' | 'set' | 'func' | 'delete',
     target: Contracted,
     prop: PropertyKey,
     invokeArgs: any[],
@@ -255,7 +255,16 @@ const proxyHandler: ProxyHandler<Contracted> = {
         return true;
     },
     deleteProperty(target, prop) {
-        throw new TypeError(`Cannot delete property '${String(prop)}' from Contracted instances.`);
+        if (!Contracted[checkedMode]) return Reflect.deleteProperty(target, prop);
+
+        // Deletion follows the same rule as assignment: it is an external
+        // mutation, so it is subject to encapsulation and to the lifecycle.
+        // Only `_`-prefixed properties, the ones a caller is allowed to mutate
+        // in the first place, may also be removed.
+        if (typeof prop === 'string' && !prop.startsWith('_'))
+            throw new TypeError(`Cannot delete property '${String(prop)}' from Contracted instances: only properties starting with '_' can be deleted.`);
+
+        return runLifecycle('delete', target, prop, [], () => Reflect.deleteProperty(target, prop));
     },
 };
 
