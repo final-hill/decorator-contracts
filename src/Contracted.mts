@@ -276,8 +276,19 @@ export class Contracted {
         rescue: Record<PropertyKey, RescueDeclaration<Contracted>>;
     };
 
-    // Prevents direct instantiation of the class
-    protected static _allowConstruction = false;
+    /**
+     * Grants permission for exactly one `Contracted` constructor call.
+     *
+     * A boolean would leave the gate open for the whole duration of the
+     * constructor, so a class that called `new Foo()` inside its own
+     * constructor — directly or through a superclass — would obtain a raw,
+     * unproxied instance and defeat every contract.
+     *
+     * `Contracted`'s constructor runs exactly once per construction, so a
+     * single-use token is enough. Classes that do not declare their own
+     * constructor call it implicitly; classes that do must call `super()` once.
+     */
+    protected static _allowedConstructions = 0;
 
     // Symbol-based checked mode state
     public static [checkedMode]: boolean = true;
@@ -286,20 +297,31 @@ export class Contracted {
         C extends typeof Contracted,
         Args extends ConstructorParameters<C>,
     >(this: C, ...args: Args): InstanceType<C> {
-        (this as any)._allowConstruction = true;
+        const previous = (this as any)._allowedConstructions;
+
+        (this as any)._allowedConstructions = previous + 1;
+
         try {
             const instance = new this(...args) as InstanceType<C>;
             assertInvariants(this, instance);
 
             return new Proxy<InstanceType<C>>(instance, proxyHandler);
         } finally {
-            (this as any)._allowConstruction = false;
+            // Restore rather than decrement: the constructor consumes the token,
+            // so decrementing here would double-count. Restoring also clears it
+            // if the constructor threw for any reason.
+            (this as any)._allowedConstructions = previous;
         }
     }
 
     constructor(..._args: any[]) {
         const Class = this.constructor as typeof Contracted;
-        if (!Class._allowConstruction)
-            throw new TypeError("Use the static 'new' method to instantiate this class.")
+
+        if (Class._allowedConstructions <= 0)
+            throw new TypeError("Use the static 'new' method to instantiate this class.");
+
+        // Consume the token so a nested `new` inside a constructor cannot
+        // borrow the outer construction's permission.
+        Class._allowedConstructions--;
     }
 }
