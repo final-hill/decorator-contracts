@@ -8,6 +8,8 @@
 
 - [Introduction](#introduction)
 - [Library Installation](#library-installation)
+- [Node.js version](#nodejs-version)
+- [Development](#development)
 - [Usage](#usage)
 - [Checked Mode](#checked-mode)
 - [Assertions](#assertions)
@@ -63,6 +65,33 @@ For use in a browser (no build step) via [unpkg.com](https://unpkg.com/):
 Via [skypack.dev](https://www.skypack.dev/):
 
 `<script type="module" src="https://cdn.skypack.dev/@final-hill/decorator-contracts"></script>`
+
+## Node.js version
+
+This library requires **Node.js 26 or later**, as declared in `engines.node`. It relies on decorator metadata and targets ES2024, so an older runtime will fail at class definition rather than at an obvious call site.
+
+## Development
+
+A [development container](https://containers.dev/) is provided, pinned to the same Node version CI uses:
+
+```bash
+# open the repository in the container, then
+npm ci          # installed automatically on create
+npm run build
+npm test
+```
+
+`npm ci` honours the lockfile and fails if it disagrees with `package.json`, which is what CI runs. Running `npm install` locally can rewrite the lockfile and is the usual cause of a build that passes locally and fails in CI.
+
+| Script | Purpose |
+| --- | --- |
+| `npm run lint` | Lint, failing on warnings; does not modify files |
+| `npm run lint:fix` | Lint and autofix |
+| `npm run typecheck` | Type-check the library and the test suite |
+| `npm test` | Type-check, then run the tests |
+| `npm run test:coverage` | Run the tests with coverage, writing `coverage/lcov.info` |
+
+The test suite imports the package by name, so it exercises the built `dist/` output rather than the sources. `npm test` builds first for that reason; running a single test file directly requires an existing `dist/`.
 
 ## Usage
 
