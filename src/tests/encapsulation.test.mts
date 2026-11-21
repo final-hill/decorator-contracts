@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test';
 import nodeAssert from 'node:assert/strict';
-import { Contracted, demands, ensures, invariant } from '@final-hill/decorator-contracts';
+import { checkedMode, Contracted, demands, ensures, invariant } from '@final-hill/decorator-contracts';
 
 /**
  * https://github.com/final-hill/decorator-contracts/issues/305
@@ -101,6 +101,198 @@ describe('Encapsulation governs the external surface only', () => {
         }
 
         nodeAssert.throws(() => (Counter.new() as any).inc(), /@ensures failed/);
+    });
+});
+
+/**
+ * https://github.com/final-hill/decorator-contracts/issues/338
+ *
+ * Encapsulation is a statement about the instance's external surface, so it has
+ * to hold for every operation that mutates that surface, not only for `=` and
+ * `delete`. Definition is also the only route that can replace a public field or
+ * a contracted method outright, which defeats every contract on the instance
+ * rather than escaping one.
+ */
+describe('Encapsulation covers property definition', () => {
+    test('an external caller cannot redefine a public property', () => {
+        class Foo extends Contracted {
+            publicProp = 1;
+        }
+
+        const foo = Foo.new() as any;
+
+        nodeAssert.throws(
+            () => Object.defineProperty(foo, 'publicProp', { value: 2, writable: true, configurable: true }),
+            TypeError,
+        );
+        nodeAssert.strictEqual(foo.publicProp, 1);
+    });
+
+    test('Reflect.defineProperty is refused too', () => {
+        class Foo extends Contracted {
+            publicProp = 1;
+        }
+
+        const foo = Foo.new() as any;
+
+        nodeAssert.throws(() => Reflect.defineProperty(foo, 'publicProp', { value: 2 }), TypeError);
+        nodeAssert.strictEqual(foo.publicProp, 1);
+    });
+
+    test('an external caller cannot replace a contracted method', () => {
+        class Foo extends Contracted {
+            @demands((_self: Foo, [n]: [number]) => n > 0)
+            guarded(n: number): number { return n; }
+        }
+
+        const foo = Foo.new() as any;
+
+        // Replacing the method would route callers around `@demands` entirely.
+        nodeAssert.throws(() => Object.defineProperty(foo, 'guarded', { value: () => 'replaced' }), TypeError);
+        nodeAssert.strictEqual(foo.guarded(1), 1);
+        nodeAssert.throws(() => foo.guarded(-1), /@demands failed/);
+    });
+
+    test('an external caller can define an `_`-prefixed property', () => {
+        class Foo extends Contracted {
+            public _value = 1;
+        }
+
+        const foo = Foo.new() as any;
+
+        nodeAssert.doesNotThrow(
+            () => Object.defineProperty(foo, '_added', { value: 2, writable: true, configurable: true, enumerable: true }),
+        );
+        nodeAssert.strictEqual(foo._added, 2);
+    });
+
+    test('a prototype setter does not authorise defining the same name', () => {
+        class Foo extends Contracted {
+            public _value = 0;
+            get value() { return this._value; }
+            set value(v: number) { this._value = v; }
+        }
+
+        const foo = Foo.new() as any;
+
+        // Assignment invokes the setter, which is the sanctioned route. Defining
+        // an own property of the same name would shadow the accessor instead, so
+        // it is not an equivalent operation and is refused.
+        nodeAssert.doesNotThrow(() => { foo.value = 3; });
+        nodeAssert.strictEqual(foo.value, 3);
+        nodeAssert.throws(() => Object.defineProperty(foo, 'value', { value: 99 }), TypeError);
+        nodeAssert.strictEqual(foo.value, 3);
+    });
+
+    test('a feature body may still define its own state', () => {
+        class Foo extends Contracted {
+            public _value = 1;
+
+            @demands(() => true)
+            define(): void {
+                Object.defineProperty(this, '_value', { value: 2, writable: true, configurable: true });
+            }
+        }
+
+        const foo = Foo.new() as any;
+        foo.define();
+
+        nodeAssert.strictEqual(foo._value, 2);
+    });
+
+    test('definition is unrestricted when checked mode is disabled', () => {
+        class Foo extends Contracted {
+            publicProp = 1;
+        }
+
+        const foo = Foo.new() as any;
+        Contracted[checkedMode] = false;
+
+        try {
+            nodeAssert.doesNotThrow(() => Object.defineProperty(foo, 'publicProp', { value: 2 }));
+            nodeAssert.strictEqual(foo.publicProp, 2);
+        }
+        finally {
+            Contracted[checkedMode] = true;
+        }
+    });
+});
+
+describe('The prototype of an instance cannot be replaced', () => {
+    test('Object.setPrototypeOf is refused', () => {
+        class Foo extends Contracted {
+            publicProp = 1;
+        }
+
+        nodeAssert.throws(() => Object.setPrototypeOf(Foo.new(), {}), TypeError);
+    });
+
+    test('Reflect.setPrototypeOf is refused too', () => {
+        class Foo extends Contracted {
+            publicProp = 1;
+        }
+
+        nodeAssert.throws(() => Reflect.setPrototypeOf(Foo.new(), {}), TypeError);
+    });
+
+    test('the instance keeps its features and contracts after a refused replacement', () => {
+        class Foo extends Contracted {
+            @demands((_self: Foo, [n]: [number]) => n > 0)
+            guarded(n: number): number { return n; }
+        }
+
+        const foo = Foo.new();
+        nodeAssert.throws(() => Object.setPrototypeOf(foo, {}), TypeError);
+
+        nodeAssert.strictEqual(foo.guarded(1), 1);
+        nodeAssert.throws(() => foo.guarded(-1), /@demands failed/);
+        nodeAssert.ok(foo instanceof Foo);
+    });
+
+    test('a replacement is permitted when checked mode is disabled', () => {
+        class Foo extends Contracted {
+            publicProp = 1;
+        }
+
+        const foo = Foo.new();
+        Contracted[checkedMode] = false;
+
+        try {
+            nodeAssert.doesNotThrow(() => Object.setPrototypeOf(foo, {}));
+        }
+        finally {
+            Contracted[checkedMode] = true;
+        }
+    });
+});
+
+describe('A frozen instance reports failed writes', () => {
+    test('a write to a frozen instance throws instead of being swallowed', () => {
+        class Foo extends Contracted {
+            public _value = 1;
+        }
+
+        const foo = Foo.new() as any;
+        Object.freeze(foo);
+
+        // Reporting success for a write the target rejected would leave the
+        // caller believing state changed when it did not.
+        nodeAssert.throws(() => { foo._value = 2; }, TypeError);
+        nodeAssert.strictEqual(foo._value, 1);
+    });
+
+    test('a frozen instance still runs its features', () => {
+        class Foo extends Contracted {
+            public _value = 1;
+            @demands((_self: Foo, [n]: [number]) => n > 0)
+            read(n: number): number { return this._value + n; }
+        }
+
+        const foo = Foo.new() as any;
+        Object.freeze(foo);
+
+        nodeAssert.strictEqual(foo.read(2), 3);
+        nodeAssert.throws(() => foo.read(-1), /@demands failed/);
     });
 });
 
