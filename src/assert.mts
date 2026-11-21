@@ -24,3 +24,44 @@ export function assert(condition: unknown, message: string = 'Assertion Error'):
     if (Boolean(condition) == false)
         throw new AssertionError(message);
 }
+
+const describeContractResult = (value: unknown): string => {
+    if (typeof value === 'object' && value !== null && typeof (value as any).then === 'function')
+        return 'a Promise (contract predicates must be synchronous)';
+    if (typeof value === 'string') return `the string ${JSON.stringify(value)}`;
+    if (value === undefined) return 'undefined';
+    if (value === null) return 'null';
+    if (typeof value === 'object') return `an object (${Object.prototype.toString.call(value)})`;
+
+    return `a ${typeof value} (${String(value)})`;
+}
+
+/**
+ * Asserts that a contract predicate returned a `boolean`.
+ *
+ * Contract predicates must return a boolean. Coercing the result would silently
+ * accept a non-boolean, which is how an accidentally asynchronous predicate
+ * passes: a `Promise` is always truthy. Treating a contract that never actually
+ * ran as satisfied is worse than failing, so a non-boolean result raises an
+ * `AssertionError` naming the contract, the feature, and the predicate index.
+ *
+ * @param result - The value returned by the predicate.
+ * @param contract - The name of the contract, e.g. `@demands`.
+ * @param label - A human-readable description of the feature, e.g. `Foo.method`.
+ * @param index - The zero-based index of the predicate in its composition list.
+ * @returns The predicate result, narrowed to `boolean`.
+ * @throws {AssertionError} If the predicate did not return a boolean.
+ */
+export function assertContractResult(
+    result: unknown,
+    contract: string,
+    label: string,
+    index: number,
+): boolean {
+    assert(
+        typeof result === 'boolean',
+        `${contract} predicate #${index + 1} for ${label} returned ${describeContractResult(result)}; contract predicates must return a boolean`
+    );
+
+    return result;
+}

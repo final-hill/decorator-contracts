@@ -1,4 +1,4 @@
-import { assert } from './assert.mjs';
+import { assert, assertContractResult } from './assert.mjs';
 import { checkedMode, Contracted } from "./Contracted.mjs";
 import type { FeatureDecoratorContext } from './types.mjs';
 
@@ -48,8 +48,8 @@ export function assertDemands(instance: Contracted, propertyKey: PropertyKey, ..
         if (ds.length === 0) return;
 
         // If ANY demand is true then the obligation is considered fulfilled
-        for (const d of ds)
-            if (d(instance, ...args)) return;
+        for (const [index, d] of ds.entries())
+            if (assertContractResult(d(instance, ...args), '@demands', `${instance.constructor.name}.${String(propertyKey)}`, index)) return;
 
         // If we reach here, it means all demands were false
         assert(false, `No demands were satisfied for ${instance.constructor.name}.${String(propertyKey)}`);

@@ -244,6 +244,18 @@ class Foo extends Contracted {
 }
 ```
 
+### Contract predicates must return a boolean
+
+`@invariant`, `@demands`, and `@ensures` predicates must return `true` or `false`. The result is not coerced: a non-boolean result raises an `AssertionError` naming the contract, the feature, and which predicate in the composition failed.
+
+```typescript
+@demands(() => Promise.resolve(true))  // AssertionError: returned a Promise
+```
+
+This is deliberate. A `Promise` is always truthy, so coercing the result would silently treat an accidentally asynchronous predicate — one that has not actually checked anything yet — as a satisfied contract. Failing closed is the only safe option, and the message points at the mistake.
+
+This also means asynchronous validation is not supported yet; see the note on asynchronous contracts.
+
 ### Subcontracting and Invariants
 
 When subclassing, if a subclass defines its own `@invariant`, the resulting invariant is **strengthened**: the subclass invariant and the base class invariant are both enforced (they are logically AND-ed together). This means all invariants in the inheritance chain must hold for the object to be valid.

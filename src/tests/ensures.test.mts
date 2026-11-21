@@ -92,6 +92,41 @@ describe('The ensures assertion is evaluated after its associated feature is cal
     });
 });
 
+/**
+ * https://github.com/final-hill/decorator-contracts/issues/283
+ */
+describe('`ensures` predicates must return a boolean', () => {
+    test('an asynchronous predicate is rejected instead of silently passing', () => {
+        class Foo extends Contracted {
+            @ensures(() => Promise.resolve(true) as any)
+            method(): void { }
+        }
+
+        nodeAssert.throws(
+            () => Foo.new().method(),
+            /@ensures predicate #1 for Foo\.method returned a Promise/
+        );
+    });
+
+    test('a truthy non-boolean is rejected', () => {
+        class Foo extends Contracted {
+            @ensures(() => 'yes' as any)
+            method(): void { }
+        }
+
+        nodeAssert.throws(() => Foo.new().method(), /returned the string "yes"/);
+    });
+
+    test('boolean predicates continue to work', () => {
+        class Foo extends Contracted {
+            @ensures(() => true)
+            method(): void { }
+        }
+
+        nodeAssert.doesNotThrow(() => Foo.new().method());
+    });
+});
+
 describe('`ensures` assertions are enabled in checkedMode and disabled otherwise', () => {
     test('The associated assertion is evaluated when checkMode = true', () => {
         class Foo extends Contracted {

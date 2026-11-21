@@ -127,6 +127,87 @@ describe('The `demands` assertion is evaluated before its associated feature is 
     });
 });
 
+/**
+ * https://github.com/final-hill/decorator-contracts/issues/283
+ */
+describe('`demands` predicates must return a boolean', () => {
+    test('an asynchronous predicate is rejected instead of silently passing', () => {
+        class Foo extends Contracted {
+            @demands(() => Promise.resolve(true) as any)
+            method(): void { }
+        }
+
+        // a Promise is truthy, so coercion would have treated this as satisfied
+        nodeAssert.throws(
+            () => Foo.new().method(),
+            /@demands predicate #1 for Foo\.method returned a Promise/
+        );
+    });
+
+    test('an asynchronous predicate returning false is rejected, not accepted', () => {
+        class Foo extends Contracted {
+            @demands(() => Promise.resolve(false) as any)
+            method(): void { }
+        }
+
+        nodeAssert.throws(() => Foo.new().method(), AssertionError);
+    });
+
+    test('a truthy string is rejected', () => {
+        class Foo extends Contracted {
+            @demands(() => 'false' as any)
+            method(): void { }
+        }
+
+        nodeAssert.throws(
+            () => Foo.new().method(),
+            /returned the string "false"/
+        );
+    });
+
+    test('a truthy object is rejected', () => {
+        class Foo extends Contracted {
+            @demands(() => ({ satisfied: true }) as any)
+            method(): void { }
+        }
+
+        nodeAssert.throws(() => Foo.new().method(), /returned an object/);
+    });
+
+    test('`undefined` is rejected with a specific message', () => {
+        class Foo extends Contracted {
+            @demands(() => undefined as any)
+            method(): void { }
+        }
+
+        nodeAssert.throws(() => Foo.new().method(), /returned undefined/);
+    });
+
+    test('the message identifies which predicate in a composition failed', () => {
+        class Foo extends Contracted {
+            @demands((_self: Foo, [value]: [number]) => value > 0)
+            @demands(() => 'invalid' as any)
+            method(value: number): number { return value; }
+        }
+
+        // the last decorator applied is evaluated first
+        nodeAssert.throws(
+            () => Foo.new().method(-1),
+            /@demands predicate #1 for Foo\.method returned the string "invalid"/
+        );
+    });
+
+    test('boolean predicates continue to work', () => {
+        class Foo extends Contracted {
+            @demands((_self: Foo, [value]: [number]) => value > 0)
+            method(value: number): number { return value; }
+        }
+
+        nodeAssert.strictEqual(Foo.new().method(3), 3);
+        nodeAssert.throws(() => Foo.new().method(0), /No demands were satisfied/);
+    });
+});
+
 describe('`demands` assertions are enabled in `checkedMode` and disabled otherwise', () => {
     test('The associated assertion is evaluated when checkMode = true', () => {
         class Foo extends Contracted {
