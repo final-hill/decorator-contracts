@@ -1,3 +1,5 @@
+import type { StandardSchemaV1 } from './standard-schema.mjs';
+
 /**
  * The contract kinds that can raise an {@link AssertionError}.
  */
@@ -24,8 +26,15 @@ export interface ContractViolation {
      * `@invariant` are AND-composed, so a failure lists the one that broke.
      */
     failedIndices: number[];
-    /** The source text of the failing predicates, aligned with `failedIndices`. */
+    /** The source text of the failing arms, aligned with `failedIndices`. */
     predicates: string[];
+    /**
+     * The `issues` reported by failing schema arms, in the order they were
+     * raised. Absent when the failure came only from predicate arms, so a caller
+     * can distinguish "a schema rejected this" from "a predicate returned
+     * false".
+     */
+    issues?: ReadonlyArray<StandardSchemaV1.Issue>;
 }
 
 /**

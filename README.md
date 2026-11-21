@@ -22,6 +22,7 @@
 - [Demands](#demands)
 - [Ensures](#ensures)
 - [Rescue](#rescue)
+- [Standard Schema](#standard-schema)
 - [The order of assertions](#the-order-of-assertions)
 - [Further Reading](#further-reading)
 
@@ -709,6 +710,103 @@ Unlike traditional `try/catch`, where exceptions are non-resumable and often han
 If a base class declares a `@rescue` handler for a method, that handler is inherited by subclasses unless the subclass overrides it with its own `@rescue` declaration. This ensures that robust error handling is preserved throughout the inheritance chain, unless explicitly changed.
 
 This approach leads to more maintainable and robust code, as error handling is organized and closely tied to the contract of the class feature, rather than being scattered throughout the call stack.
+
+## Standard Schema
+
+`@invariant`, `@demands`, and `@ensures` accept a [Standard Schema V1](https://github.com/standard-schema/standard-schema) value anywhere they accept a predicate. Zod, Valibot, ArkType, and Effect Schema are then interchangeable: the library consumes the protocol and never depends on a provider.
+
+```typescript
+import { z } from 'zod';
+
+const positive = z.number().positive();
+const quantity = z.tuple([z.number().positive()]);
+
+class Inventory extends Contracted {
+    protected _stock = 0;
+    get stock() { return this._stock; }
+
+    @demands(quantity)                       // validates the argument tuple
+    @ensures(positive)                       // validates the result
+    add(...[count]: [number]): number {
+        this._stock += count;
+
+        return this._stock;
+    }
+}
+```
+
+### What a schema validates
+
+The subject is the subject the contract already describes, so the two kinds of arm are interchangeable:
+
+| Decorator | A schema validates | A predicate receives | Composition |
+| --- | --- | --- | --- |
+| `@invariant` | the instance | `(self)` | AND |
+| `@demands` | the **argument tuple** | `(self, args)` | OR |
+| `@ensures` | the **result** | `(self, args, old)` | AND |
+
+Because `@demands` validates the argument tuple rather than the first argument, a one-parameter method is written as a tuple of one (`z.tuple([...])`). This keeps the subject unambiguous for any arity.
+
+### Composition follows variance
+
+The rules above are the substitution rules, not a convention:
+
+- **`@demands` is contravariant.** A subtype may accept *wider* input, so conditions are OR-composed and any inherited arm satisfies the call. A subtype adding an arm therefore **weakens** the precondition.
+- **`@ensures` and `@invariant` are covariant.** A subtype may promise *narrower* output and must preserve *more* state, so conditions are AND-composed and every arm must hold. A subtype adding an arm therefore **strengthens** the obligation.
+
+A schema arm composes exactly like a predicate arm, which is why no separate decorators exist: the rule belongs to the contract, not to the kind of arm.
+
+**A narrowing subtype precondition has no effect, and that is correct.** Writing `@demands(z.number().min(5))` in a subtype does not restrict anything, because OR-composition keeps the inherited arm. A subtype is not permitted to narrow what its supertype accepts, so the runtime refuses to give it that power. TypeScript will not catch the mistake either — **method parameters are bivariant** under `strictFunctionTypes` — so this is a review obligation. Declare input schemas on the base feature.
+
+### Failure reporting
+
+A schema failure carries the provider's own `issues` in the structured payload, and renders them into the message:
+
+```typescript
+try {
+    inventory.add(-1);
+} catch (error) {
+    error.violation?.contract;   // '@demands'
+    error.violation?.issues;     // ReadonlyArray<{ message, path? }>
+}
+```
+
+One consequence of validating the argument tuple is that an issue's `path` is also relative to it, so the first argument is index `0`:
+
+```text
+@demands failed for Shipping.send (1 of 1 schema unsatisfied: schema #1: ...).
+Reported: 0.zip: Invalid string: must match pattern /^\d{5}$/.
+```
+
+### Normalization is opt-in
+
+`validate` may transform its input. Applying that transformation changes what the body receives and what later contracts observe, so it is an explicit choice:
+
+```typescript
+@demands(trimmedName, { normalize: true })
+rename(name: string): void { /* receives the trimmed name */ }
+```
+
+- **`@demands`** is OR-composed, so the **first passing arm** decides the normalized value. That is deterministic and matches evaluation order.
+- **`@ensures`** is AND-composed, so two normalizing arms would disagree about what the caller receives. That is refused at decoration time rather than resolved arbitrarily.
+
+Off by default: without `normalize`, a schema only reports a verdict.
+
+### Synchronous only
+
+Contract evaluation is synchronous, so a `validate` that returns a Promise is refused with a message asking for a synchronous schema. Treating a pending validation as satisfied would be worse than failing, and awaiting would move the feature's boundary.
+
+### No type inference
+
+Decorators cannot change a feature's signature, so a schema gives **runtime enforcement only**: it neither narrows the declared parameter types nor infers `Input`/`Output`. Accurate inference needs a builder API, which this library does not have.
+
+### Providers
+
+Any implementation of the protocol works, and no provider is a dependency. The `StandardSchemaV1` types are exported if you want to annotate your own schemas:
+
+```typescript
+import type { StandardSchemaV1 } from '@final-hill/decorator-contracts';
+```
 
 ## The order of assertions
 
