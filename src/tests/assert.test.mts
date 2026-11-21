@@ -10,6 +10,7 @@ describe('The assertion function must support assertion signatures from TypeScri
         const a: any = 'foo';
 
         // No type error
+        // eslint-disable-next-line no-useless-assignment -- intentional; verifies no type error before the assertion
         let b = 5 * a;
 
         assert(typeof a === 'string');
