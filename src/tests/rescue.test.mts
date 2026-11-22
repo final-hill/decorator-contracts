@@ -790,3 +790,374 @@ describe('A `retry` works when the feature is inherited', () => {
         nodeAssert.strictEqual(Sub.new().v, 7);
     });
 });
+
+/**
+ * https://github.com/final-hill/decorator-contracts/issues/334
+ *
+ * An invariant the instance has failed is the state a handler exists to repair, so
+ * it has to reach `@rescue`. Before this, the entry and exit checks sat outside the
+ * `try`, which made a broken instance unrecoverable: every accessor throws on exit,
+ * so a handler could not even reach the state it would fix.
+ *
+ * `@demands` stays outside. A precondition rejects a call that has not begun, so
+ * there is no body to resume, and a handler that retried with an argument the
+ * precondition also rejects would recurse without end.
+ */
+describe('`@rescue` observes an invariant failure', () => {
+    @invariant((self: Foo) => self._n >= 0)
+    class Foo extends Contracted {
+        public _n = 1;
+
+        @rescue((self: Foo) => { self._n = 5; })
+        breakIt(): string { this._n = -1; return 'done'; }
+    }
+
+    test('the handler runs and can repair the instance', () => {
+        const foo = Foo.new() as Foo;
+
+        // No `retry`, so the call still fails: `@rescue` resumes a body, and the
+        // body it would resume has already run. The repair is what survives.
+        nodeAssert.throws(() => foo.breakIt(), /^AssertionError: @invariant failed/);
+        nodeAssert.strictEqual(foo._n, 5, 'the handler restored the state');
+
+        // The instance is usable again, which is the whole point: before the change
+        // every accessor threw from here on.
+        nodeAssert.doesNotThrow(() => { void foo._n; });
+    });
+
+    test('the invariant failure is what reaches the handler', () => {
+        const seen: string[] = [];
+
+        @invariant((self: Bar) => self._n >= 0)
+        class Bar extends Contracted {
+            public _n = 1;
+
+            @rescue((_self: Bar, error: any) => { seen.push(error?.violation?.contract); })
+            breakIt(): void { this._n = -1; }
+        }
+
+        nodeAssert.throws(() => (Bar.new() as any).breakIt());
+        nodeAssert.deepStrictEqual(seen, ['@invariant']);
+    });
+
+    test('a retry that repairs and then succeeds recovers the call', () => {
+        let attempt = 0;
+
+        @invariant((self: Retried) => self._n >= 0)
+        class Retried extends Contracted {
+            public _n = 1;
+
+            @rescue((self: Retried, _error, _args, retry) => {
+                self._n = 5;
+                if (attempt++ === 0) retry();
+            })
+            go(): string { this._n = attempt === 0 ? -1 : 5; return 'value'; }
+        }
+
+        nodeAssert.strictEqual(Retried.new().go(), 'value');
+    });
+
+    test('a broken instance reached through an accessor is rescuable too', () => {
+        @invariant((self: Guarded) => self._n >= 0)
+        class Guarded extends Contracted {
+            public _n = 1;
+
+            @rescue((self: Guarded) => { self._n = 5; })
+            get repaired(): number { return this._n; }
+        }
+
+        const guarded = Guarded.new() as Guarded;
+
+        // Corrupt the state below the proxy, so the next getter's entry check is the
+        // first thing to notice.
+        Object.defineProperty(guarded, '_n', { value: -1, writable: true, configurable: true, enumerable: true });
+
+        // An accessor has no body to resume, so the call fails; the handler still ran
+        // and restored the state.
+        nodeAssert.throws(() => guarded.repaired, /^AssertionError: @invariant failed/);
+        nodeAssert.strictEqual(guarded._n, 5);
+    });
+
+    test('`@demands` is not rescuable', () => {
+        let reached = false;
+
+        class Demanding extends Contracted {
+            @demands((_self: Demanding, [v]: [number]) => v > 0)
+            @rescue(() => { reached = true; })
+            method(_v: number): void { }
+        }
+
+        nodeAssert.throws(() => (Demanding.new() as any).method(-1), /^AssertionError: @demands failed/);
+        nodeAssert.strictEqual(reached, false, 'a rejected precondition has no body to resume');
+    });
+});
+
+/**
+ * https://github.com/final-hill/decorator-contracts/issues/334
+ */
+describe('An invariant failure supersedes an error that revealed it', () => {
+    test('the original error is preserved as `cause`', () => {
+        @invariant((self: Broken) => self._n >= 0)
+        class Broken extends Contracted {
+            public _n = 1;
+            boom(): void { this._n = -1; throw new RangeError('the real cause'); }
+        }
+
+        try {
+            (Broken.new() as any).boom();
+            nodeAssert.fail('expected an invariant failure');
+        } catch (error: any) {
+            nodeAssert.match(error.message, /@invariant failed/);
+            nodeAssert.strictEqual(error.cause?.constructor.name, 'RangeError');
+            nodeAssert.strictEqual(error.cause?.message, 'the real cause');
+        }
+    });
+
+    test('an instance left valid keeps the original error unchanged', () => {
+        @invariant((self: Fine) => self._n >= 0)
+        class Fine extends Contracted {
+            public _n = 1;
+            boom(): void { throw new RangeError('the only cause'); }
+        }
+
+        nodeAssert.throws(
+            () => (Fine.new() as any).boom(),
+            (error: any) => error.constructor.name === 'RangeError' && error.cause === undefined,
+        );
+    });
+});
+
+/**
+ * https://github.com/final-hill/decorator-contracts/issues/334
+ *
+ * The asynchronous lifecycle behaves the same way, so a handler observes an
+ * invariant failure there too.
+ */
+describe('`@rescue` observes an invariant failure on an async feature', () => {
+    test('an entry failure reaches the handler', async () => {
+        let reached = false;
+
+        @invariant((self: AsyncEntry) => self._n >= 0)
+        class AsyncEntry extends Contracted {
+            public _n = 1;
+
+            @rescue((self: AsyncEntry) => { reached = true; self._n = 5; })
+            async go(): Promise<string> { return 'value'; }
+        }
+
+        const foo = AsyncEntry.new() as AsyncEntry;
+
+        // Corrupt below the proxy, so the entry check is the first to notice.
+        Object.defineProperty(foo, '_n', { value: -1, writable: true, configurable: true, enumerable: true });
+
+        await nodeAssert.rejects(() => foo.go(), /@invariant failed/);
+        nodeAssert.strictEqual(reached, true, 'the handler observed the entry failure');
+        nodeAssert.strictEqual(foo._n, 5, 'the handler repaired the instance');
+    });
+
+    test('a repair plus a retry recovers the call', async () => {
+        let attempt = 0;
+
+        @invariant((self: AsyncFoo) => self._n >= 0)
+        class AsyncFoo extends Contracted {
+            public _n = 1;
+
+            @rescue((self: AsyncFoo, _error, _args, retry) => {
+                self._n = 5;
+                if (attempt++ === 0) retry();
+            })
+            async go(): Promise<string> { this._n = attempt === 0 ? -1 : 5; return 'value'; }
+        }
+
+        nodeAssert.strictEqual(await AsyncFoo.new().go(), 'value');
+    });
+});
+
+/**
+ * https://github.com/final-hill/decorator-contracts/issues/334
+ *
+ * A generator has the same entry boundary as any other call, so a handler observes
+ * an invariant the instance failed before the traversal began.
+ */
+describe('`@rescue` observes an invariant failure on a generator feature', () => {
+    test('the call-time entry check reaches the handler', () => {
+        let reached = false;
+
+        @invariant((self: GenFoo) => self._n >= 0)
+        class GenFoo extends Contracted {
+            public _n = 1;
+
+            @rescue((self: GenFoo) => { reached = true; self._n = 5; })
+            *gen(): Generator<number> { yield this._n; }
+        }
+
+        const foo = GenFoo.new() as GenFoo;
+
+        // Corrupt below the proxy so the call's entry check is the first to notice.
+        Object.defineProperty(foo, '_n', { value: -1, writable: true, configurable: true, enumerable: true });
+
+        nodeAssert.throws(() => foo.gen(), /^AssertionError: @invariant failed/);
+        nodeAssert.strictEqual(reached, true, 'the handler observed the failure');
+        nodeAssert.strictEqual(foo._n, 5, 'the handler repaired the instance');
+    });
+});
+
+/**
+ * https://github.com/final-hill/decorator-contracts/issues/334
+ *
+ * The entry check is the one boundary that cannot be restarted: nothing has run, so
+ * a retry can only re-check the state the handler just set. One repair attempt is
+ * allowed, and a second identical failure is surfaced, because every further attempt
+ * would fail the same way.
+ */
+describe('An unrepairable entry invariant is surfaced instead of retried', () => {
+    test('a method does not loop when the handler retries without repairing', () => {
+        @invariant((self: Repairless) => self._n >= 0)
+        class Repairless extends Contracted {
+            public _n = 1;
+
+            @rescue((_self: Repairless, _error, _args, retry) => { retry(); })
+            method(): void { }
+        }
+
+        const foo = Repairless.new() as Repairless;
+
+        Object.defineProperty(foo, '_n', { value: -1, writable: true, configurable: true, enumerable: true });
+
+        nodeAssert.throws(() => foo.method(), /^AssertionError: @invariant failed/);
+    });
+
+    test('a generator does not exhaust the stack when the handler retries without repairing', () => {
+        @invariant((self: GenRepairless) => self._n >= 0)
+        class GenRepairless extends Contracted {
+            public _n = 1;
+
+            @rescue((_self: GenRepairless, _error, _args, retry) => { retry(); })
+            *gen(): Generator<number> { yield 1; }
+        }
+
+        const foo = GenRepairless.new() as GenRepairless;
+
+        Object.defineProperty(foo, '_n', { value: -1, writable: true, configurable: true, enumerable: true });
+
+        nodeAssert.throws(
+            () => foo.gen(),
+            (error: any) => error.violation?.contract === '@invariant',
+            'a stack overflow would surface as a RangeError, not the contract failure',
+        );
+    });
+
+    test('an async feature rejects with the invariant failure rather than looping', async () => {
+        @invariant((self: AsyncRepairless) => self._n >= 0)
+        class AsyncRepairless extends Contracted {
+            public _n = 1;
+
+            @rescue((_self: AsyncRepairless, _error, _args, retry) => { retry(); })
+            async method(): Promise<void> { }
+        }
+
+        const foo = AsyncRepairless.new() as AsyncRepairless;
+
+        Object.defineProperty(foo, '_n', { value: -1, writable: true, configurable: true, enumerable: true });
+
+        await nodeAssert.rejects(() => foo.method(), /@invariant failed/);
+    });
+
+    test('a handler is called once, not repeatedly', () => {
+        let calls = 0;
+
+        @invariant((self: Once) => self._n >= 0)
+        class Once extends Contracted {
+            public _n = 1;
+
+            @rescue((_self: Once, _error, _args, retry) => { calls++; retry(); })
+            method(): void { }
+        }
+
+        const foo = Once.new() as Once;
+
+        Object.defineProperty(foo, '_n', { value: -1, writable: true, configurable: true, enumerable: true });
+
+        nodeAssert.throws(() => foo.method());
+        nodeAssert.strictEqual(calls, 1, 'the entry repair is attempted once');
+    });
+
+    test('an entry invariant a handler does repair still lets the call proceed', () => {
+        @invariant((self: Repaired) => self._n >= 0)
+        class Repaired extends Contracted {
+            public _n = 1;
+
+            @rescue((self: Repaired) => { self._n = 5; })
+            method(): number { return this._n; }
+        }
+
+        const foo = Repaired.new() as Repaired;
+
+        Object.defineProperty(foo, '_n', { value: -1, writable: true, configurable: true, enumerable: true });
+
+        // The handler ran, but did not retry, so the call still fails and the repair
+        // is what survives.
+        nodeAssert.throws(() => foo.method(), /^AssertionError: @invariant failed/);
+        nodeAssert.strictEqual(foo._n, 5);
+    });
+});
+
+/**
+ * https://github.com/final-hill/decorator-contracts/issues/334
+ *
+ * A handler runs before the invariant is re-tested, so it observes the error that
+ * actually failed. The superseding invariant failure is what the caller receives
+ * when nothing repaired the instance.
+ */
+describe('A handler observes the error that failed, not the superseding invariant', () => {
+    @invariant((self: Account) => self._balance >= 0)
+    class Account extends Contracted {
+        public _balance = 1;
+
+        @rescue((_self: Account, error) => {
+            observed.push((error as any)?.message ?? String(error));
+        })
+        withdraw(amount: number): void {
+            this._balance -= amount;
+            if (this._balance < 0) throw new Error('insufficient funds');
+        }
+    }
+
+    const observed: string[] = [];
+
+    test('the handler sees the body error', () => {
+        observed.length = 0;
+
+        nodeAssert.throws(() => Account.new().withdraw(5), /@invariant failed/);
+        nodeAssert.deepStrictEqual(observed, ['insufficient funds']);
+    });
+
+    test('the caller receives the invariant failure, with the body error as `cause`', () => {
+        try {
+            Account.new().withdraw(5);
+            nodeAssert.fail('expected an invariant failure');
+        } catch (error: any) {
+            nodeAssert.strictEqual(error.violation?.contract, '@invariant');
+            nodeAssert.strictEqual(error.cause?.message, 'insufficient funds');
+        }
+    });
+
+    test('a handler that repairs prevents the supersession', () => {
+        @invariant((self: RepairedAccount) => self._balance >= 0)
+        class RepairedAccount extends Contracted {
+            public _balance = 1;
+
+            @rescue((self: RepairedAccount) => { self._balance = 0; })
+            withdraw(amount: number): void {
+                this._balance -= amount;
+                if (this._balance < 0) throw new Error('insufficient funds');
+            }
+        }
+
+        nodeAssert.throws(
+            () => RepairedAccount.new().withdraw(5),
+            (error: any) => error.violation === undefined && error.message === 'insufficient funds',
+            'a repaired instance is valid, so the body error stands',
+        );
+    });
+});
