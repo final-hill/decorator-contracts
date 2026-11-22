@@ -175,12 +175,68 @@ const rescueArguments = (descriptorType: DescriptorType, args: any[]): any[] =>
     descriptorType === 'get' ? [] : args;
 
 /**
+ * True when an error is a contract failure raised by `@invariant`.
+ *
+ * Used to tell "the instance is broken" apart from "something else failed and the
+ * instance may also be broken". The two are handled differently: a broken instance
+ * is the state a handler must repair, so it is never re-tested before the handler
+ * runs, and a second failure is not invented on top of the first.
+ */
+const isInvariantFailure = (error: unknown): boolean =>
+    error instanceof AssertionError && error.violation?.contract === '@invariant';
+
+/**
+ * Raises an invariant failure in place of the error that revealed it.
+ *
+ * A body or postcondition error can leave the instance in a state the invariant
+ * rejects. That failure supersedes the original, because it is the state the caller
+ * has to repair, but the original is what explains how the instance got there, so it
+ * travels as `cause`.
+ */
+const supersede = (invariantError: unknown, original: unknown): unknown => {
+    if (invariantError instanceof AssertionError
+        && typeof original === 'object' && original !== null
+        && !Object.hasOwn(invariantError, 'cause'))
+        Object.defineProperty(invariantError, 'cause', {
+            value: original,
+            enumerable: false,
+            configurable: true,
+        });
+
+    return invariantError;
+};
+
+/**
+ * Raises an invariant failure in place of the error that revealed it.
+ *
+ * A body or postcondition error can leave the instance in a state the invariant
+ * rejects. That failure supersedes the original, because it is the state the caller
+ * has to repair, but the original is what explains how the instance got there, so it
+ * travels as `cause`. When the instance is still valid the original error stands.
+ */
+const surfaceInvariantFailure = (
+    Class: typeof Contracted,
+    target: Contracted,
+    error: unknown,
+): unknown => {
+    if (isInvariantFailure(error)) return error;
+
+    try {
+        assertInvariants(Class, target);
+    } catch (invariantError) {
+        return supersede(invariantError, error);
+    }
+
+    return error;
+};
+
+/**
  * Decides what a failed invocation does next.
  *
  * Every lifecycle needs the same three decisions at its `@rescue` boundary:
- * whether another retry is permitted, what the handler asked for, and whether
- * the invariant has to be re-checked before the error reaches the caller.
- * Extracted because the sync and async lifecycles had this block verbatim twice.
+ * whether another retry is permitted, what the handler asked for, and what happens
+ * to an instance the failure left invalid. Extracted because the sync and async
+ * lifecycles had this block verbatim twice.
  *
  * The sync and async lifecycles are separate functions on purpose: a lifecycle
  * that awaited unconditionally would make every synchronous feature return a
@@ -197,18 +253,69 @@ function attemptRescue(
     retries: number,
     args: any[],
 ): any[] {
-    const maxRetries = getRescueDeclaration(target, prop)?.maxRetries ?? Infinity;
+    const declaration = getRescueDeclaration(target, prop),
+        maxRetries = declaration?.maxRetries ?? Infinity;
 
-    if (retries >= maxRetries) {
-        assertInvariants(Class, target);
-        throw error;
+    if (!declaration || retries >= maxRetries) {
+        // The error is on its way to the caller, so the invariant is checked one last
+        // time: an invalid instance is the state the caller has to repair, and that
+        // failure supersedes the error which revealed it.
+        //
+        // A handler is not given this check, because it is the thing that repairs the
+        // state: re-testing first would report the failure it was called to fix. The
+        // consequence is that a handler observes the error that failed — the body's
+        // own error when the body threw — while the caller may receive the superseding
+        // invariant failure. A class-level `@rescue` serves features that fail in
+        // different ways, so that asymmetry becomes visible there and may have to be
+        // revisited. See https://github.com/final-hill/decorator-contracts/issues/344
+        throw surfaceInvariantFailure(Class, target, error);
     }
 
     try {
         return applyRescueHandler(target, prop, error, args);
     } catch (rescuedError) {
-        assertInvariants(Class, target);
-        throw rescuedError;
+        // The handler ran and either threw its own error or returned without asking
+        // for a retry. Its repair is over by this point, so an instance it left
+        // invalid is reported rather than passed over, and the original is carried as
+        // `cause`. Routing through the same helper keeps the caller's error identical
+        // whichever path produced it.
+        throw surfaceInvariantFailure(Class, target, rescuedError);
+    }
+}
+
+/**
+ * Runs the entry invariant for one invocation, giving a `@rescue` one chance to
+ * repair it.
+ *
+ * This is the one boundary a retry cannot restart: nothing has run yet, so the
+ * handler's repair is the only thing the next check can observe. A second attempt
+ * after a repair that did not satisfy the invariant would fail identically, so the
+ * failure is surfaced rather than spent against the retry budget.
+ *
+ * The exit side needs no equivalent: a retried body can genuinely change the state it
+ * returns to, which is why `retry` is unbounded there by default.
+ *
+ * @param state - The call's argument list and retry count, which the handler may
+ *   replace and which the repair consumes.
+ * @throws Whatever the invariant raises once the repair attempt is spent.
+ */
+function enterWithRepair(
+    Class: typeof Contracted,
+    target: Contracted,
+    prop: PropertyKey,
+    state: { args: any[], retries: number },
+): void {
+    for (let repairs = 0; ;) {
+        try {
+            assertInvariants(Class, target);
+
+            return;
+        } catch (error) {
+            if (repairs++ > 0) throw error;
+
+            state.args = attemptRescue(Class, target, prop, error, state.retries, state.args);
+            state.retries++;
+        }
     }
 }
 
@@ -259,10 +366,23 @@ function runSyncLifecycle(
     for (; ;) {
         const old = hasEnsures ? populateOld(target) : undefined;
 
-        assertInvariants(Class, target);
+        // The entry invariant may be repaired once by a `@rescue`; see `enterWithRepair`.
+        // It is inside the lifecycle so that a broken instance is not unrecoverable:
+        // every accessor throws on exit, so a handler could not otherwise reach the
+        // state it would fix.
+        const state = { args, retries };
+
+        enterWithRepair(Class, target, prop, state);
+        args = state.args;
+        retries = state.retries;
+
+        // `@demands` sits outside every `try`. A precondition rejects a call that has
+        // not begun, so there is no body to resume, and a handler that retried with
+        // an argument the precondition also rejects would recurse without end. A
+        // failed precondition therefore reaches the caller directly.
         args = assertDemands(target, prop, args);
 
-        let result: any
+        let result: any;
         try {
             result = invoke(args);
 
@@ -270,6 +390,8 @@ function runSyncLifecycle(
 
             if (hasEnsures)
                 result = assertEnsures(target, old, prop, ensuresArgs(descriptorType, result, args), result);
+
+            assertInvariants(Class, target);
         } catch (error) {
             args = attemptRescue(Class, target, prop, error, retries,
                 rescueArguments(descriptorType, args));
@@ -277,7 +399,6 @@ function runSyncLifecycle(
             continue;
         }
 
-        assertInvariants(Class, target);
         return result;
     }
 }
@@ -325,7 +446,19 @@ async function runAsyncLifecycle(
     for (; ;) {
         const old = hasEnsures ? populateOld(target) : undefined;
 
-        assertInvariants(Class, target);
+        // The same entry boundary as the synchronous lifecycle. Because this function
+        // is `async`, an entry failure is delivered as a rejection rather than a
+        // synchronous throw, which keeps the failure surface identical to the
+        // undecorated body's.
+        const state = { args, retries };
+
+        enterWithRepair(Class, target, prop, state);
+        args = state.args;
+        retries = state.retries;
+
+        // Outside the rescuable scope, for the reason given in the synchronous
+        // lifecycle: a rejected precondition has no body to resume, and a retry
+        // whose argument it also rejects would recurse without end.
         args = assertDemands(target, prop, args);
 
         let result: any;
@@ -333,6 +466,8 @@ async function runAsyncLifecycle(
             result = await invoke(args);
             if (hasEnsures)
                 result = assertEnsures(target, old, prop, ensuresArgs(descriptorType, result, args), result);
+
+            assertInvariants(Class, target);
         } catch (error) {
             args = attemptRescue(Class, target, prop, error, retries,
                 rescueArguments(descriptorType, args));
@@ -340,7 +475,6 @@ async function runAsyncLifecycle(
             continue;
         }
 
-        assertInvariants(Class, target);
         return result;
     }
 }
@@ -554,8 +688,18 @@ function runGeneratorLifecycle(
 
     // The call's entry contracts run when the feature is called, matching the
     // arrow out of `obj.feature(...)` in the diagram. The body itself does not
-    // start until the iterator is resumed.
-    assertInvariants(Class, target);
+    // start until the iterator is resumed, so this is the same entry boundary as an
+    // ordinary feature and goes through the same helper.
+    //
+    // `@demands` stays outside, for the reason given in the synchronous lifecycle: a
+    // rejected precondition has no traversal to resume, and a retry that violated it
+    // again would recurse without end.
+    const entry = { args, retries };
+
+    enterWithRepair(Class, target, prop, entry);
+    args = entry.args;
+    retries = entry.retries;
+
     args = assertDemands(target, prop, args);
     needsEntry = false;
     iterator = invoke(args);

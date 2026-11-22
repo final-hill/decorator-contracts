@@ -461,7 +461,7 @@ Declare the feature `async` instead. Awaiting arbitrary thenables was rejected a
 
 A generator has a contract boundary per **step**, not one per call. Calling the feature runs nothing; each `next()` runs the body from where it was suspended up to the following `yield`. When `next()` returns the segment has finished and the instance holds the state it will be observed with, so the contracts bracket each step:
 
-```
+```text
 call    -> @invariant, @demands      the call arguments are P
 next()  -> @invariant                entry of the step
 segment -> body up to the next yield
@@ -756,6 +756,71 @@ method(value: number): number { /* ... */ }
 
 This keeps the postcondition meaningful: a result the body never produced would not be covered by `@ensures`.
 
+### What a `@rescue` observes
+
+A handler is the place to repair an instance, so it sees every failure that leaves state worth repairing:
+
+| Failure | Reaches the feature's own `@rescue`? |
+| --- | --- |
+| the body throws | **yes** |
+| own `@ensures` fails | **yes** |
+| own `@invariant` fails, on entry or exit | **yes** |
+| own `@demands` fails | **no** |
+
+The last row is deliberate. A precondition rejects a call that has not begun, so there is no body to resume, and a handler that retried with an argument the precondition also rejects would recurse without end. A failed precondition therefore reaches the caller directly.
+
+The third row is what makes a broken instance recoverable. Once an instance fails its invariant, every accessor throws on exit, so without this a handler could not even reach the state it would fix:
+
+```typescript
+@invariant((self: Account) => self._balance >= 0)
+class Account extends Contracted {
+    public _balance = 1;
+    @rescue((self: Account) => { self._balance = 0; })
+    withdraw(amount: number): void { this._balance -= amount; }
+}
+
+const account = Account.new();
+nodeAssert.throws(() => account.withdraw(5), /@invariant failed/); // overdrawn
+account._balance;                                                  // 0 — usable again
+```
+
+The call still fails, because `@rescue` resumes a body and this one has already run. What the handler buys is an instance that is valid again, which a later `retry` can use.
+
+A getter or setter behaves the same way: the handler runs and can repair the instance, but the access is not resumed, because an accessor has no body to re-run. A handler that repairs a getter's state therefore leaves the instance usable without that particular read succeeding.
+
+A handler is called **before** the invariant is re-tested, so it can repair the state rather than being denied the attempt. That means a handler observes the error that failed, which is the body's own error when the body threw.
+
+When nothing has repaired the instance, the invariant failure supersedes the original on the way to the caller, and the original travels as `cause`:
+
+```typescript
+@invariant((self: Account) => self._balance >= 0)
+class Account extends Contracted {
+    public _balance = 1;
+
+    withdraw(amount: number): void {
+        this._balance -= amount;
+        if (this._balance < 0) throw new Error('insufficient funds');
+    }
+}
+
+try {
+    Account.new().withdraw(5);   // body throws, and leaves the balance negative
+} catch (error) {
+    error.violation.contract;    // '@invariant'
+    error.cause.message;         // 'insufficient funds'
+}
+```
+
+A handler that repairs the state before declining to retry prevents that: the instance is valid by the time the invariant is re-tested, so the body's own error is what the caller receives.
+
+Because a handler runs before the invariant is re-tested, it receives the error that failed rather than the invariant failure that may supersede it. A per-feature handler knows which feature it was attached to, so that is unambiguous; a class-level handler would not, and the [class-level `@rescue`](https://github.com/final-hill/decorator-contracts/issues/344) design has to settle what context such a handler receives.
+
+### Retry bounds
+
+`retry` restarts the body, so it can always be attempted again. The one boundary that cannot be restarted is the *entry* check: nothing has run yet, so a retry can only re-check the state the handler just set. That repair is attempted **once**; if the invariant still fails, the failure is raised rather than looping, because every further attempt would fail identically.
+
+Everywhere else, retries are unbounded by default and `maxRetries` bounds them, as described under [N-Version programming](#robustness-organized-panic-and-the-benefits-of-rescue). An unbounded handler that never repairs will therefore loop until it does — that is the price of allowing a handler to choose the next alternative.
+
 ### Robustness, Organized Panic, and the Benefits of `@rescue`
 
 The `@rescue` decorator enables a mechanism for **Robustness** in your code. It allows your implementation to respond to situations not specified, providing the ability to handle exceptions in a structured way. This is sometimes called **Organized Panic**.
@@ -924,11 +989,11 @@ The entry check is not redundant with `Contracted.new()`. Object state can be co
 
 Because the invariant is checked first, an invalid object reports its invariant violation rather than a precondition failure. That ordering is deliberate: the object is broken in a way that makes the caller's arguments moot.
 
-If an error is thrown and there is no `@rescue` defined then the `@invariant` is checked before the error is raised to the caller.
+If an error is thrown and there is no `@rescue` defined then the `@invariant` is checked before the error is raised to the caller. If the instance has become invalid, that invariant failure is what reaches the caller, with the original error as its `cause`.
 
-If an error is thrown in the `@invariant` then it is raised to the caller.
+If an error is thrown in the `@invariant` then the `@rescue` is executed, so a handler can restore the state. Without a handler, or once its attempts are spent, the failure is raised to the caller.
 
-If an error is thrown in the `@demands` then the error is raised to the caller. In this case the exit `@invariant` is not checked because the feature body has not been entered and the instance cannot have changed.
+If an error is thrown in the `@demands` then the error is raised to the caller, and `@rescue` is not consulted. A precondition rejects a call that has not begun, so there is no body to resume. The exit `@invariant` is not checked either, because the feature body has not been entered and the instance cannot have changed.
 
 If an error is thrown by the feature body or the `@ensures` then the `@rescue` is executed. If `retry` is called then the process starts from the beginning.
 

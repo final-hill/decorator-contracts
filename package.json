@@ -14,8 +14,8 @@
     "scripts": {
         "prebuild": "npm run lint",
         "build": "webpack",
-        "lint": "eslint src/ --ext .mts --max-warnings 0",
-        "lint:fix": "eslint src/ --ext .mts --fix",
+        "lint": "eslint src '**/*.md' eslint.config.js webpack.config.mjs --ignore-pattern node_modules --ignore-pattern dist --max-warnings 0",
+        "lint:fix": "eslint src '**/*.md' eslint.config.js webpack.config.mjs --ignore-pattern node_modules --ignore-pattern dist --fix",
         "pretest": "npm run build && npm run typecheck",
         "test": "globstar -- node --import tsx --test ./src/tests/*.test.mts",
         "pretest:coverage": "npm run build && node -e \"require('node:fs').mkdirSync('coverage',{recursive:true})\"",
