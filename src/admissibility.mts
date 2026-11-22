@@ -91,6 +91,21 @@ export const assertNormalizable = (arm: unknown, contract: string, options: ArmO
 }
 
 /**
+ * Rejects `normalize` on a contract that has nothing to replace.
+ *
+ * `@invariant` describes the instance, and an invariant predicate or schema answers
+ * a question about it; neither produces a value the runtime could substitute. The
+ * option was previously accepted here and silently ignored, which reads as a
+ * declared intention that is not in force. Rejecting it where it is written keeps
+ * the declaration and the behaviour in agreement.
+ */
+export const assertNotNormalizable = (contract: string, options: ArmOptions | undefined): void => {
+    if (!options?.normalize) return;
+
+    throw new TypeError(`${contract} cannot normalize: its subject is the instance, which no arm can replace.`);
+}
+
+/**
  * Checks one arm against the subject that belongs to it.
  *
  * @param arm - A predicate or a `StandardSchemaV1` value.

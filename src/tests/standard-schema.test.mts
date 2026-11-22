@@ -358,6 +358,37 @@ describe('Normalization is opt-in', () => {
             void Foo;
         }, /@demands cannot normalize/);
     });
+
+    test('`normalize` on an @invariant arm is refused at decoration time', () => {
+        /*
+         * `@invariant` describes the instance, and no arm can replace it: a predicate
+         * yields a verdict and a schema's output is discarded. Accepting `normalize`
+         * here declared an intention the runtime never carried out.
+         */
+        nodeAssert.throws(() => {
+            @invariant(positive as any, { normalize: true })
+            class WithSchema extends Contracted { }
+
+            void WithSchema;
+        }, /@invariant cannot normalize/);
+
+        nodeAssert.throws(() => {
+            @invariant((() => true) as any, { normalize: true })
+            class WithPredicate extends Contracted { }
+
+            void WithPredicate;
+        }, /@invariant cannot normalize/);
+    });
+
+    test('`normalize: false` on @invariant is accepted', () => {
+        // The option is refused for what it would do, not for appearing.
+        nodeAssert.doesNotThrow(() => {
+            @invariant(positive as any, { normalize: false })
+            class Foo extends Contracted { }
+
+            void Foo;
+        });
+    });
 });
 
 describe('Generator steps honour normalization', () => {

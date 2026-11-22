@@ -952,7 +952,30 @@ The subject is the subject the contract already describes, so the two kinds of a
 | `@demands` | the **argument tuple** | `(self, args)` | OR |
 | `@ensures` | the **result** | `(self, args, old)` | AND |
 
-Because `@demands` validates the argument tuple rather than the first argument, a one-parameter method is written as a tuple of one (`z.tuple([...])`). This keeps the subject unambiguous for any arity.
+Because `@demands` validates the argument tuple rather than the first argument, a one-parameter method is written as a tuple of one (`z.tuple([...])`). This keeps the subject unambiguous for any arity, and it is what makes an issue's `path` point at the argument that failed.
+
+A schema is the subject for the contract, not for the feature it happens to guard: `@demands` takes the tuple, `@ensures` takes the result, `@invariant` takes the instance. Declaring the tuple once and sharing it keeps that true across every feature with the same shape:
+
+```typescript
+const quantity = z.tuple([z.number().positive()]);
+
+class Inventory extends Contracted {
+    @demands(quantity) add(count: number): number { /* ... */ }
+    @demands(quantity) remove(count: number): number { /* ... */ }
+}
+```
+
+### `normalize` and `@invariant`
+
+`normalize` replaces the contract's subject with the schema's output, which is meaningful where the subject is something the runtime can substitute: the arguments for `@demands`, and the result for `@ensures`.
+
+An invariant's subject is the instance, and nothing replaces it. `normalize` is therefore **refused at decoration time**, for either kind of arm:
+
+```text
+@invariant cannot normalize: its subject is the instance, which no arm can replace.
+```
+
+Accepting it had no effect, so the option read as an intention that was not in force.
 
 ### Composition follows variance
 
