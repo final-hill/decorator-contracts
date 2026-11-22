@@ -703,7 +703,46 @@ class Sub extends Base {
 // The effective ensures for Sub#foo is: (x >= 0) && (x <= 10)
 ```
 
-The signature is `(self, args, old)`: the argument list, then the snapshot of the instance from before the feature ran. Writing `(_self, _args, x: number) => x >= 0` does not compile — the third parameter is `old`, and comparing it to a number is always `false`.
+The signature is `(self, args, old, result)`: the argument list, the snapshot of
+the instance from before the feature ran, and the value the feature produced.
+Writing `(_self, _args, x: number) => x >= 0` does not compile — the third
+parameter is `old`, and comparing it to a number is always `false`.
+
+### The `result`
+
+A postcondition receives `result`, the value the feature returned:
+
+```typescript
+class Proposal extends Contracted {
+    protected _state = 'Draft';
+    get state() { return this._state; }
+
+    @ensures((self, _args, _old, result: any) => result.state === 'Proposed')
+    submit(): Proposal {
+        this._state = 'Proposed';
+        return this;
+    }
+}
+```
+
+For a getter, `result` is the value the getter returned. For an `async` feature
+it is the settled value, so the postcondition observes the promise's resolution
+rather than the promise. For a generator it is the value yielded by the step being
+checked, because a generator's boundary is per step.
+
+A rejected `async` feature has no value to describe, so `@ensures` does not run for
+it; the rejection reaches the caller (or `@rescue`) directly. The same holds for a
+getter that returns a promise, which is refused as an `async` mistake before any
+postcondition is evaluated: `result` is therefore the value a *synchronous* getter
+returned.
+
+Every arm receives the **same** result: the raw value the body produced. A
+normalizing schema arm validates that value and only then replaces what the caller
+receives, so a predicate and a normalizing schema in one composition agree about
+what they were shown. `result` is therefore *not* the post-normalization value.
+
+A write has no value to deliver, so for a setter `result` is the value that was
+assigned.
 
 ## Rescue
 
