@@ -111,7 +111,7 @@ describe('Deletion runs the contract lifecycle', () => {
     });
 
     test('a delete that invalidates the object is rejected', () => {
-        @invariant((self: Foo) => '_needed' in self)
+        @invariant(({ self }) => '_needed' in self)
         class Foo extends Contracted {
             _needed = 1;
         }
@@ -122,7 +122,7 @@ describe('Deletion runs the contract lifecycle', () => {
     });
 
     test('a delete that satisfies the invariant succeeds', () => {
-        @invariant((self: Foo) => !('_temp' in self) || self._temp === 1)
+        @invariant(({ self }) => !('_temp' in self) || self._temp === 1)
         class Foo extends Contracted {
             _temp = 1;
         }

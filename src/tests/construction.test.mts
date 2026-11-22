@@ -172,7 +172,7 @@ describe('Ordinary construction is unaffected', () => {
     });
 
     test('an invalid initial state is caught by the invariant', () => {
-        @invariant((self: Foo) => self.publicProp < 3)
+        @invariant(({ self }) => self.publicProp < 3)
         class Foo extends Contracted {
             publicProp = 2;
 
@@ -200,7 +200,7 @@ describe('A `@rescue` handler cannot supply the result', () => {
         class Foo extends Contracted {
             protected _attempts = 0;
 
-            @rescue((_self, _error, _args, retry) => retry())
+            @rescue(({ retry }) => retry())
             method(): number {
                 if (this._attempts++ === 0) throw new Error('first');
 

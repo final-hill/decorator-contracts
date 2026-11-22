@@ -113,12 +113,13 @@ describe('both combinators compose with the contracts', () => {
         const { Contracted, demands } = await import('@final-hill/decorator-contracts');
 
         class Order extends Contracted {
-            // Both operands are deliberately non-boolean, which is the shape that
-            // used to leak the object and fail the strict-boolean check.
+            // Both operands are deliberately non-boolean. `iff` returns a
+            // boolean rather than an operand, so the strict-boolean check is
+            // satisfied.
             public _paid: any = { amount: 10 };
             public _hasTicket: any = { seat: 'A1' };
 
-            @demands(function (self: Order) { return iff(self._paid, self._hasTicket); })
+            @demands(function ({ self }) { return iff(self._paid, self._hasTicket); })
             board(): string { return 'boarded'; }
         }
 

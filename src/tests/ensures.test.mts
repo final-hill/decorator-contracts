@@ -1,4 +1,4 @@
-import { AssertionError, checkedMode, Contracted, ensures } from '@final-hill/decorator-contracts';
+import { AssertionError, checkedMode, Contracted, ensures, type EnsuresSubject } from '@final-hill/decorator-contracts';
 import { describe, test } from 'node:test';
 import nodeAssert from 'node:assert/strict';
 
@@ -12,10 +12,10 @@ describe('Ensures assertions can be defined for a class feature', () => {
             get value() { return this._value; }
             set value(val: number) { this._value = val; }
 
-            @ensures((self: Foo) => nonNegative(self) && isEven(self))
+            @ensures(({ self }) => nonNegative(self) && isEven(self))
             inc(): void { this.value += 2; }
 
-            @ensures((self: Foo) => nonNegative(self) && isEven(self))
+            @ensures(({ self }) => nonNegative(self) && isEven(self))
             dec(): void { this.value -= 1; }
         }
 
@@ -37,7 +37,7 @@ describe('Overridden features are still subject to the ensures assertion ', () =
         get value() { return this._value; }
         set value(val: number) { this._value = val; }
 
-        @ensures((self: Base) => self.value >= 0)
+        @ensures(({ self }) => self.value >= 0)
         dec(): void { this.value--; }
         inc(): void { this.value++; }
     }
@@ -72,7 +72,7 @@ describe('The ensures assertion is evaluated after its associated feature is cal
 
     test('true @ensures check does not throw', () => {
         class Bar extends Foo {
-            @ensures((self: Bar) => self.value >= 0)
+            @ensures(({ self }) => self.value >= 0)
             method(): number { return this.value = 2; }
         }
 
@@ -83,7 +83,7 @@ describe('The ensures assertion is evaluated after its associated feature is cal
 
     test('false @ensures check throws', () => {
         class Bar extends Foo {
-            @ensures(_self => false)
+            @ensures(() => false)
             method(): number { return this.value = 12; }
         }
         const bar = Bar.new();
@@ -153,7 +153,7 @@ describe('`ensures` assertions are enabled in checkedMode and disabled otherwise
 
 describe('Postconditions cannot be weakened in a subtype', () => {
     class Base extends Contracted {
-        @ensures((_self, [value]) => 10 <= value && value <= 30)
+        @ensures(({ args: [value] }) => 10 <= value && value <= 30)
         method(value: number): number { return value; }
     }
 
@@ -167,7 +167,7 @@ describe('Postconditions cannot be weakened in a subtype', () => {
     });
 
     class Weaker extends Base {
-        @ensures((_self, [value]) => 1 <= value && value <= 50)
+        @ensures(({ args: [value] }) => 1 <= value && value <= 50)
         override method(value: number): number { return value; }
     }
 
@@ -181,7 +181,7 @@ describe('Postconditions cannot be weakened in a subtype', () => {
     });
 
     class Stronger extends Base {
-        @ensures((_self, [value]) => 15 <= value && value <= 20)
+        @ensures(({ args: [value] }) => 15 <= value && value <= 20)
         override method(value: number): number { return value; }
     }
 
@@ -204,7 +204,7 @@ describe('ensures has access to the properties of the instance class before its 
 
             get size() { return this._size; }
 
-            @ensures((self: Stack<T>, _args, old) => self.size == old.size - 1)
+            @ensures(({ self, old }) => self.size == old.size - 1)
             pop(): T {
                 const result = this._implementation.pop()!;
                 this._size = this._implementation.length;
@@ -212,7 +212,7 @@ describe('ensures has access to the properties of the instance class before its 
                 return result;
             }
 
-            @ensures((self: Stack<T>, _args, old) => self.size == old.size + 1)
+            @ensures(({ self, old }) => self.size == old.size + 1)
             push(item: T): void {
                 this._implementation.push(item);
                 this._size = this._implementation.length;
@@ -249,8 +249,8 @@ describe('A throwing `@ensures` arm rejects without hiding its siblings', () => 
         let siblingRan = false;
 
         class Foo extends Contracted {
-            @ensures((_self: Foo, _args: any[], _old: Foo) => { siblingRan = true; return false; })
-            @ensures((_self: Foo, _args: any[], _old: Foo) => { throw new Failed('no'); })
+            @ensures(() => { siblingRan = true; return false; })
+            @ensures(() => { throw new Failed('no'); })
             method(): void { }
         }
 
@@ -269,8 +269,8 @@ describe('A throwing `@ensures` arm rejects without hiding its siblings', () => 
 
     test('a throwing arm and a passing arm still rejects the invocation', () => {
         class Foo extends Contracted {
-            @ensures((_self: Foo, _args: any[], _old: Foo) => true)
-            @ensures((_self: Foo, _args: any[], _old: Foo) => { throw new Failed('no'); })
+            @ensures(() => true)
+            @ensures(() => { throw new Failed('no'); })
             method(): number { return 1; }
         }
 
@@ -280,8 +280,8 @@ describe('A throwing `@ensures` arm rejects without hiding its siblings', () => 
 
     test('no throwing arm means an AssertionError listing the falsy arm', () => {
         class Foo extends Contracted {
-            @ensures((_self: Foo, _args: any[], _old: Foo) => true)
-            @ensures((_self: Foo, _args: any[], _old: Foo) => false)
+            @ensures(() => true)
+            @ensures(() => false)
             method(): void { }
         }
 
@@ -297,15 +297,15 @@ describe('A throwing `@ensures` arm rejects without hiding its siblings', () => 
 /**
  * https://github.com/final-hill/decorator-contracts/issues/331
  *
- * A postcondition predicate receives the feature's result as its fourth
- * argument. Every arm of one composition is given the same raw value, which is
- * what makes AND-composition a claim about one thing: "every arm holds" says
- * nothing if each arm was shown a different value.
+ * A postcondition predicate receives the feature's result as `result`. Every arm
+ * of one composition is given the same raw value, which is what makes
+ * AND-composition a claim about one thing: "every arm holds" says nothing if each
+ * arm was shown a different value.
  */
 describe('A postcondition predicate can read the result', () => {
-    test('the fourth parameter is the value the feature returned', () => {
+    test('`result` is the value the feature returned', () => {
         class Foo extends Contracted {
-            @ensures((_self: Foo, _args: any[], _old: Foo, result: unknown) => result === 42)
+            @ensures(({ result }) => result === 42)
             method(): number { return 42; }
         }
 
@@ -314,7 +314,7 @@ describe('A postcondition predicate can read the result', () => {
 
     test('a result that violates the postcondition rejects the call', () => {
         class Foo extends Contracted {
-            @ensures((_self: Foo, _args: any[], _old: Foo, result: any) => result.state === 'Proposed')
+            @ensures(({ result }: EnsuresSubject<Foo, [], { state: string }>) => result.state === 'Proposed')
             submit(): { state: string } { return { state: 'Draft' }; }
         }
 
@@ -329,7 +329,7 @@ describe('A postcondition predicate can read the result', () => {
         class Foo extends Contracted {
             public _value = 7;
 
-            @ensures((_self: Foo, _args: any[], _old: Foo, result: unknown) => result === 7)
+            @ensures(({ result }) => result === 7)
             get value() { return this._value; }
         }
 
@@ -342,7 +342,7 @@ describe('A postcondition predicate can read the result', () => {
         class Foo extends Contracted {
             public _value = 0;
 
-            @ensures((_self: Foo, _args: any[], _old: Foo, result: unknown) => { observed = result; return true; })
+            @ensures(({ result }) => { observed = result; return true; })
             set value(v: number) { this._value = v; }
         }
 
@@ -359,7 +359,7 @@ describe('A postcondition predicate can read the result', () => {
             // The predicate stays synchronous: contract evaluation is synchronous,
             // so what it observes is the value the promise settled to, which the
             // lifecycle awaits before calling it.
-            @ensures((_self: Foo, _args: any[], _old: Foo, result: unknown) => { observed = result; return true; })
+            @ensures(({ result }) => { observed = result; return true; })
             async method(): Promise<number> { return 99; }
         }
 
@@ -372,7 +372,7 @@ describe('A postcondition predicate can read the result', () => {
         let ran = false;
 
         class Foo extends Contracted {
-            @ensures((_self: Foo, _args: any[], _old: Foo, _result: unknown) => { ran = true; return true; })
+            @ensures(() => { ran = true; return true; })
             async method(): Promise<number> { throw new Error('body failed'); }
         }
 
@@ -384,7 +384,7 @@ describe('A postcondition predicate can read the result', () => {
         const observed: unknown[] = [];
 
         class Foo extends Contracted {
-            @ensures((_self: Foo, _args: any[], _old: Foo, result: unknown) => { observed.push(result); return true; })
+            @ensures(({ result }) => { observed.push(result); return true; })
             *gen(): Generator<number> {
                 // Two different values: a predicate handed the *previous* step's
                 // value, or the iterator itself, is distinguishable only if the
@@ -422,7 +422,7 @@ describe('The result is the raw value, shared by every arm', () => {
             // and has already replaced the running value by the time the predicate
             // runs. That is the only arrangement in which "raw" and "normalized"
             // differ when the predicate is called.
-            @ensures((_self: Foo, _args: any[], _old: Foo, result: unknown) => { seen.push(result); return true; })
+            @ensures(({ result }) => { seen.push(result); return true; })
             @ensures(padded as any, { normalize: true })
             method(): string { return '  padded  '; }
         }
@@ -447,7 +447,7 @@ describe('The result is the raw value, shared by every arm', () => {
 
         class Foo extends Contracted {
             @ensures(recording as any)
-            @ensures((_self: Foo, _args: any[], _old: Foo, result: unknown) => { subjects.push(['predicate', result]); return true; })
+            @ensures(({ result }) => { subjects.push(['predicate', result]); return true; })
             method(): string { return 'raw'; }
         }
 

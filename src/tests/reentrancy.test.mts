@@ -14,13 +14,13 @@ describe('Contract evaluation does not re-enter the traps', () => {
     test('a predicate reading a getter', () => {
         let evaluations = 0;
 
-        @invariant((self: Foo) => { evaluations++; return self.value >= 0; })
+        @invariant(({ self }) => { evaluations++; return self.value >= 0; })
         class Foo extends Contracted {
             protected _value = 1;
             get value() { return this._value; }
 
-            @demands((self: Foo) => self.value >= 0)
-            @ensures((self: Foo, _args, old: Foo) => self.value === old.value + 1)
+            @demands(({ self }) => self.value >= 0)
+            @ensures(({ self, old  }) => self.value === old.value + 1)
             @demands(() => true)
             inc(): void { this._value += 1; }
         }
@@ -33,7 +33,7 @@ describe('Contract evaluation does not re-enter the traps', () => {
     });
 
     test('a predicate calling a method on the instance', () => {
-        @invariant((self: Foo) => self.check())
+        @invariant(({ self }) => self.check())
         class Foo extends Contracted {
             protected _n = 0;
             get n() { return this._n; }
@@ -51,7 +51,7 @@ describe('Contract evaluation does not re-enter the traps', () => {
     });
 
     test('a predicate reading a property through a chain of getters', () => {
-        @invariant((self: Foo) => self.outer >= 0)
+        @invariant(({ self }) => self.outer >= 0)
         class Foo extends Contracted {
             protected _v = 1;
             get inner() { return this._v; }
@@ -72,7 +72,7 @@ describe('Contract evaluation does not re-enter the traps', () => {
             get attempts() { return this._attempts; }
 
             @demands(() => true)
-            @rescue((self: Foo, _error, _args, retry) => {
+            @rescue(({ self, retry }) => {
                 self._attempts++;
                 retry();
             })

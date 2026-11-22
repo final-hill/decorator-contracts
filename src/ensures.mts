@@ -6,12 +6,11 @@ import type { StandardSchemaV1 } from './standard-schema.mjs';
 import type { FeatureDecoratorContext } from './types.mjs';
 
 /**
- * A postcondition predicate.
+ * The fields a postcondition predicate is called with.
  *
- * `args` is the argument list of the invocation and `old` is the snapshot of
- * the instance from before the feature ran, so a predicate reads
- * `(self, [x], old, result) => ...`. See `DemandsPredicate` for why the tuple is
- * generic.
+ * `old` is the snapshot of the instance from before the feature ran. It is not
+ * `Readonly`, and is deliberately not the same object as `self`: it is a detached
+ * copy, so a predicate writing to it corrupts nothing.
  *
  * `result` is the value the feature body produced, which is what the caller
  * receives unless a schema arm normalizes it. Every arm is given the **same**
@@ -19,9 +18,35 @@ import type { FeatureDecoratorContext } from './types.mjs';
  * only a statement about one thing if every arm observes one thing. A normalizing
  * schema also validates this value and replaces it afterwards, so a predicate and
  * a schema in the same composition always agree about what they were shown.
+ *
+ * See `DemandsSubject` for why `self` is not `Readonly<This>` and for the
+ * inference that makes an annotation unnecessary.
+ *
+ * `Result` defaults to `unknown`. A method's context type carries a call
+ * signature while a getter's carries the property type, so both would be
+ * inference sites for one parameter and the compiler would resolve it to their
+ * intersection. A predicate that reads a member of `result` therefore names it —
+ * `EnsuresSubject<Cart, [number], number>` — and `unknown` rather than `any` makes
+ * forgetting that a compile error rather than a silent `undefined`.
  */
-export type EnsuresPredicate<This extends Contracted, Args extends any[] = any[]> =
-    (self: This, args: Args, old: This, result: unknown) => boolean;
+export interface EnsuresSubject<This, Args extends any[] = any[], Result = unknown> {
+    readonly self: This;
+    readonly args: Args;
+    readonly old: This;
+    readonly result: Result;
+}
+
+/**
+ * A postcondition predicate.
+ *
+ * It takes one object rather than a positional list, so a contract that supplies
+ * fields the predicate does not read costs nothing where it is declared.
+ */
+export type EnsuresPredicate<
+    This extends Contracted,
+    Args extends any[] = any[],
+    Result = unknown,
+> = (subject: EnsuresSubject<This, Args, Result>) => boolean;
 
 /**
  * A postcondition arm: a predicate, or a schema the feature's **result** must
@@ -31,21 +56,28 @@ export type EnsuresPredicate<This extends Contracted, Args extends any[] = any[]
  * the covariant position: a subtype may promise a narrower result, so the arms
  * are AND-composed.
  */
-export type EnsuresArm<This extends Contracted, Args extends any[] = any[]> =
-    EnsuresPredicate<This, Args> | StandardSchemaV1<unknown, any>;
+export type EnsuresArm<
+    This extends Contracted,
+    Args extends any[] = any[],
+    Result = unknown,
+> = EnsuresPredicate<This, Args, Result> | StandardSchemaV1<unknown, any>;
 
 export type EnsuresDecorator = <
     This extends Contracted,
-    Args extends any[]
+    Args extends any[],
+    Result = unknown,
 >(
-    arm: EnsuresArm<This, Args>,
+    arm: EnsuresArm<This, Args, Result>,
     options?: ArmOptions,
 ) => (
     value: unknown,
-    context: FeatureDecoratorContext
+    context: FeatureDecoratorContext<This, Args>
 ) => void;
 
 /** A registered postcondition arm, with the options it was declared with. */
+/** No arms are declared for a feature, so none are evaluated. */
+const NO_ARMS: readonly RegisteredEnsures[] = Object.freeze([]);
+
 export interface RegisteredEnsures {
     arm: EnsuresArm<Contracted>;
     options?: ArmOptions;
@@ -55,6 +87,7 @@ export const ensures: EnsuresDecorator = (arm, options) => (feature, ctx) => {
     assertFeatureContractTarget('@ensures', feature, ctx);
     assertNormalizable(arm, '@ensures', options);
 
+    // See `@demands` for why the metadata record needs an assertion here.
     const es = [
         ...(ctx.metadata as any)?.ensures?.[ctx.name] ?? [],
         { arm, options }
@@ -97,7 +130,7 @@ export function assertEnsures(
     if (!Contracted[checkedMode]) return result;
 
     const Class = instance.constructor as typeof Contracted,
-        es = (Class[Symbol.metadata]?.ensures?.[propertyKey] ?? []) as unknown as RegisteredEnsures[];
+        es = Class[Symbol.metadata]?.ensures?.[propertyKey] ?? NO_ARMS;
 
     if (es.length === 0) return result;
 
@@ -116,7 +149,7 @@ export function assertEnsures(
             // before replacing it. Supplying the raw value to all of them is what
             // makes AND-composition a claim about one thing rather than several.
             {
-                predicate: () => [instance, args, old, result],
+                predicate: () => ({ self: instance, args, old, result }),
                 schema: () => result,
             },
             '@ensures',

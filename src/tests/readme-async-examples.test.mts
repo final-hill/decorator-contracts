@@ -23,8 +23,8 @@ describe('README asynchronous feature examples', () => {
         // to satisfy the invariant, so the fixture must not bypass the proxy.
         seed(balance: number): void { this._balance = balance; }
 
-        @demands((self: Account, [amount]: [number]) => self.balance + amount >= 0)
-        @ensures((self: Account, [amount]: [number], old: Account) => self.balance === old.balance + amount)
+        @demands(({ self, args: [amount]  }) => self.balance + amount >= 0)
+        @ensures(({ self, args: [amount], old  }) => self.balance === old.balance + amount)
         async deposit(amount: number): Promise<void> {
             await this._ledger.record(amount);
             this._balance += amount;
@@ -60,7 +60,7 @@ describe('README asynchronous feature examples', () => {
     test('`@invariant` brackets the suspended body', async () => {
         const balances: number[] = [];
 
-        @invariant(function (self: Guarded) { balances.push(self.value); return self.value >= 0; })
+        @invariant(function ({ self }) { balances.push(self.value); return self.value >= 0; })
         class Guarded extends Contracted {
             protected _value = 0;
             get value() { return this._value; }

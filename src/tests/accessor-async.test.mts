@@ -36,7 +36,7 @@ describe('Accessors that return promises', () => {
     test('a getter is bracketed by the invariant and fails synchronously', () => {
         let evaluations = 0;
 
-        @invariant(function (self: Foo) { evaluations++; return self._value > 0; })
+        @invariant(function ({ self }) { evaluations++; return self._value > 0; })
         class Foo extends Contracted {
             public _value = 1;
 

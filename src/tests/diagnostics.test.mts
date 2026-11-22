@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test';
 import nodeAssert from 'node:assert/strict';
-import { AssertionError, Contracted, demands, ensures, invariant } from '@final-hill/decorator-contracts';
+import { AssertionError, Contracted, demands, ensures, invariant, type DemandsSubject } from '@final-hill/decorator-contracts';
 
 /**
  * https://github.com/final-hill/decorator-contracts/issues/289
@@ -85,7 +85,7 @@ describe('A contract failure is described in its message', () => {
     });
 
     test('`@invariant` names the class and the failing predicate', () => {
-        @invariant((self: Foo) => self.value > 0)
+        @invariant(({ self }) => self.value > 0)
         class Foo extends Contracted {
             get value() { return 0; }
         }
@@ -130,8 +130,8 @@ describe('A contract failure is described in its message', () => {
 describe('A contract failure carries a structured payload', () => {
     test('`@demands` lists every arm, because OR-composition means any could permit the call', () => {
         class Foo extends Contracted {
-            @demands((_self: Foo, [v]: [number]) => v > 0)
-            @demands((_self: Foo, [v]: [number]) => v === 42)
+            @demands(({ args: [v] }: DemandsSubject<Foo, [number]>) => v > 0)
+            @demands(({ args: [v] }: DemandsSubject<Foo, [number]>) => v === 42)
             method(_v: number): void { }
         }
 

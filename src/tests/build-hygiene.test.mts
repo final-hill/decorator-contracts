@@ -7,10 +7,10 @@ import { join, resolve } from 'node:path';
 /**
  * https://github.com/final-hill/decorator-contracts/issues/293
  *
- * The build used to lint with `fix: true`, and `prebuild` ran `eslint --fix`.
- * A build therefore rewrote tracked files, so the working tree could silently
- * disagree with what was committed, and CI's autofix masked findings instead of
- * failing on them.
+ * Lint reports violations and does not correct them, so `prebuild` neither runs
+ * `--fix` nor passes `fix` to the webpack plugin. A build that rewrote tracked
+ * files would let the working tree disagree with what was committed, and CI's
+ * autofix would mask findings instead of failing on them.
  *
  * These tests pin the configuration, and demonstrate the behaviour with a
  * temporary copy of a source file so nothing in the repo is touched.
@@ -48,7 +48,7 @@ describe('The build does not rewrite source files', () => {
 describe('Lint reports a fixable violation instead of correcting it', () => {
     /**
      * `prefer-const` is auto-fixable, so it distinguishes "reported" from
-     * "silently rewritten" — the behaviour this issue is about.
+     * "silently rewritten", which is the property these tests pin.
      *
      * The probe must live inside the project for ESLint to find `eslint.config.js`,
      * so it is written to a uniquely named file under `src/` and removed again.

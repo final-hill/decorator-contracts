@@ -1,13 +1,14 @@
 import { describe, test } from 'node:test';
 import nodeAssert from 'node:assert/strict';
-import { Contracted, rescue } from '@final-hill/decorator-contracts';
+import { Contracted, rescue, type RescueSubject } from '@final-hill/decorator-contracts';
 
 /**
  * https://github.com/final-hill/decorator-contracts/issues/292
  *
- * These lock in the `retry` signature. Before `RescueHandler` declared
- * `retry` with `this: This`, every handler written outside the library failed
- * to type-check, because a bare call `retry(x)` has a `this` of `void`.
+ * These lock in the `retry` signature. `retry` is a field of the rescue subject
+ * rather than a method of it, so it is called bare, `retry(x)`, and its `this` is
+ * `void`. Declaring `this: This` on the handler makes every consumer-written
+ * handler fail to type-check for that reason.
  *
  * The signatures below are the ones a consumer writes. If they stop compiling,
  * `npm run typecheck` fails.
@@ -17,7 +18,7 @@ describe('`retry` is callable as a plain function', () => {
         class Foo extends Contracted {
             protected _attempts = 0;
 
-            @rescue((_self, _error, args, retry) => retry(...args))
+            @rescue(({ args, retry }) => retry(...args))
             run(value: number): number {
                 if (this._attempts++ === 0) throw new Error('first');
 
@@ -32,7 +33,7 @@ describe('`retry` is callable as a plain function', () => {
         class Foo extends Contracted {
             protected _attempts = 0;
 
-            @rescue((_self, _error, _args, retry) => retry())
+            @rescue(({ retry }) => retry())
             run(): number {
                 if (this._attempts++ === 0) throw new Error('first');
 
@@ -47,7 +48,7 @@ describe('`retry` is callable as a plain function', () => {
         class Foo extends Contracted {
             protected _attempts = 0;
 
-            @rescue((_self, _error, _args, retry: (value: number) => void) => retry(0))
+            @rescue(({ retry }) => retry(0))
             run(): number {
                 if (this._attempts++ === 0) throw new Error('first');
 
@@ -56,5 +57,30 @@ describe('`retry` is callable as a plain function', () => {
         }
 
         nodeAssert.strictEqual((Foo.new() as any).run(), 0);
+    });
+});
+
+/**
+ * A handler written as a `function` expression gets the instance as its `this`,
+ * because the runtime invokes it with `Function.prototype.call`. An arrow
+ * handler ignores that, which is why the instance is also supplied as `self`.
+ */
+describe('A `function` handler receives the instance as `this`', () => {
+    test('`this` and `self` are the same instance', () => {
+        const observed: { viaThis?: number, viaSelf?: number } = {};
+
+        class Foo extends Contracted {
+            public _n = 7;
+
+            @rescue(function (this: Foo, { self }: RescueSubject<Foo>) {
+                observed.viaThis = this._n;
+                observed.viaSelf = self._n;
+            })
+            run(): void { throw new Error('boom'); }
+        }
+
+        nodeAssert.throws(() => (Foo.new() as Foo).run(), { message: 'boom' });
+        nodeAssert.strictEqual(observed.viaThis, 7, '`this` is the instance');
+        nodeAssert.strictEqual(observed.viaSelf, 7, '`self` is the instance too');
     });
 });

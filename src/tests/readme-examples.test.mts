@@ -1,27 +1,29 @@
 import { describe, test } from 'node:test';
 import nodeAssert from 'node:assert/strict';
-import { AssertionError, Contracted, demands, ensures } from '@final-hill/decorator-contracts';
+import { AssertionError, Contracted, demands, ensures, type DemandsSubject, type EnsuresSubject } from '@final-hill/decorator-contracts';
 
 /**
  * https://github.com/final-hill/decorator-contracts/issues/290
  *
  * These mirror the README's subtyping examples. They exist so the documented
- * signatures are executable: a predicate receives the argument list, so it
- * destructures `(_self, [x])` rather than taking the first argument directly.
+ * signatures are executable: a predicate is called with one subject object, so
+ * it destructures `({ args: [x] })` rather than taking the first argument
+ * directly.
  *
- * The incorrect forms used to compile, because `DemandsPredicate` declared a
- * rest parameter and `(_self, x: number)` bound `x` to the array. Comparison
- * then passed through coercion (`[5] >= 0` is `true`) until the argument was
- * non-numeric, at which point the contract silently failed.
+ * The incorrect forms compile when the predicate reads the parameter list as
+ * though it were the first argument: `({ args }) => args >= 0` compares the
+ * array rather than its element. Comparison then passes through coercion
+ * (`[5] >= 0` is `true`) until the argument is non-numeric, at which point the
+ * contract silently fails.
  */
 describe('README subtyping examples', () => {
     class BaseD extends Contracted {
-        @demands((_self, [x]: [number]) => x >= 0)
+        @demands(({ args: [x] }: DemandsSubject<Contracted, [number]>) => x >= 0)
         foo(x: number): number { return x; }
     }
 
     class SubD extends BaseD {
-        @demands((_self, [x]: [number]) => x === 42)
+        @demands(({ args: [x] }: DemandsSubject<Contracted, [number]>) => x === 42)
         override foo(x: number): number { return x; }
     }
 
@@ -36,12 +38,12 @@ describe('README subtyping examples', () => {
     });
 
     class BaseE extends Contracted {
-        @ensures((_self, [x]: [number]) => x >= 0)
+        @ensures(({ args: [x] }: EnsuresSubject<Contracted, [number], unknown>) => x >= 0)
         foo(x: number): number { return x; }
     }
 
     class SubE extends BaseE {
-        @ensures((_self, [x]: [number]) => x <= 10)
+        @ensures(({ args: [x] }: EnsuresSubject<Contracted, [number], unknown>) => x <= 10)
         override foo(x: number): number { return x; }
     }
 
@@ -56,11 +58,11 @@ describe('README subtyping examples', () => {
 });
 
 describe('A predicate receives the argument list', () => {
-    test('the second parameter is the array of arguments', () => {
+    test('the `args` field is the array of arguments', () => {
         let received: unknown;
 
         class Foo extends Contracted {
-            @demands((_self, args) => { received = args; return true; })
+            @demands(({ args }) => { received = args; return true; })
             method(_a: number, _b: string): void { }
         }
 
@@ -71,7 +73,7 @@ describe('A predicate receives the argument list', () => {
 
     test('destructuring reads individual arguments', () => {
         class Foo extends Contracted {
-            @demands((_self, [a, b]: [number, string]) => a > 0 && b.length > 0)
+            @demands(({ args: [a, b] }: DemandsSubject<Contracted, [number, string]>) => a > 0 && b.length > 0)
             method(_a: number, _b: string): void { }
         }
 
@@ -79,7 +81,8 @@ describe('A predicate receives the argument list', () => {
 
         nodeAssert.doesNotThrow(() => foo.method(1, 'x'));
         nodeAssert.throws(() => foo.method(0, 'x'), AssertionError);
-        nodeAssert.throws(() => foo.method(1, ''), AssertionError);    });
+        nodeAssert.throws(() => foo.method(1, ''), AssertionError);
+    });
 
     test('an `@ensures` predicate also receives the argument list, plus `old`', () => {
         let argsSeen: unknown;
@@ -89,7 +92,7 @@ describe('A predicate receives the argument list', () => {
             protected _n = 0;
             get n() { return this._n; }
 
-            @ensures((self: Counter, args: any[], old: Counter) => {
+            @ensures(({ self, args, old }) => {
                 argsSeen = args;
                 oldSeen = self.n === old.n + args[0];
                 return true;
@@ -116,12 +119,12 @@ describe('README: a throwing predicate is a failed predicate', () => {
     }
 
     class BaseThrows extends Contracted {
-        @demands((_self: BaseThrows, [x]: [number]) => { if (x !== 42) throw new Denied(); return true; })
+        @demands(({ args: [x] }: DemandsSubject<BaseThrows, [number]>) => { if (x !== 42) throw new Denied(); return true; })
         method(x: number): number { return x; }
     }
 
     class SubThrows extends BaseThrows {
-        @demands((_self: SubThrows, [x]: [number]) => x === 7)
+        @demands(({ args: [x] }: DemandsSubject<SubThrows, [number]>) => x === 7)
         override method(x: number): number { return x; }
     }
 

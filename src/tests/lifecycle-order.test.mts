@@ -142,7 +142,7 @@ describe('The assertions run in the documented order', () => {
     });
 
     test('an invalid state is reported before a failing precondition', () => {
-        @invariant((self: Foo) => self.value > 0)
+        @invariant(({ self }) => self.value > 0)
         class Foo extends Contracted {
             protected _value = 1;
             get value() { return this._value; }

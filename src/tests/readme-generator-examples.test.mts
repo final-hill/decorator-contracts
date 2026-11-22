@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test';
 import nodeAssert from 'node:assert/strict';
-import { AssertionError, Contracted, demands, ensures, invariant } from '@final-hill/decorator-contracts';
+import { AssertionError, Contracted, demands, ensures, invariant, type DemandsSubject, type EnsuresSubject } from '@final-hill/decorator-contracts';
 
 /**
  * https://github.com/final-hill/decorator-contracts/issues/318
@@ -12,7 +12,7 @@ describe('README generator examples', () => {
     class Counter extends Contracted {
         protected _count = 0;
 
-        @ensures((self: Counter, [_value]: [number], old: Counter) => self._count === old._count + 1)
+        @ensures(({ self, args: [_value], old }: EnsuresSubject<Counter, [number], unknown>) => self._count === old._count + 1)
         *tick(): Generator<number> {
             this._count++;
             yield this._count;
@@ -27,7 +27,7 @@ describe('README generator examples', () => {
         nodeAssert.deepEqual([...counter.tick()], [1, 2]);
     });
 
-    @invariant((self: Ledger) => self._balance >= 0)
+    @invariant(({ self }) => self._balance >= 0)
     class Ledger extends Contracted {
         protected _balance = 10;
 
@@ -54,7 +54,7 @@ describe('README generator examples', () => {
     });
 
     class Chunks extends Contracted {
-        @demands((_self: Chunks, [count]: [number]) => count > 0)
+        @demands(({ args: [count] }: DemandsSubject<Chunks, [number]>) => count > 0)
         *gen(count: number): Generator<number> {
             for (let i = 0; i < count; i++) yield i;
         }

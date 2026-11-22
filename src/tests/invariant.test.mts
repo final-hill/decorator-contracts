@@ -43,7 +43,7 @@ describe('`invariant` predicates must return a boolean', () => {
     });
 
     test('boolean predicates continue to work', () => {
-        @invariant((self: Foo) => self.value >= 0)
+        @invariant(({ self }) => self.value >= 0)
         class Foo extends Contracted {
             protected _value = 0;
             get value() { return this._value; }
@@ -55,7 +55,7 @@ describe('`invariant` predicates must return a boolean', () => {
 });
 
 describe('The subclasses of a contracted class must obey the invariants', () => {
-    @invariant((instance) => instance.value >= 0)
+    @invariant(({ self: instance }) => instance.value >= 0)
     class Foo extends Contracted {
         protected _value = 0;
         get value() { return this._value; }
@@ -135,7 +135,7 @@ describe('The subclasses of a contracted class must obey the invariants', () => 
     test('Test subclassing in unchecked mode', () => {
         Contracted[checkedMode] = false;
 
-        @invariant(self => self.value >= 0)
+        @invariant(({ self }) => self.value >= 0)
         class Foo extends Contracted {
             protected _value = 0;
             get value() { return this._value; }
@@ -181,7 +181,7 @@ describe('The subclasses of a contracted class must obey the invariants', () => 
         @invariant(() => true)
         class Base extends Contracted { }
 
-        @invariant((self) => self.value >= 0)
+        @invariant(({ self }) => self.value >= 0)
         class Sub extends Base {
             protected _value = 0;
             get value() { return this._value; }
@@ -196,13 +196,13 @@ describe('The subclasses of a contracted class must obey the invariants', () => 
 describe('A truthy invariant does not throw an exception when evaluated', () => {
     test('Construction does not throw', () => {
         nodeAssert.doesNotThrow(() => {
-            @invariant(self => self instanceof Foo)
+            @invariant(({ self }) => self instanceof Foo)
             class Foo extends Contracted { }
 
             return Foo.new();
         });
         nodeAssert.doesNotThrow(() => {
-            @invariant(self => self instanceof Foo)
+            @invariant(({ self }) => self instanceof Foo)
             class Foo extends Contracted { }
 
             return Foo.new();
@@ -211,7 +211,7 @@ describe('A truthy invariant does not throw an exception when evaluated', () => 
 
     test('Method does not throw', () => {
         nodeAssert.doesNotThrow(() => {
-            @invariant(self => self.value >= 0)
+            @invariant(({ self }) => self.value >= 0)
             class Foo extends Contracted {
                 protected _value = 0;
                 get value() { return this._value; }
@@ -229,7 +229,7 @@ describe('A truthy invariant does not throw an exception when evaluated', () => 
         });
 
         nodeAssert.doesNotThrow(() => {
-            @invariant(self => self.value >= 0)
+            @invariant(({ self }) => self.value >= 0)
             class Foo extends Contracted {
                 protected _value = 0;
                 get value() { return this._value; }
@@ -251,7 +251,7 @@ describe('A truthy invariant does not throw an exception when evaluated', () => 
 describe('A falsy invariant throws an exception when evaluated', () => {
     test('Construction throws in checkMode', () => {
         nodeAssert.throws(() => {
-            @invariant(self => self instanceof Set)
+            @invariant(({ self }) => self instanceof Set)
             class Foo extends Contracted { }
 
             return Foo.new();
@@ -264,7 +264,7 @@ describe('A falsy invariant throws an exception when evaluated', () => {
         nodeAssert.doesNotThrow(() => {
             Contracted[checkedMode] = false;
 
-            @invariant(self => self instanceof Map)
+            @invariant(({ self }) => self instanceof Map)
             class Foo extends Contracted { }
 
             const result = Foo.new();
@@ -280,7 +280,7 @@ describe('A falsy invariant throws an exception when evaluated', () => {
 
     test('Method throws in checkMode', () => {
         nodeAssert.throws(() => {
-            @invariant(self => self.value === 37)
+            @invariant(({ self }) => self.value === 37)
             class Foo extends Contracted {
                 protected _value = 37;
                 get value() { return this._value; }
@@ -302,7 +302,7 @@ describe('A falsy invariant throws an exception when evaluated', () => {
         Contracted[checkedMode] = false;
 
         nodeAssert.doesNotThrow(() => {
-            @invariant(self => self.value === 37)
+            @invariant(({ self }) => self.value === 37)
             class Foo extends Contracted {
                 protected _value = 37;
                 get value() { return this._value; }
@@ -330,7 +330,7 @@ describe('A falsy invariant throws an exception when evaluated', () => {
 describe('Invariants are evaluated after the associated class is constructed', () => {
     test('truthy construction does not throw in checked and unchecked mode', () => {
         nodeAssert.doesNotThrow(() => {
-            @invariant(self => self instanceof Foo)
+            @invariant(({ self }) => self instanceof Foo)
             class Foo extends Contracted { }
 
             return Foo.new();
@@ -339,7 +339,7 @@ describe('Invariants are evaluated after the associated class is constructed', (
         nodeAssert.doesNotThrow(() => {
             Contracted[checkedMode] = false;
 
-            @invariant(self => self instanceof Foo)
+            @invariant(({ self }) => self instanceof Foo)
             class Foo extends Contracted { }
 
             const result = Foo.new();
@@ -352,7 +352,7 @@ describe('Invariants are evaluated after the associated class is constructed', (
 
     test('falsy construction throws in checked mode', () => {
         nodeAssert.throws(() => {
-            @invariant(self => self instanceof Array)
+            @invariant(({ self }) => self instanceof Array)
             class Foo extends Contracted { }
 
             return Foo.new();
@@ -363,7 +363,7 @@ describe('Invariants are evaluated after the associated class is constructed', (
         nodeAssert.doesNotThrow(() => {
             Contracted[checkedMode] = false;
 
-            @invariant(self => self instanceof Error)
+            @invariant(({ self }) => self instanceof Error)
             class Foo extends Contracted { }
 
             const result = Foo.new();
@@ -377,7 +377,7 @@ describe('Invariants are evaluated after the associated class is constructed', (
 
 describe('An invariant is evaluated before and after every method call on the associated class', () => {
     test('Test method call in checked mode', () => {
-        @invariant(self => self.value >= 0)
+        @invariant(({ self }) => self.value >= 0)
         class Foo extends Contracted {
             protected _value = 0;
             get value() { return this._value; }
@@ -405,7 +405,7 @@ describe('An invariant is evaluated before and after every method call on the as
     test('Test method call in unchecked mode', () => {
         Contracted[checkedMode] = false;
 
-        @invariant(self => self.value >= 0)
+        @invariant(({ self }) => self.value >= 0)
         class Foo extends Contracted {
             protected _value = 0;
             get value() { return this._value; }
@@ -436,7 +436,7 @@ describe('An invariant is evaluated before and after every method call on the as
 describe('In checked mode the invariant is evaluated', () => {
     test('Constructor throws in checkMode', () => {
         nodeAssert.throws(() => {
-            @invariant(self => self instanceof Array)
+            @invariant(({ self }) => self instanceof Array)
             class Foo extends Contracted { }
 
             return Foo.new();
@@ -445,7 +445,7 @@ describe('In checked mode the invariant is evaluated', () => {
 
     test('Method throws in checkMode', () => {
         nodeAssert.throws(() => {
-            @invariant(self => self.value === 37)
+            @invariant(({ self }) => self.value === 37)
             class Foo extends Contracted {
                 protected _value = 37;
                 get value() { return this._value; }
@@ -464,7 +464,7 @@ describe('In checked mode the invariant is evaluated', () => {
     });
 
     test('Test getter/setter', () => {
-        @invariant(self => self.value >= 0)
+        @invariant(({ self }) => self.value >= 0)
         class Foo extends Contracted {
             protected _value = 0;
             get value() { return this._value; }
@@ -488,7 +488,7 @@ describe('In unchecked mode the invariant is not evaluated', () => {
         nodeAssert.doesNotThrow(() => {
             Contracted[checkedMode] = false;
 
-            @invariant(self => self instanceof Array)
+            @invariant(({ self }) => self instanceof Array)
             class Foo extends Contracted { }
 
             const result = Foo.new();
@@ -503,7 +503,7 @@ describe('In unchecked mode the invariant is not evaluated', () => {
         nodeAssert.doesNotThrow(() => {
             Contracted[checkedMode] = false;
 
-            @invariant(self => self.value === 42)
+            @invariant(({ self }) => self.value === 42)
             class Foo extends Contracted {
                 protected _value = 0;
                 get value() { return this._value; }
@@ -527,30 +527,30 @@ describe('In unchecked mode the invariant is not evaluated', () => {
 describe('A subclass with its own invariants must enforce all ancestor invariants', () => {
     test('Checked Mode', () => {
         nodeAssert.doesNotThrow(() => {
-            @invariant(self => self instanceof Base && self != null)
+            @invariant(({ self }) => self instanceof Base && self != null)
             class Base extends Contracted { }
 
-            @invariant(self => self instanceof Sub)
+            @invariant(({ self }) => self instanceof Sub)
             class Sub extends Base { }
 
             return Sub.new();
         });
 
         nodeAssert.throws(() => {
-            @invariant(self => self instanceof Array)
+            @invariant(({ self }) => self instanceof Array)
             class Base extends Contracted { }
 
-            @invariant(self => self instanceof Sub)
+            @invariant(({ self }) => self instanceof Sub)
             class Sub extends Base { }
 
             return Sub.new();
         }, AssertionError);
 
         nodeAssert.doesNotThrow(() => {
-            @invariant(self => self instanceof Base)
+            @invariant(({ self }) => self instanceof Base)
             class Base extends Contracted { }
 
-            @invariant(self => self instanceof Array)
+            @invariant(({ self }) => self instanceof Array)
             class Sub extends Base { }
 
             console.log('Sub:', Sub.name);
@@ -625,7 +625,7 @@ describe('A subclass with its own invariants must enforce all ancestor invariant
 });
 
 describe('Third-party features applied to a contracted class are subject to its invariant', () => {
-    @invariant(self => self.value >= 0)
+    @invariant(({ self }) => self.value >= 0)
     class Foo extends Contracted {
         protected _value = 0;
         get value() { return this._value; }
@@ -674,8 +674,8 @@ describe('A throwing `@invariant` arm rejects without hiding its siblings', () =
     }
 
     test('a throwing arm and a falsy arm are both reported', () => {
-        @invariant((_self: Foo) => false)
-        @invariant((_self: Foo) => { throw new Broken('no'); })
+        @invariant(() => false)
+        @invariant(() => { throw new Broken('no'); })
         class Foo extends Contracted { }
 
         try {
@@ -695,8 +695,8 @@ describe('A throwing `@invariant` arm rejects without hiding its siblings', () =
     });
 
     test('a throwing arm rejects even when a sibling arm holds', () => {
-        @invariant((_self: Foo) => true)
-        @invariant((_self: Foo) => { throw new Broken('no'); })
+        @invariant(() => true)
+        @invariant(() => { throw new Broken('no'); })
         class Foo extends Contracted { }
 
         nodeAssert.throws(() => Foo.new(), (error: any) => error instanceof Broken);
@@ -705,8 +705,8 @@ describe('A throwing `@invariant` arm rejects without hiding its siblings', () =
     test('the throw is evaluated on feature entry as well as at construction', () => {
         let evaluations = 0;
 
-        @invariant((_self: Foo) => true)
-        @invariant((_self: Foo) => { evaluations++; throw new Broken('no'); })
+        @invariant(() => true)
+        @invariant(() => { evaluations++; throw new Broken('no'); })
         class Foo extends Contracted {
             method(): void { }
         }

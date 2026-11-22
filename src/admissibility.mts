@@ -36,6 +36,22 @@ export interface ArmOptions {
 }
 
 /**
+ * The object a predicate is called with.
+ *
+ * A predicate takes one argument rather than a positional list, so a contract
+ * that supplies a field the predicate does not need costs nothing at the call
+ * site: the predicate destructures the fields it reads. Each contract publishes
+ * a precise version of this shape — `DemandsSubject`, `EnsuresSubject`,
+ * `InvariantSubject`, `RescueSubject` — and this is the part the runtime has in
+ * common.
+ */
+export interface PredicateSubject {
+    /** The instance, replaced with a read-only view before the call. */
+    readonly self: unknown;
+    readonly [field: string]: unknown;
+}
+
+/**
  * The two subjects a contract arm can observe.
  *
  * A predicate and a schema look at different things even within one contract: an
@@ -45,8 +61,8 @@ export interface ArmOptions {
  * convention.
  */
 export interface ArmSubjects {
-    /** The arguments a predicate is called with. */
-    predicate: () => any[];
+    /** The fields a predicate is called with. */
+    predicate: () => PredicateSubject;
     /** The value a schema arm validates. */
     schema: () => unknown;
 }
@@ -146,20 +162,21 @@ export const evaluateArm = (
  */
 const evaluatePredicate = (
     predicate: (...args: any[]) => unknown,
-    args: any[],
+    subject: PredicateSubject,
     contract: string,
     label: string,
     index: number,
 ): Admissibility => {
-    // Only the instance is guarded, and it is always the first argument:
-    // `(self)`, `(self, args)`, `(self, args, old)`, or `(self, args, old, result)`.
-    // `old` is a detached copy, so writing to it corrupts nothing and needs no
-    // guard. The argument tuple and the result are shared with the caller — they are
-    // readable data, not a place to write.
-    const [instance, ...rest] = args,
-        guarded = typeof instance === 'object' && instance !== null
-            ? readOnlyView(instance)
-            : instance;
+    // Only `self` is guarded, and the guard is a property of the field rather
+    // than of its position. Every other field describes the invocation rather
+    // than the instance: `args` and `result` are readable data shared with the
+    // caller, `old` is a detached copy taken by `populateOld`, and `error` and
+    // `retry` belong to `@rescue`, which is exempt from the view because
+    // restoring corrupted state is its purpose.
+    const { self, ...rest } = subject,
+        guarded = typeof self === 'object' && self !== null
+            ? readOnlyView(self)
+            : self;
 
     // A predicate that throws has answered "no": the call it guards must not be
     // denied on its say-so when a sibling arm permits it. The value is carried in
@@ -174,7 +191,7 @@ const evaluatePredicate = (
     let verdict: unknown;
 
     try {
-        verdict = predicate(guarded, ...rest);
+        verdict = predicate({ self: guarded, ...rest });
     } catch (thrown) {
         return { ok: false, thrown };
     }
