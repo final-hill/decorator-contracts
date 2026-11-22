@@ -137,9 +137,10 @@ const evaluatePredicate = (
     index: number,
 ): Admissibility => {
     // Only the instance is guarded, and it is always the first argument:
-    // `(self)`, `(self, args)`, or `(self, args, old)`. The argument tuple and the
-    // `old` snapshot are data the predicate is expected to inspect and mutate
-    // freely — `old` is a detached copy, so writing to it corrupts nothing.
+    // `(self)`, `(self, args)`, `(self, args, old)`, or `(self, args, old, result)`.
+    // `old` is a detached copy, so writing to it corrupts nothing and needs no
+    // guard. The argument tuple and the result are shared with the caller — they are
+    // readable data, not a place to write.
     const [instance, ...rest] = args,
         guarded = typeof instance === 'object' && instance !== null
             ? readOnlyView(instance)

@@ -294,6 +294,63 @@ describe('A frozen instance reports failed writes', () => {
         nodeAssert.strictEqual(foo.read(2), 3);
         nodeAssert.throws(() => foo.read(-1), /@demands failed/);
     });
+
+    test('a setter assigns a falsy value as readily as a truthy one', () => {
+        /*
+         * The setter path's lifecycle result is the assigned value, which is what a
+         * postcondition describes. The trap must therefore decide the write verdict
+         * from which path ran, not from that value: assigning `false` is a successful
+         * write whose result happens to equal the failure sentinel `Reflect.set`
+         * reports.
+         */
+        class Foo extends Contracted {
+            public _v: unknown = 'init';
+            set v(n: unknown) { this._v = n; }
+        }
+
+        const foo = Foo.new() as any;
+
+        for (const value of [false, 0, '', null, undefined]) {
+            foo.v = 'reset';
+
+            nodeAssert.doesNotThrow(() => { foo.v = value; }, `assigning ${String(value)} must not be refused`);
+            nodeAssert.strictEqual(foo._v, value);
+        }
+    });
+});
+
+describe('A write is not a feature that returns a value', () => {
+    /*
+     * The async rule refuses a *synchronous feature* whose result is a promise,
+     * because its postcondition would then describe a body that had not finished.
+     * A write has no result the caller receives, so storing a promise in a field is
+     * ordinary — a body may keep one for a later `await` — and must not be reported
+     * as a missing `async` keyword naming a property instead of a feature.
+     */
+    test('assigning a promise to a writable field is accepted', () => {
+        class Foo extends Contracted {
+            public _pending: unknown = null;
+            set through(n: unknown) { this._pending = n; }
+        }
+
+        const foo = Foo.new() as any;
+        const promise = Promise.resolve(1);
+
+        nodeAssert.doesNotThrow(() => { (foo as Foo)._pending = promise; });
+        nodeAssert.doesNotThrow(() => { foo.through = promise; });
+        nodeAssert.strictEqual((foo as Foo)._pending, promise);
+    });
+
+    test('a method that returns a promise is still refused', () => {
+        class Foo extends Contracted {
+            method(): unknown { return Promise.resolve(1); }
+        }
+
+        nodeAssert.throws(
+            () => (Foo.new() as Foo).method(),
+            /Foo\.method returned a promise but is not declared 'async'/,
+        );
+    });
 });
 
 describe('A nested feature access does not start a second lifecycle', () => {

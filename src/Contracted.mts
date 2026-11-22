@@ -175,6 +175,19 @@ const rescueArguments = (descriptorType: DescriptorType, args: any[]): any[] =>
     descriptorType === 'get' ? [] : args;
 
 /**
+ * True when a feature delivers a value to its caller, so that returning a promise
+ * instead of a result is a declaration mistake.
+ *
+ * A write and a deletion have no result the caller receives: the lifecycle carries
+ * the assigned value or a boolean verdict. Storing a promise in a field is
+ * ordinary — a body may keep one for a later `await` — so the async rule must not
+ * reach these paths, or an assignment is reported as a missing `async` keyword
+ * naming a property instead of a feature.
+ */
+const deliversValue = (descriptorType: DescriptorType): boolean =>
+    descriptorType === 'func' || descriptorType === 'get';
+
+/**
  * True when an error is a contract failure raised by `@invariant`.
  *
  * Used to tell "the instance is broken" apart from "something else failed and the
@@ -386,7 +399,8 @@ function runSyncLifecycle(
         try {
             result = invoke(args);
 
-            assertNotThenable(result, target, prop);
+            if (deliversValue(descriptorType))
+                assertNotThenable(result, target, prop);
 
             if (hasEnsures)
                 result = assertEnsures(target, old, prop, ensuresArgs(descriptorType, result, args), result);
@@ -853,15 +867,28 @@ const proxyHandler: ProxyHandler<Contracted> = {
         // which refuses an external definition of a public property. The name
         // is already checked above, so writing the target directly performs
         // exactly the mutation this trap authorises.
-        const assigned = runLifecycle('set', target, prop, [value],
-            (args) => setter
-                ? (setter.call(target, args[0]), true)
-                : Reflect.set(target, prop, args[0]));
+        //
+        // A setter's lifecycle result is the assigned value, which is what a
+        // postcondition describes. Whether the write was accepted is a property of
+        // the trap rather than of the feature, so it is tracked separately instead
+        // of being inferred from that value — `false` is both a legitimate value to
+        // assign and the failure `Reflect.set` reports.
+        let accepted = true;
 
-        // Report the target's own outcome. A target that cannot accept the
-        // write, because `Object.freeze` or `Object.preventExtensions` was
-        // applied, raises a `TypeError` in strict mode.
-        return assigned !== false;
+        runLifecycle('set', target, prop, [value],
+            (args) => {
+                if (setter)
+                    setter.call(target, args[0]);
+                else
+                    // A target that cannot accept the write, because `Object.freeze`
+                    // or `Object.preventExtensions` was applied, reports `false`,
+                    // which strict mode turns into a `TypeError`.
+                    accepted = Reflect.set(target, prop, args[0]);
+
+                return args[0];
+            });
+
+        return accepted;
     },
     defineProperty(target, prop, descriptor) {
         if (!Contracted[checkedMode]) return Reflect.defineProperty(target, prop, descriptor);

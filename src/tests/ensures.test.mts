@@ -293,3 +293,167 @@ describe('A throwing `@ensures` arm rejects without hiding its siblings', () => 
         );
     });
 });
+
+/**
+ * https://github.com/final-hill/decorator-contracts/issues/331
+ *
+ * A postcondition predicate receives the feature's result as its fourth
+ * argument. Every arm of one composition is given the same raw value, which is
+ * what makes AND-composition a claim about one thing: "every arm holds" says
+ * nothing if each arm was shown a different value.
+ */
+describe('A postcondition predicate can read the result', () => {
+    test('the fourth parameter is the value the feature returned', () => {
+        class Foo extends Contracted {
+            @ensures((_self: Foo, _args: any[], _old: Foo, result: unknown) => result === 42)
+            method(): number { return 42; }
+        }
+
+        nodeAssert.doesNotThrow(() => (Foo.new() as Foo).method());
+    });
+
+    test('a result that violates the postcondition rejects the call', () => {
+        class Foo extends Contracted {
+            @ensures((_self: Foo, _args: any[], _old: Foo, result: any) => result.state === 'Proposed')
+            submit(): { state: string } { return { state: 'Draft' }; }
+        }
+
+        nodeAssert.throws(
+            () => (Foo.new() as Foo).submit(),
+            (error: any) => error.name === 'AssertionError'
+                && error.violation.contract === '@ensures',
+        );
+    });
+
+    test('the result is the value a getter returned', () => {
+        class Foo extends Contracted {
+            public _value = 7;
+
+            @ensures((_self: Foo, _args: any[], _old: Foo, result: unknown) => result === 7)
+            get value() { return this._value; }
+        }
+
+        nodeAssert.strictEqual((Foo.new() as Foo).value, 7);
+    });
+
+    test('a setter observes the assigned value as its result', () => {
+        let observed: unknown;
+
+        class Foo extends Contracted {
+            public _value = 0;
+
+            @ensures((_self: Foo, _args: any[], _old: Foo, result: unknown) => { observed = result; return true; })
+            set value(v: number) { this._value = v; }
+        }
+
+        const foo = Foo.new() as Foo;
+
+        foo.value = 5;
+        nodeAssert.strictEqual(observed, 5);
+    });
+
+    test('the result is the settled value for an async feature', async () => {
+        let observed: unknown;
+
+        class Foo extends Contracted {
+            // The predicate stays synchronous: contract evaluation is synchronous,
+            // so what it observes is the value the promise settled to, which the
+            // lifecycle awaits before calling it.
+            @ensures((_self: Foo, _args: any[], _old: Foo, result: unknown) => { observed = result; return true; })
+            async method(): Promise<number> { return 99; }
+        }
+
+        nodeAssert.strictEqual(await (Foo.new() as Foo).method(), 99);
+        nodeAssert.strictEqual(observed, 99, 'the settled value, not the promise');
+        nodeAssert.strictEqual((observed as any) instanceof Promise, false, 'a promise here would mean the boundary moved');
+    });
+
+    test('a rejecting async feature never reaches the postcondition', async () => {
+        let ran = false;
+
+        class Foo extends Contracted {
+            @ensures((_self: Foo, _args: any[], _old: Foo, _result: unknown) => { ran = true; return true; })
+            async method(): Promise<number> { throw new Error('body failed'); }
+        }
+
+        await nodeAssert.rejects(() => (Foo.new() as Foo).method() as Promise<number>, /body failed/);
+        nodeAssert.strictEqual(ran, false, 'there is no value to describe when the body rejected');
+    });
+
+    test('the result is the yielded value of each generator step', () => {
+        const observed: unknown[] = [];
+
+        class Foo extends Contracted {
+            @ensures((_self: Foo, _args: any[], _old: Foo, result: unknown) => { observed.push(result); return true; })
+            *gen(): Generator<number> {
+                // Two different values: a predicate handed the *previous* step's
+                // value, or the iterator itself, is distinguishable only if the
+                // steps differ.
+                yield 1;
+                yield 2;
+            }
+        }
+
+        nodeAssert.deepStrictEqual([...(Foo.new() as Foo).gen()], [1, 2]);
+        nodeAssert.deepStrictEqual(observed, [1, 2]);
+    });
+});
+
+describe('The result is the raw value, shared by every arm', () => {
+    /*
+     * AND-composition is only meaningful if every arm is shown the same subject.
+     * A normalizing schema validates the raw value and *then* replaces what the
+     * caller receives, so a predicate must be handed that raw value too.
+     */
+    const padded = {
+        '~standard': {
+            version: 1 as const,
+            vendor: 'test',
+            validate: (value: unknown) => ({ value: String(value).trim() }),
+        },
+    };
+
+    test('a predicate sees the raw result, not the normalized one', () => {
+        const seen: unknown[] = [];
+
+        class Foo extends Contracted {
+            // Source order is the reverse of evaluation order: decorators register
+            // bottom-up, so the schema arm below the predicate is evaluated *first*
+            // and has already replaced the running value by the time the predicate
+            // runs. That is the only arrangement in which "raw" and "normalized"
+            // differ when the predicate is called.
+            @ensures((_self: Foo, _args: any[], _old: Foo, result: unknown) => { seen.push(result); return true; })
+            @ensures(padded as any, { normalize: true })
+            method(): string { return '  padded  '; }
+        }
+
+        // The caller receives the normalized value...
+        nodeAssert.strictEqual((Foo.new() as Foo).method(), 'padded');
+
+        // ...but the predicate was shown what the schema validated.
+        nodeAssert.deepStrictEqual(seen, ['  padded  ']);
+    });
+
+    test('a predicate and a schema arm agree about the subject', () => {
+        const subjects: [string, unknown][] = [];
+
+        const recording = {
+            '~standard': {
+                version: 1 as const,
+                vendor: 'test',
+                validate: (value: unknown) => { subjects.push(['schema', value]); return { value }; },
+            },
+        };
+
+        class Foo extends Contracted {
+            @ensures(recording as any)
+            @ensures((_self: Foo, _args: any[], _old: Foo, result: unknown) => { subjects.push(['predicate', result]); return true; })
+            method(): string { return 'raw'; }
+        }
+
+        (Foo.new() as Foo).method();
+
+        // Both arms were shown the same string, whichever order they ran in.
+        nodeAssert.deepStrictEqual(subjects.map(entry => entry[1]), ['raw', 'raw']);
+    });
+});

@@ -10,10 +10,18 @@ import type { FeatureDecoratorContext } from './types.mjs';
  *
  * `args` is the argument list of the invocation and `old` is the snapshot of
  * the instance from before the feature ran, so a predicate reads
- * `(self, [x], old) => ...`. See `DemandsPredicate` for why the tuple is generic.
+ * `(self, [x], old, result) => ...`. See `DemandsPredicate` for why the tuple is
+ * generic.
+ *
+ * `result` is the value the feature body produced, which is what the caller
+ * receives unless a schema arm normalizes it. Every arm is given the **same**
+ * unnormalized value, because `@ensures` is AND-composed: "every arm must hold" is
+ * only a statement about one thing if every arm observes one thing. A normalizing
+ * schema also validates this value and replaces it afterwards, so a predicate and
+ * a schema in the same composition always agree about what they were shown.
  */
 export type EnsuresPredicate<This extends Contracted, Args extends any[] = any[]> =
-    (self: This, args: Args, old: This) => boolean;
+    (self: This, args: Args, old: This, result: unknown) => boolean;
 
 /**
  * A postcondition arm: a predicate, or a schema the feature's **result** must
@@ -102,11 +110,13 @@ export function assertEnsures(
     for (const [index, entry] of es.entries()) {
         const outcome = evaluateArm(
             entry.arm,
-            // A predicate sees the invocation and the historical instance; a
-            // schema validates the result. Both are supplied so the adapter can
-            // pick the one that belongs to the arm.
+            // A predicate sees the invocation, the historical instance, and the
+            // result; a schema validates the result. Every arm is given the same
+            // `result`, including a normalizing schema arm, which validates it
+            // before replacing it. Supplying the raw value to all of them is what
+            // makes AND-composition a claim about one thing rather than several.
             {
-                predicate: () => [instance, args, old],
+                predicate: () => [instance, args, old, result],
                 schema: () => result,
             },
             '@ensures',
