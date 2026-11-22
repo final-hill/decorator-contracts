@@ -1,5 +1,6 @@
 import { assert, violationFailure } from './assert.mjs';
 import { checkedMode, Contracted } from './Contracted.mjs';
+import { assertDecoratorContext } from './decorator.mjs';
 import { armFailures, describeArm, evaluateArm, recordFailure, type ArmOptions } from './admissibility.mjs';
 import type { StandardSchemaV1 } from './standard-schema.mjs';
 
@@ -76,8 +77,12 @@ export function assertInvariants<C extends typeof Contracted, T extends Instance
     );
 }
 
-export const invariant: InvariantDecorator = (arm, options) => (OriginalClass, { kind, metadata }) => {
-    assert(kind === 'class', '@invariant decorator can only be applied to classes');
+export const invariant: InvariantDecorator = (arm, options) => (OriginalClass, context) => {
+    assertDecoratorContext('@invariant', context);
+
+    const { metadata } = context;
+
+    assert(context.kind === 'class', '@invariant decorator can only be applied to classes');
     assert(OriginalClass.prototype instanceof Contracted, '@invariant decorator can only be applied to classes that extend Contracted');
 
     const existing = (metadata.invariants ?? []) as unknown as RegisteredInvariant[];
