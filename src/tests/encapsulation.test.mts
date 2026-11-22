@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test';
 import nodeAssert from 'node:assert/strict';
-import { checkedMode, Contracted, demands, ensures, invariant } from '@final-hill/decorator-contracts';
+import { checkedMode, Contracted, demands, ensures, invariant, type DemandsSubject } from '@final-hill/decorator-contracts';
 
 /**
  * https://github.com/final-hill/decorator-contracts/issues/305
@@ -77,7 +77,7 @@ describe('Encapsulation governs the external surface only', () => {
     });
 
     test('a body leaving an invalid state is caught by the invariant', () => {
-        @invariant((self: Foo) => self.publicProp === 1)
+        @invariant(({ self }) => self.publicProp === 1)
         class Foo extends Contracted {
             publicProp = 1;
 
@@ -95,7 +95,7 @@ describe('Encapsulation governs the external surface only', () => {
             protected _n = 0;
             get n() { return this._n; }
 
-            @ensures((self: Counter) => self.n === 2)
+            @ensures(({ self }) => self.n === 2)
             @demands(() => true)
             inc(): void { this._n = this._n + 1; }
         }
@@ -141,7 +141,7 @@ describe('Encapsulation covers property definition', () => {
 
     test('an external caller cannot replace a contracted method', () => {
         class Foo extends Contracted {
-            @demands((_self: Foo, [n]: [number]) => n > 0)
+            @demands(({ args: [n] }: DemandsSubject<Foo, [number]>) => n > 0)
             guarded(n: number): number { return n; }
         }
 
@@ -237,7 +237,7 @@ describe('The prototype of an instance cannot be replaced', () => {
 
     test('the instance keeps its features and contracts after a refused replacement', () => {
         class Foo extends Contracted {
-            @demands((_self: Foo, [n]: [number]) => n > 0)
+            @demands(({ args: [n] }: DemandsSubject<Foo, [number]>) => n > 0)
             guarded(n: number): number { return n; }
         }
 
@@ -284,7 +284,7 @@ describe('A frozen instance reports failed writes', () => {
     test('a frozen instance still runs its features', () => {
         class Foo extends Contracted {
             public _value = 1;
-            @demands((_self: Foo, [n]: [number]) => n > 0)
+            @demands(({ args: [n] }: DemandsSubject<Foo, [number]>) => n > 0)
             read(n: number): number { return this._value + n; }
         }
 
@@ -418,7 +418,7 @@ describe('A nested feature access does not start a second lifecycle', () => {
             protected _value = 0;
             get value() { return this._value; }
 
-            @ensures((self: Foo) => { ensured = self.value === 1; return ensured; })
+            @ensures(({ self }) => { ensured = self.value === 1; return ensured; })
             write(): void { this._value = 1; }
         }
 

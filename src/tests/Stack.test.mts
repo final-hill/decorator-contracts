@@ -2,7 +2,7 @@ import { Contracted, demands, ensures, invariant } from '@final-hill/decorator-c
 import { describe, test } from 'node:test';
 import nodeAssert from 'node:assert/strict';
 
-@invariant((self: Stack<any>) =>
+@invariant(({ self }) =>
     self.isEmpty() == (self.size == 0) &&
     self.isFull() == (self.size == self.limit) &&
     self.size >= 0 && self.size <= self.limit
@@ -29,8 +29,8 @@ class Stack<T> extends Contracted {
     isEmpty(): boolean { return this._implementation.length == 0; }
     isFull(): boolean { return this._implementation.length == this.limit; }
 
-    @demands((self: Stack<any>) => !self.isEmpty())
-    @ensures((self: Stack<any>, _args, old: Stack<any>) =>
+    @demands(({ self }) => !self.isEmpty())
+    @ensures(({ self, old  }) =>
         !self.isFull() && self.size == old.size - 1)
     pop(): T {
         this._size--;
@@ -38,8 +38,8 @@ class Stack<T> extends Contracted {
         return this._implementation.pop()!;
     }
 
-    @demands((self: Stack<any>) => !self.isFull())
-    @ensures((self, [item], old: Stack<any>) =>
+    @demands(({ self }) => !self.isFull())
+    @ensures(({ self, args: [item], old  }) =>
         !self.isEmpty() &&
         self.top === item &&
         self.size === old.size + 1
@@ -49,7 +49,7 @@ class Stack<T> extends Contracted {
         this._implementation.push(item);
     }
 
-    @demands((self: Stack<any>) => !self.isEmpty())
+    @demands(({ self }) => !self.isEmpty())
     top(): T {
         return this._implementation[this._implementation.length - 1];
     }

@@ -1,14 +1,6 @@
 import { describe, test } from 'node:test';
 import nodeAssert from 'node:assert/strict';
-import {
-    Contracted,
-    demands,
-    ensures,
-    getContractMetadata,
-    getFeatureContracts,
-    invariant,
-    rescue,
-} from '@final-hill/decorator-contracts';
+import { Contracted, demands, ensures, getContractMetadata, getFeatureContracts, invariant, rescue } from '@final-hill/decorator-contracts';
 
 /**
  * https://github.com/final-hill/decorator-contracts/issues/335
@@ -263,7 +255,7 @@ describe('Metadata cannot be mutated through the public surface', () => {
         class Guard extends Contracted {
             public _n = 0;
 
-            @demands((self: Guard) => self._n < 1)
+            @demands(({ self }) => self._n < 1)
             inc(): void { this._n++; }
         }
 

@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test';
 import nodeAssert from 'node:assert/strict';
-import { Contracted, demands, ensures, invariant, rescue } from '@final-hill/decorator-contracts';
+import { Contracted, demands, ensures, invariant, rescue, type DemandsSubject, type EnsuresSubject, type RescueSubject } from '@final-hill/decorator-contracts';
 
 /**
  * https://github.com/final-hill/decorator-contracts/issues/188
@@ -17,7 +17,7 @@ describe('Contracts on async features', () => {
             class Foo extends Contracted {
                 public _value = 0;
 
-                @ensures(function (self: Foo, [delta]: [number], old: Foo) {
+                @ensures(function ({ self, args: [delta], old  }) {
                     return self._value === old._value + delta;
                 })
                 async add(delta: number): Promise<number> {
@@ -39,7 +39,7 @@ describe('Contracts on async features', () => {
             class Foo extends Contracted {
                 public _value = 0;
 
-                @ensures(function (self: Foo, _args: [], old: Foo) {
+                @ensures(function ({ self, args: _args, old  }) {
                     // Deliberately claims the feature is a no-op
                     return self._value === old._value;
                 })
@@ -59,7 +59,7 @@ describe('Contracts on async features', () => {
         });
 
         test('the exit `@invariant` runs after the body settles', async () => {
-            @invariant(function (self: Foo) { return self._value <= 10; })
+            @invariant(function ({ self }) { return self._value <= 10; })
             class Foo extends Contracted {
                 public _value = 0;
 
@@ -84,7 +84,7 @@ describe('Contracts on async features', () => {
             class Foo extends Contracted {
                 public _value = 0;
 
-                @ensures(function (_self: Foo, _args: [], old: Foo) {
+                @ensures(function ({ self: _self, args: _args, old }: EnsuresSubject<Foo, [delta: number], unknown>) {
                     seen.push(old._value);
 
                     return true;
@@ -107,7 +107,7 @@ describe('Contracts on async features', () => {
         test('an unsatisfied `@demands` on an async feature rejects', async () => {
             @invariant(function () { return true; })
             class Foo extends Contracted {
-                @demands(function (_self: Foo, [delta]: [number]) { return delta > 0; })
+                @demands(function ({ self: _self, args: [delta] }: DemandsSubject<Foo, [number]>) { return delta > 0; })
                 async add(delta: number): Promise<number> { return delta; }
             }
 
@@ -122,7 +122,7 @@ describe('Contracts on async features', () => {
         });
 
         test('an unsatisfied entry `@invariant` on an async feature rejects', async () => {
-            @invariant(function (self: Foo) { return self._value >= 0; })
+            @invariant(function ({ self }) { return self._value >= 0; })
             class Foo extends Contracted {
                 public _value = 0;
 
@@ -182,7 +182,7 @@ describe('Contracts on async features', () => {
             class Foo extends Contracted {
                 public _attempts = 0;
 
-                @rescue(function (self: Foo, _error, _args, retry) {
+                @rescue(function ({ self, error: _error, args: _args, retry }: RescueSubject<Foo>) {
                     self._attempts++;
 
                     retry();
@@ -207,7 +207,7 @@ describe('Contracts on async features', () => {
 
             @invariant(function () { return true; })
             class Foo extends Contracted {
-                @rescue(function (_self, _error, _args, retry) {
+                @rescue(function ({ self: _self, error: _error, args: _args, retry }) {
                     handlerRuns++;
                     retry();
                 }, { maxRetries: 2 })
@@ -227,11 +227,11 @@ describe('Contracts on async features', () => {
             class Foo extends Contracted {
                 public _value = 0;
 
-                @rescue(function (self: Foo) {
+                @rescue(function ({ self }) {
                     rescued = true;
                     self._value = 0;
                 })
-                @ensures(function (self: Foo, _args: [], old: Foo) {
+                @ensures(function ({ self, args: _args, old  }) {
                     return self._value === old._value;
                 })
                 async mutate(): Promise<void> {
@@ -253,7 +253,7 @@ describe('Contracts on async features', () => {
             class Foo extends Contracted {
                 public _value = 0;
 
-                @ensures(function (self: Foo, _args: [], old: Foo) {
+                @ensures(function ({ self, args: _args, old  }) {
                     return self._value === old._value + 1;
                 })
                 thenable(): Promise<void> {

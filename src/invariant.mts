@@ -5,9 +5,29 @@ import { armFailures, assertNotNormalizable, describeArm, evaluateArm, recordFai
 import type { StandardSchemaV1 } from './standard-schema.mjs';
 
 /**
- * An invariant predicate: a property the instance always satisfies.
+ * The fields an invariant predicate is called with.
+ *
+ * An invariant describes the whole instance, so `self` is the only field. See
+ * `DemandsSubject` for why it is not `Readonly<This>`, which would hide the
+ * `protected` state an invariant is written against.
+ *
+ * A predicate rarely needs to name this type. The decorator receives the class,
+ * so `This` is inferred and `@invariant(({ self }) => ...)` reads instance state
+ * without an annotation. It is exported for code that builds an arm separately
+ * from the decorator that registers it.
  */
-export type InvariantPredicate<Class extends typeof Contracted> = (self: InstanceType<Class>) => boolean;
+export interface InvariantSubject<This> {
+    readonly self: This;
+}
+
+/**
+ * An invariant predicate: a property the instance always satisfies.
+ *
+ * It takes one object rather than a positional list, so every contract in the
+ * library presents the same shape to the predicate it calls.
+ */
+export type InvariantPredicate<Class extends typeof Contracted> =
+    (subject: InvariantSubject<InstanceType<Class>>) => boolean;
 
 /**
  * An invariant arm: a predicate, or a schema the instance must satisfy.
@@ -49,7 +69,7 @@ export function assertInvariants<C extends typeof Contracted, T extends Instance
     for (const [index, entry] of registered.entries()) {
         const result = evaluateArm(
             entry.arm,
-            { predicate: () => [instance], schema: () => instance },
+            { predicate: () => ({ self: instance }), schema: () => instance },
             '@invariant',
             Class.name,
             index,

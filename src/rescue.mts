@@ -4,15 +4,35 @@ import { assertFeatureContractTarget } from './decorator.mjs';
 import type { FeatureDecoratorContext } from './types.mjs';
 
 /**
+ * The fields a rescue handler is called with.
+ *
+ * `self` is the **raw** instance. Restoring corrupted state is what a handler is
+ * for, so unlike a predicate it must be able to assign — `read-only.mts` excludes
+ * `@rescue` for that reason.
+ *
+ * `retry` is an ordinary function field, called as `retry(...)`. It is not a
+ * method of the subject, so lifting it off (`subject.retry(...)`) is unnecessary
+ * and would give it a `this` it does not want. The handler itself carries no
+ * `this: This` annotation for the same reason: the `this` context of a bare call
+ * is `void`, so a declared `this` makes every consumer-written handler fail to
+ * type-check. The subject carries the instance instead.
+ */
+export interface RescueSubject<This> {
+    readonly self: This;
+    readonly error: unknown;
+    readonly args: any[];
+    readonly retry: (...args: any[]) => any;
+}
+
+/**
  * A handler for `@rescue`.
  *
- * `retry` is an ordinary function, called as `retry(...)`, so it has no
- * meaningful `this`. Declaring `this: This` on it made every consumer-written
- * handler fail to type-check, because the `this` context of a bare call is
- * `void`.
+ * It takes one object rather than a positional list, matching the other
+ * contracts. See {@link RescueSubject} for the fields and for why `retry` is a
+ * bare callable.
  */
 export type RescueHandler<This extends Contracted> =
-    (self: This, error: unknown, args: any[], retry: (...args: any[]) => any) => void
+    (subject: RescueSubject<This>) => void
 
 export interface RescueOptions {
     /**
@@ -34,19 +54,19 @@ export interface RescueDeclaration<This extends Contracted> {
  * Declares a rescue handler for a feature.
  *
  * `retry` is explicit: it passes only the arguments it is given and never
- * replays the original arguments. Forward the `args` parameter to retry with
- * the same arguments (`retry(...args)`); calling `retry()` retries with none.
+ * replays the original arguments. Forward the `args` field to retry with the
+ * same arguments (`retry(...args)`); calling `retry()` retries with none.
  *
  * Options are declaration level because they describe the feature rather than an
  * individual failure. `maxRetries` bounds how many times `retry` may restart the
  * lifecycle for one invocation; it defaults to unbounded.
  */
-export type RescueDecorator = <This extends Contracted>(
+export type RescueDecorator = <This extends Contracted, Args extends any[] = any[]>(
     handler: RescueHandler<This>,
     options?: RescueOptions,
 ) => (
     value: unknown,
-    context: FeatureDecoratorContext
+    context: FeatureDecoratorContext<This, Args>
 ) => void;
 
 export const rescue: RescueDecorator = (handler, options) => (feature, ctx) => {
@@ -108,11 +128,18 @@ export const applyRescueHandler = (instance: Contracted, propertyKey: PropertyKe
     let hasRetried = false;
     let retryArgs: any[] = [];
 
-    declaration.handler.call(instance, instance, error, args, (...args: any[]) => {
-        assert(!hasRetried, 'retry can only be called once per rescue execution');
-        hasRetried = true;
-        retryArgs = args;
-    })
+    // `this` stays bound to the instance so a handler written with a `function`
+    // expression keeps working; the instance is also supplied as `self`.
+    declaration.handler.call(instance, {
+        self: instance,
+        error,
+        args,
+        retry: (...retryArguments: any[]) => {
+            assert(!hasRetried, 'retry can only be called once per rescue execution');
+            hasRetried = true;
+            retryArgs = retryArguments;
+        },
+    });
     if (!hasRetried)
         throw error;
 

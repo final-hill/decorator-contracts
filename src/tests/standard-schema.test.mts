@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test';
 import nodeAssert from 'node:assert/strict';
-import { AssertionError, Contracted, demands, ensures, invariant } from '@final-hill/decorator-contracts';
+import { AssertionError, Contracted, demands, ensures, invariant, type DemandsSubject, type EnsuresSubject } from '@final-hill/decorator-contracts';
 import type { StandardSchemaV1 } from '@final-hill/decorator-contracts';
 
 /**
@@ -161,7 +161,7 @@ describe('A Standard Schema can be used in place of a predicate', () => {
 
             class Age extends Contracted {
                 @ensures(positive)
-                @ensures((_self: Age, [_value]: [number]) => { calls.push('predicate'); return true; })
+                @ensures(({ args: [_value] }: EnsuresSubject<Age, [number], unknown>) => { calls.push('predicate'); return true; })
                 next(value: number): number { return value + 1; }
             }
 
@@ -198,7 +198,7 @@ describe('Composition follows variance', () => {
     test('@demands OR-composes a schema with a predicate', () => {
         class Foo extends Contracted {
             @demands(positiveArgs)
-            @demands((_self: Foo, [value]: [number]) => value === 0)
+            @demands(({ args: [value] }: DemandsSubject<Foo, [number]>) => value === 0)
             m(value: number): number { return value; }
         }
 
@@ -212,7 +212,7 @@ describe('Composition follows variance', () => {
     test('@ensures AND-composes a schema with a predicate', () => {
         class Foo extends Contracted {
             @ensures(positive)
-            @ensures((_self: Foo, [_value]: [number]) => true)
+            @ensures(({ args: [_value] }: EnsuresSubject<Foo, [number], unknown>) => true)
             m(value: number): number { return value; }
         }
 
@@ -231,7 +231,7 @@ describe('Composition follows variance', () => {
         class Sub extends Base {
             // Contravariance: the subtype accepts MORE, so its arm is an
             // alternative rather than an additional restriction.
-            @demands((_self: Sub, [value]: [number]) => value === 0)
+            @demands(({ args: [value] }: DemandsSubject<Sub, [number]>) => value === 0)
             override m(value: number): number { return value; }
         }
 
@@ -249,7 +249,7 @@ describe('Composition follows variance', () => {
         }
 
         class Sub extends Base {
-            @ensures((_self: Sub, [_value]: [number]) => true)
+            @ensures(({ args: [_value] }: EnsuresSubject<Sub, [number], unknown>) => true)
             override m(value: number): number { return value; }
         }
 
@@ -290,7 +290,7 @@ describe('Normalization is opt-in', () => {
 
         class Foo extends Contracted {
             @demands(trimmedArgs, { normalize: true })
-            @ensures((_self: Foo, [value]: [string]) => { observed = value; return true; })
+            @ensures(({ args: [value] }: EnsuresSubject<Foo, [string], unknown>) => { observed = value; return true; })
             m(value: string): string { return value; }
         }
 
@@ -313,7 +313,7 @@ describe('Normalization is opt-in', () => {
         class Foo extends Contracted {
             // Decorators register bottom-up, so the normalizing arm is declared
             // last in source order to be evaluated first.
-            @demands((_self: Foo, [_value]: [string]) => true)
+            @demands(({ args: [_value] }: DemandsSubject<Foo, [string]>) => true)
             @demands(trimmedArgs, { normalize: true })
             m(value: string): string { received = value; return value; }
         }
@@ -327,7 +327,7 @@ describe('Normalization is opt-in', () => {
 
         class Foo extends Contracted {
             @demands(positiveArgs, { normalize: true })
-            @demands((_self: Foo, [value]: [number]) => value <= 0)
+            @demands(({ args: [value] }: DemandsSubject<Foo, [number]>) => value <= 0)
             m(value: number): number { received = value; return value; }
         }
 
@@ -474,12 +474,12 @@ describe('Schema contracts follow `checkedMode`', () => {
 
 describe('Predicates and schemas coexist', () => {
     test('a class may mix predicate and schema arms across its contracts', () => {
-        @invariant(value => typeof (value as any)._items === 'number')
+        @invariant(({ self: value }) => typeof (value as any)._items === 'number')
         class Basket extends Contracted {
             public _items = 0;
 
             @demands(schema(value => typeof (value as any)?.[0] === 'number' ? ok(value) : fail('Need a number')))
-            @ensures((self: Basket) => self._items >= 0)
+            @ensures(({ self }) => self._items >= 0)
             add(count: number): number {
                 this._items += count;
 

@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test';
 import nodeAssert from 'node:assert/strict';
-import { Contracted, demands, ensures, invariant, rescue } from '@final-hill/decorator-contracts';
+import { Contracted, demands, ensures, invariant, rescue, type DemandsSubject, type EnsuresSubject } from '@final-hill/decorator-contracts';
 
 /**
  * https://github.com/final-hill/decorator-contracts/issues/318
@@ -21,7 +21,7 @@ describe('Contracts on generator features', () => {
             class Counter extends Contracted {
                 public _count = 0;
 
-                @ensures(function (self: Counter, [_value]: [number], old: Counter) {
+                @ensures(function ({ self, args: [_value], old }: EnsuresSubject<Counter, [number], unknown>) {
                     observed.push([old._count, self._count]);
 
                     return self._count === old._count + 1;
@@ -47,7 +47,7 @@ describe('Contracts on generator features', () => {
             class Counter extends Contracted {
                 public _count = 0;
 
-                @ensures(function (self: Counter, _args: any) {
+                @ensures(function ({ self, args: _args  }) {
                     observed.push(self._count);
 
                     return true;
@@ -71,7 +71,7 @@ describe('Contracts on generator features', () => {
             class Bad extends Contracted {
                 public _count = 0;
 
-                @ensures(function (self: Bad, _args: any, old: Bad) {
+                @ensures(function ({ self, args: _args, old  }) {
                     return self._count === old._count + 1;
                 })
                 *gen(): Generator<number> {
@@ -97,7 +97,7 @@ describe('Contracts on generator features', () => {
             class Foo extends Contracted {
                 public _count = 0;
 
-                @ensures(function (self: Foo, _args: any) {
+                @ensures(function ({ self, args: _args  }) {
                     observed.push(self._count);
 
                     return true;
@@ -122,7 +122,7 @@ describe('Contracts on generator features', () => {
 
     describe('`@invariant` is checked on every resume', () => {
         test('another feature may be called between yields and never sees an invalid object', () => {
-            @invariant(function (self: Ledger) { return self._balance >= 0; })
+            @invariant(function ({ self }) { return self._balance >= 0; })
             class Ledger extends Contracted {
                 public _balance = 10;
 
@@ -185,7 +185,7 @@ describe('Contracts on generator features', () => {
 
             @invariant(function () { return true; })
             class Foo extends Contracted {
-                @demands(function (_self: Foo, [count]: [number]) {
+                @demands(function ({ self: _self, args: [count] }: DemandsSubject<Foo, [number]>) {
                     evaluations++;
 
                     return count > 0;
@@ -204,7 +204,7 @@ describe('Contracts on generator features', () => {
         test('`for...of` does not re-enter the precondition with `undefined`', () => {
             @invariant(function () { return true; })
             class Foo extends Contracted {
-                @demands(function (_self: Foo, [count]: [number]) { return count > 0; })
+                @demands(function ({ self: _self, args: [count] }: DemandsSubject<Foo, [number]>) { return count > 0; })
                 *gen(count: number): Generator<number> {
                     for (let i = 0; i < count; i++) yield i;
                 }
@@ -219,7 +219,7 @@ describe('Contracts on generator features', () => {
         test('a value injected with `next(value)` is checked as a precondition', () => {
             @invariant(function () { return true; })
             class Echo extends Contracted {
-                @demands(function (_self: Echo, [seed]: [number]) { return seed >= 0; })
+                @demands(function ({ self: _self, args: [seed] }: DemandsSubject<Echo, [number]>) { return seed >= 0; })
                 *gen(seed: number): Generator<number, number, number> {
                     let value = seed;
 
@@ -274,7 +274,7 @@ describe('Contracts on generator features', () => {
 
             @invariant(function () { return true; })
             class Foo extends Contracted {
-                @rescue(function (_self, _error, args, retry) {
+                @rescue(function ({ self: _self, error: _error, args, retry }) {
                     retry(...args);
                 }, { maxRetries: 1 })
                 *gen(): Generator<number> {
@@ -297,7 +297,7 @@ describe('Contracts on generator features', () => {
 
             @invariant(function () { return true; })
             class Foo extends Contracted {
-                @rescue(function (_self, _error, _args, retry) {
+                @rescue(function ({ self: _self, error: _error, args: _args, retry }) {
                     handlerRuns++;
                     retry();
                 }, { maxRetries: 2 })
@@ -367,7 +367,7 @@ describe('Contracts on generator features', () => {
             class Foo extends Contracted {
                 public _count = 0;
 
-                @ensures(function (self: Foo, _args: any, old: Foo) {
+                @ensures(function ({ self, args: _args, old  }) {
                     observed.push(self._count);
 
                     return self._count === old._count + 1;
@@ -390,7 +390,7 @@ describe('Contracts on generator features', () => {
         });
 
         test('the invariant is checked on every resume', async () => {
-            @invariant(function (self: Foo) { return self._balance >= 0; })
+            @invariant(function ({ self }) { return self._balance >= 0; })
             class Foo extends Contracted {
                 public _balance = 10;
 

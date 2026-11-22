@@ -1,4 +1,4 @@
-import { AssertionError, checkedMode, Contracted, demands } from '@final-hill/decorator-contracts';
+import { AssertionError, checkedMode, Contracted, demands, type DemandsSubject } from '@final-hill/decorator-contracts';
 import { describe, test } from 'node:test';
 import nodeAssert from 'node:assert/strict';
 
@@ -12,10 +12,10 @@ describe('Demands assertions can be defined for a class feature', () => {
             get value() { return this._value; }
             set value(v: number) { this._value = v; }
 
-            @demands((self: Foo) => nonNegative(self) && isEven(self))
+            @demands(({ self }) => nonNegative(self) && isEven(self))
             inc(): void { this.value += 2; }
 
-            @demands((self: Foo) => nonNegative(self) && isEven(self))
+            @demands(({ self }) => nonNegative(self) && isEven(self))
             dec(): void { this.value -= 1; }
         }
 
@@ -38,7 +38,7 @@ describe('Overridden features are still subject to the demands assertion', () =>
         get value() { return this._value; }
         set value(v: number) { this._value = v; }
 
-        @demands((self: Base) => self.value >= 0)
+        @demands(({ self }) => self.value >= 0)
         dec(): void { this.value--; }
         inc(): void { this.value++; }
     }
@@ -102,7 +102,7 @@ describe('The `demands` assertion is evaluated before its associated feature is 
 
     test('true "demands" check does not throw', () => {
         class Bar extends Foo {
-            @demands((self: Bar) => self.value >= 0)
+            @demands(({ self }) => self.value >= 0)
             method(): number {
                 return this.value = -2;
             }
@@ -185,7 +185,7 @@ describe('`demands` predicates must return a boolean', () => {
 
     test('the message identifies which predicate in a composition failed', () => {
         class Foo extends Contracted {
-            @demands((_self: Foo, [value]: [number]) => value > 0)
+            @demands(({ args: [value] }: DemandsSubject<Foo, [number]>) => value > 0)
             @demands(() => 'invalid' as any)
             method(value: number): number { return value; }
         }
@@ -199,7 +199,7 @@ describe('`demands` predicates must return a boolean', () => {
 
     test('boolean predicates continue to work', () => {
         class Foo extends Contracted {
-            @demands((_self: Foo, [value]: [number]) => value > 0)
+            @demands(({ args: [value] }: DemandsSubject<Foo, [number]>) => value > 0)
             method(value: number): number { return value; }
         }
 
@@ -283,12 +283,12 @@ describe('Predicates are registered once, not once per instantiation', () => {
         const evaluated: string[] = [];
 
         class Base extends Contracted {
-            @demands((_self: Base, [v]: [number]) => { evaluated.push('base:' + v); return false; })
+            @demands(({ args: [v] }: DemandsSubject<Base, [number]>) => { evaluated.push('base:' + v); return false; })
             foo(v: number): number { return v; }
         }
 
         class Sub extends Base {
-            @demands((_self: Sub, [v]: [number]) => { evaluated.push('sub:' + v); return false; })
+            @demands(({ args: [v] }: DemandsSubject<Sub, [number]>) => { evaluated.push('sub:' + v); return false; })
             override foo(v: number): number { return v; }
         }
 
@@ -311,7 +311,7 @@ describe('Predicates are registered once, not once per instantiation', () => {
 
 describe('`demands` assertions cannot be strengthened in a subtype', () => {
     class Base extends Contracted {
-        @demands((_self, [value]: [number]) => 10 <= value && value <= 30)
+        @demands(({ args: [value] }: DemandsSubject<Contracted, [number]>) => 10 <= value && value <= 30)
         method(value: number): number { return value; }
     }
 
@@ -324,7 +324,7 @@ describe('`demands` assertions cannot be strengthened in a subtype', () => {
     });
 
     class Weaker extends Base {
-        @demands((_self, [value]: [number]) => 1 <= value && value <= 50)
+        @demands(({ args: [value] }: DemandsSubject<Contracted, [number]>) => 1 <= value && value <= 50)
         override method(value: number): number { return value; }
     }
 
@@ -339,7 +339,7 @@ describe('`demands` assertions cannot be strengthened in a subtype', () => {
     });
 
     class Stronger extends Base {
-        @demands((_self, [value]: [number]) => 15 <= value && value <= 20)
+        @demands(({ args: [value] }: DemandsSubject<Contracted, [number]>) => 15 <= value && value <= 20)
         override method(value: number): number { return value; }
     }
 
@@ -366,12 +366,12 @@ describe('A throwing predicate is a failed arm, not an abort', () => {
     }
 
     class Base extends Contracted {
-        @demands((_self: Base, [x]: [number]) => { if (x !== 42) throw new Denied('not 42'); return true; })
+        @demands(({ args: [x] }: DemandsSubject<Base, [number]>) => { if (x !== 42) throw new Denied('not 42'); return true; })
         method(x: number): number { return x; }
     }
 
     class Sub extends Base {
-        @demands((_self: Sub, [x]: [number]) => x === 7)
+        @demands(({ args: [x] }: DemandsSubject<Sub, [number]>) => x === 7)
         override method(x: number): number { return x; }
     }
 
@@ -398,8 +398,8 @@ describe('A throwing predicate is a failed arm, not an abort', () => {
 
     test('a false arm and a throwing arm: the thrown value wins', () => {
         class Mixed extends Contracted {
-            @demands((_self: Mixed, [_x]: [number]) => { throw new Denied('explicit'); })
-            @demands((_self: Mixed, [_x]: [number]) => false)
+            @demands(({ args: [_x] }: DemandsSubject<Mixed, [number]>) => { throw new Denied('explicit'); })
+            @demands(({ args: [_x] }: DemandsSubject<Mixed, [number]>) => false)
             method(_x: number): void { }
         }
 
@@ -413,8 +413,8 @@ describe('A throwing predicate is a failed arm, not an abort', () => {
         const evaluated: string[] = [];
 
         class Ordered extends Contracted {
-            @demands((_self: Ordered, [_x]: [number]) => { evaluated.push('first'); return false; })
-            @demands((_self: Ordered, [_x]: [number]) => { evaluated.push('second'); return false; })
+            @demands(({ args: [_x] }: DemandsSubject<Ordered, [number]>) => { evaluated.push('first'); return false; })
+            @demands(({ args: [_x] }: DemandsSubject<Ordered, [number]>) => { evaluated.push('second'); return false; })
             method(_x: number): void { }
         }
 
@@ -425,7 +425,7 @@ describe('A throwing predicate is a failed arm, not an abort', () => {
 
     test('a predicate bug keeps its own error class', () => {
         class Faulty extends Contracted {
-            @demands((_self: Faulty, [x]: [number]) => (x as any).missing.deeper)
+            @demands(({ args: [x] }: DemandsSubject<Faulty, [number]>) => (x as any).missing.deeper)
             method(_x: number): void { }
         }
 
@@ -448,7 +448,7 @@ describe('A re-raised predicate error carries the contract violation', () => {
     }
 
     class Foo extends Contracted {
-        @demands((_self: Foo, [_x]: [number]) => { throw new Denied('denied'); })
+        @demands(({ args: [_x] }: DemandsSubject<Foo, [number]>) => { throw new Denied('denied'); })
         method(_x: number): void { }
     }
 
@@ -489,7 +489,7 @@ describe('A re-raised predicate error carries the contract violation', () => {
 describe('A thrown non-object is re-raised unchanged', () => {
     test('a thrown string reaches the caller as that string', () => {
         class Foo extends Contracted {
-            @demands((_self: Foo, [_x]: [number]) => { throw 'plain'; })
+            @demands(({ args: [_x] }: DemandsSubject<Foo, [number]>) => { throw 'plain'; })
             method(_x: number): void { }
         }
 
@@ -512,8 +512,8 @@ describe('The first arm that threw decides which value is re-raised', () => {
 
     test('two throwing arms: the one evaluated first wins', () => {
         class Foo extends Contracted {
-            @demands((_self: Foo, [_x]: [number]) => { throw new First('first'); })
-            @demands((_self: Foo, [_x]: [number]) => { throw new Second('second'); })
+            @demands(({ args: [_x] }: DemandsSubject<Foo, [number]>) => { throw new First('first'); })
+            @demands(({ args: [_x] }: DemandsSubject<Foo, [number]>) => { throw new Second('second'); })
             method(_x: number): void { }
         }
 
@@ -527,8 +527,8 @@ describe('The first arm that threw decides which value is re-raised', () => {
 
     test('the reported thrown indices are in evaluation order', () => {
         class Foo extends Contracted {
-            @demands((_self: Foo, [_x]: [number]) => { throw new First('first'); })
-            @demands((_self: Foo, [_x]: [number]) => { throw new Second('second'); })
+            @demands(({ args: [_x] }: DemandsSubject<Foo, [number]>) => { throw new First('first'); })
+            @demands(({ args: [_x] }: DemandsSubject<Foo, [number]>) => { throw new Second('second'); })
             method(_x: number): void { }
         }
 
@@ -547,8 +547,8 @@ describe('The first arm that threw decides which value is re-raised', () => {
 describe('Only the arms that threw are marked as having thrown', () => {
     test('the message distinguishes a thrown arm from a false one', () => {
         class Foo extends Contracted {
-            @demands((_self: Foo, [_x]: [number]) => false)
-            @demands((_self: Foo, [_x]: [number]) => { throw new Error('explicit'); })
+            @demands(({ args: [_x] }: DemandsSubject<Foo, [number]>) => false)
+            @demands(({ args: [_x] }: DemandsSubject<Foo, [number]>) => { throw new Error('explicit'); })
             method(_x: number): void { }
         }
 

@@ -43,8 +43,8 @@ export function assertDecoratorContext(
  *
  * `@demands`, `@ensures`, and `@rescue` apply to exactly the same kind of member:
  * an instance feature of a `Contracted` subclass, whose name is not `_`-prefixed.
- * Each used to repeat the same four assertions and the same `addInitializer`
- * check, so a rule added to one was easy to miss in the others.
+ * The rule lives here rather than in each decorator so that a constraint added to
+ * one applies to all three, instead of being easy to miss in the others.
  *
  * The name of the contract is passed in so the messages stay specific.
  *

@@ -6,19 +6,46 @@ import type { StandardSchemaV1 } from './standard-schema.mjs';
 import type { FeatureDecoratorContext } from './types.mjs';
 
 /**
+ * The fields a precondition predicate is called with.
+ *
+ * `self` is the instance and `args` is the invocation's argument list.
+ *
+ * `This` and `Args` are inferred from the member the decorator is applied to, so
+ * a predicate that reads instance state needs no annotation:
+ * `({ self, args }) => self._x > 0`. The inference comes from the decorator's
+ * context type, which carries the class and the feature's signature; naming it
+ * explicitly is only necessary where the runtime subject differs from that
+ * signature.
+ *
+ * `self` is **not** `Readonly<This>`. `Readonly` maps over `keyof This`, which
+ * covers only public members, so `Readonly<Cart>` has no `_balance` when
+ * `_balance` is `protected` — the type would erase the fields contracts are
+ * written against, and `protected` state is the documented convention. Purity is
+ * enforced at runtime instead: every predicate receives a read-only view, so an
+ * assignment throws rather than silently corrupting the instance the next
+ * contract observes.
+ */
+export interface DemandsSubject<This, Args extends any[] = any[]> {
+    readonly self: This;
+    readonly args: Args;
+}
+
+/**
  * A precondition predicate.
  *
  * `args` is the argument list of the invocation, matching `EnsuresPredicate`,
- * so a predicate destructures it: `(_self, [x]) => x > 0`.
+ * so a predicate destructures it: `({ args: [x] }) => x > 0`.
  *
  * The type is generic over the argument tuple so the element types are inferred
- * from the predicate. Writing `(_self, x: number) => x > 0` does not compile:
- * the second parameter is the array, not the first argument, and a predicate
- * that compares against the array passes only through coercion, which is how
- * the previous documentation ended up describing contracts that never held.
+ * from the predicate. Writing `({ args }) => args > 0` does not compile: `args`
+ * is the array, not the first argument, and a predicate that compares against the
+ * array passes only through coercion.
+ *
+ * It takes one object rather than a positional list, so a contract that supplies
+ * a field the predicate does not read costs nothing where it is declared.
  */
 export type DemandsPredicate<This extends Contracted, Args extends any[] = any[]> =
-    (self: This, args: Args) => boolean;
+    (subject: DemandsSubject<This, Args>) => boolean;
 
 /**
  * A precondiction arm: a predicate, or a schema the argument tuple must satisfy.
@@ -37,13 +64,16 @@ export type DemandsPredicate<This extends Contracted, Args extends any[] = any[]
 export type DemandsArm<This extends Contracted, Args extends any[] = any[]> =
     DemandsPredicate<This, Args> | StandardSchemaV1<unknown, any>;
 
-export type DemandsDecorator = <This extends Contracted, Args extends any[], Feature = unknown>(
+export type DemandsDecorator = <This extends Contracted, Args extends any[]>(
     arm: DemandsArm<This, Args>,
     options?: ArmOptions,
 ) => (
-    value: Feature,
-    context: FeatureDecoratorContext
-) => Feature | void;
+    value: unknown,
+    context: FeatureDecoratorContext<This, Args>
+) => void;
+
+/** No arm is declared for a feature, so none is evaluated. */
+const NO_ARMS: readonly RegisteredDemands[] = Object.freeze([]);
 
 /** A registered precondition arm, with the options it was declared with. */
 export interface RegisteredDemands {
@@ -55,6 +85,11 @@ export const demands: DemandsDecorator = (arm, options) => (feature, ctx) => {
     assertFeatureContractTarget('@demands', feature, ctx);
     assertNormalizable(arm, '@demands', options);
 
+    // The cast is the protocol's, not this contract's: `ctx.metadata` is
+    // `DecoratorMetadataObject`, an open `Record<PropertyKey, unknown>`, so the
+    // key this decorator writes has no static type until it is asserted. The
+    // record's shape is asserted once here and read back through
+    // `Contracted[Symbol.metadata]`, which is typed.
     const ds = [
         ...(ctx.metadata as any)?.demands?.[ctx.name] ?? [],
         { arm, options }
@@ -88,7 +123,7 @@ export function assertDemands(
     if (!Contracted[checkedMode]) return args;
 
     const Class = instance.constructor as typeof Contracted,
-        ds = (Class[Symbol.metadata]?.demands?.[propertyKey] ?? []) as unknown as RegisteredDemands[];
+        ds = Class[Symbol.metadata]?.demands?.[propertyKey] ?? NO_ARMS;
 
     if (ds.length === 0) return args;
 
@@ -98,7 +133,7 @@ export function assertDemands(
     for (const [index, { arm, options }] of ds.entries()) {
         const result = evaluateArm(
             arm,
-            { predicate: () => [instance, args], schema: () => args },
+            { predicate: () => ({ self: instance, args }), schema: () => args },
             '@demands',
             label,
             index,

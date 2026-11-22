@@ -18,7 +18,7 @@ describe('Contract predicates may not mutate the instance', () => {
             class Foo extends Contracted {
                 public _value = 0;
 
-                @demands(function (self: Foo) {
+                @demands(function ({ self }) {
                     try {
                         self._value = 999;
 
@@ -42,7 +42,7 @@ describe('Contract predicates may not mutate the instance', () => {
             class Foo extends Contracted {
                 public _value = 0;
 
-                @demands(function (self: Foo) {
+                @demands(function ({ self }) {
                     try {
                         self._value = 1;
                     } catch (error) {
@@ -59,7 +59,7 @@ describe('Contract predicates may not mutate the instance', () => {
         });
 
         test('@invariant cannot assign to the instance', () => {
-            @invariant(function (self: Foo) {
+            @invariant(function ({ self }) {
                 try {
                     self._value = -1;
                 } catch {
@@ -84,7 +84,7 @@ describe('Contract predicates may not mutate the instance', () => {
             class Foo extends Contracted {
                 public _value = 0;
 
-                @ensures(function (self: Foo) {
+                @ensures(function ({ self }) {
                     try {
                         self._value = 42;
                     } catch {
@@ -110,7 +110,7 @@ describe('Contract predicates may not mutate the instance', () => {
             class Foo extends Contracted {
                 public _value = 1;
 
-                @demands(function (self: Foo) {
+                @demands(function ({ self }) {
                     try {
                         delete (self as any)._value;
                     } catch (error) {
@@ -130,7 +130,7 @@ describe('Contract predicates may not mutate the instance', () => {
             let message = '';
 
             class Foo extends Contracted {
-                @demands(function (self: Foo) {
+                @demands(function ({ self }) {
                     try {
                         Object.defineProperty(self, 'injected', { value: 1 });
                     } catch (error) {
@@ -156,7 +156,7 @@ describe('Contract predicates may not mutate the instance', () => {
                 get doubled() { return this._value * 2; }
                 triple(): number { return this._value * 3; }
 
-                @demands(function (self: Foo) {
+                @demands(function ({ self }) {
                     observed = [self._value, self.doubled, self.triple()];
 
                     return true;
@@ -171,7 +171,7 @@ describe('Contract predicates may not mutate the instance', () => {
         test('`instanceof` still identifies the instance', () => {
             let isFoo: boolean | undefined;
 
-            @invariant(function (self: Foo) {
+            @invariant(function ({ self }) {
                 isFoo ??= self instanceof Foo;
 
                 return true;
@@ -196,7 +196,7 @@ describe('Contract predicates may not mutate the instance', () => {
                 public _child = new Child();
                 public _value = 0;
 
-                @ensures(function (self: Holder, [delta]: [number], old: Holder) {
+                @ensures(function ({ self, args: [delta], old  }) {
                     seen.push(old._child === self._child, self._value === old._value + delta);
 
                     return true;
@@ -217,7 +217,7 @@ describe('Contract predicates may not mutate the instance', () => {
             class Account extends Contracted {
                 public _balance = 0;
 
-                @demands(function (self: Account) {
+                @demands(function ({ self }) {
                     try {
                         self._balance = 999;
                     } catch {
@@ -244,11 +244,11 @@ describe('Contract predicates may not mutate the instance', () => {
             class Foo extends Contracted {
                 public _value = 5;
 
-                @rescue(function (self: Foo) {
+                @rescue(function ({ self }) {
                     // Restoring corrupted state is the whole point of @rescue.
                     self._value = 0;
                 })
-                @ensures(function (self: Foo) {
+                @ensures(function ({ self }) {
                     return self._value === 0 || self._value === 5;
                 })
                 breakIt(): void {
@@ -271,7 +271,7 @@ describe('Contract predicates may not mutate the instance', () => {
             class Foo extends Contracted {
                 public _value = 1;
 
-                @demands(function (self: Foo) {
+                @demands(function ({ self }) {
                     try {
                         self._value = 0;
                     } catch (error) {
@@ -291,7 +291,7 @@ describe('Contract predicates may not mutate the instance', () => {
             class Foo extends Contracted {
                 public _items: number[] = [];
 
-                @demands(function (self: Foo) {
+                @demands(function ({ self }) {
                     // Documented as out of scope: the guard covers the instance's
                     // own surface, not values it points at.
                     self._items.push(1);

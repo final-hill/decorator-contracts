@@ -25,6 +25,7 @@
 - [Standard Schema](#standard-schema)
 - [Inspecting contracts](#inspecting-contracts)
 - [The order of assertions](#the-order-of-assertions)
+- [The subject a predicate is called with](#the-subject-a-predicate-is-called-with)
 - [Further Reading](#further-reading)
 
 ## Introduction
@@ -100,9 +101,11 @@ The test suite imports the package by name, so it exercises the built `dist/` ou
 After installation, use the decorators directly on your class methods and properties. All contracted classes must extend `Contracted` and be instantiated using the static `.new()` method.
 
 ```typescript
-import { Contracted, invariant, demands, ensures } from '@final-hill/decorator-contracts';
+import {
+    Contracted, demands, ensures, invariant,
+} from '@final-hill/decorator-contracts';
 
-@invariant((self: Stack<any>) =>
+@invariant(({ self }) =>
     self.isEmpty() == (self.size == 0) &&
     self.isFull() == (self.size == self.limit) &&
     self.size >= 0 && self.size <= self.limit
@@ -128,16 +131,16 @@ class Stack<T> extends Contracted {
     isEmpty(): boolean { return this._implementation.length == 0; }
     isFull(): boolean { return this._implementation.length == this.limit; }
 
-    @demands((self: Stack<any>) => !self.isEmpty())
-    @ensures((self: Stack<any>, _args, old: Stack<any>) =>
+    @demands(({ self }) => !self.isEmpty())
+    @ensures(({ self, old }) =>
         !self.isFull() && self.size == old.size - 1)
     pop(): T {
         this._size--;
         return this._implementation.pop()!;
     }
 
-    @demands((self: Stack<any>) => !self.isFull())
-    @ensures((self, [item], old: Stack<any>) =>
+    @demands(({ self }) => !self.isFull())
+    @ensures(({ self, args: [item], old }) =>
         !self.isEmpty() &&
         self.top === item &&
         self.size === old.size + 1
@@ -295,12 +298,12 @@ A predicate that throws has answered *no*. It has not withdrawn the other arms, 
 
 ```typescript
 class Base extends Contracted {
-    @demands((_self: Base, [x]: [number]) => { if (x !== 42) throw new Denied(); return true; })
+    @demands(({ args: [x] }) => { if (x !== 42) throw new Denied(); return true; })
     method(x: number): number { return x; }
 }
 
 class Sub extends Base {
-    @demands((_self: Sub, [x]: [number]) => x === 7) // a legal weakening arm
+    @demands(({ args: [x] }) => x === 7) // a legal weakening arm
     override method(x: number): number { return x; }
 }
 
@@ -424,8 +427,8 @@ class Account extends Contracted {
     public _ledger!: Ledger;                 // a collaborator the caller sets
     get balance() { return this._balance; }
 
-    @demands((self, [amount]: [number]) => self.balance + amount >= 0)
-    @ensures((self, [amount]: [number], old) => self.balance === old.balance + amount)
+    @demands(({ self, args: [amount] }) => self.balance + amount >= 0)
+    @ensures(({ self, args: [amount], old }) => self.balance === old.balance + amount)
     async deposit(amount: number): Promise<void> {
         await this._ledger.record(amount);   // suspension happens here
         this._balance += amount;              // observed by @ensures
@@ -475,7 +478,7 @@ This is the same sandwich shown above, applied once per step. A yield is the obs
 class Counter extends Contracted {
     protected _count = 0;
 
-    @ensures((self, [_value]: [number], old) => self._count === old._count + 1)
+    @ensures(({ self, args: [_value], old }: EnsuresSubject<Counter, [number], unknown>) => self._count === old._count + 1)
     *tick(): Generator<number> {
         this._count++; yield this._count;   // each step is checked
         this._count++; yield this._count;
@@ -500,7 +503,7 @@ ledger.audit();          // a public call, and it sees a valid object
 `@demands` runs once, on the first step: there is one call, so there is one precondition. A later step may also be *given* a value through `next(value)`, which becomes the value of the preceding `yield` expression and is not an argument of the call; that input is checked as a precondition **when it is present**. `for...of` iterates with `next()` and injects nothing, so it never re-enters the precondition with `undefined`:
 
 ```typescript
-@demands((_self, [count]: [number]) => count > 0)
+@demands(({ args: [count] }) => count > 0)
 *gen(count: number): Generator<number> { /* ... */ }
 
 for (const value of obj.gen(3)) { /* works: no value is injected */ }
@@ -534,7 +537,7 @@ These will not work correctly with the contract enforcement provided by this lib
 Use the `@invariant` decorator on your class to enforce relationships between properties and methods. The invariant is checked after construction, before and after every method execution, and before and after every get/set usage.
 
 ```typescript
-@invariant(self => self.value >= 0)
+@invariant(({ self }) => self.value >= 0)
 class Foo extends Contracted {
     protected _value = 0;
     get value() { return this._value; }
@@ -564,14 +567,14 @@ Asynchronous *features* are supported; see [Asynchronous features](#asynchronous
 A predicate answers a question, so it cannot change the state it is asked about. `@invariant`, `@demands`, and `@ensures` receive a **read-only view** of the instance: assigning, deleting, or defining a property raises a `TypeError` naming the property.
 
 ```typescript
-@demands((self) => { self._value = 0; return true; })
+@demands(({ self }) => { self._value = 0; return true; })
 // TypeError: A contract predicate may not assign '_value'.
 ```
 
 This matters because a predicate runs *between* the entry and exit `@invariant`. A write inside a predicate can therefore hide a violation the invariant would otherwise have reported, turning a detectable bug into a silent one.
 
 ```typescript
-@invariant((self) => {
+@invariant(({ self }) => {
     self._value = 0;          // would repair the state being checked
     return self._value >= 0;  // and then pass
 })
@@ -584,7 +587,7 @@ This matters because a predicate runs *between* the entry and exit `@invariant`.
 The guard covers the instance's own surface. A mutation *through* a nested value still reaches the shared object:
 
 ```typescript
-@demands((self) => { self._items.push(item); return true; })  // not intercepted
+@demands(({ self }) => { self._items.push(item); return true; })  // not intercepted
 ```
 
 Closing that would mean deep-wrapping every value a predicate reads, which changes object identity and would break legitimate comparisons such as `old.child === self.child`. The guarantee is therefore "a predicate cannot assign to the instance", which is the case that corrupts contract evaluation.
@@ -596,12 +599,12 @@ The feature body is unaffected: it still receives the instance itself and mutate
 When subclassing, if a subclass defines its own `@invariant`, the resulting invariant is **strengthened**: the subclass invariant and the base class invariant are both enforced (they are logically AND-ed together). This means all invariants in the inheritance chain must hold for the object to be valid.
 
 ```typescript
-@invariant(self => self.value >= 0)
+@invariant(({ self }) => self.value >= 0)
 class Base extends Contracted {
     // ...
 }
 
-@invariant(self => self.value <= 10)
+@invariant(({ self }) => self.value <= 10)
 class Sub extends Base {
     // ...
 }
@@ -618,7 +621,7 @@ class Foo extends Contracted {
     get value() { return this._value; }
     set value(v: number) { this._value = v; }
 
-    @demands(self => self.value >= 0)
+    @demands(({ self }) => self.value >= 0)
     dec(): void { this.value--; }
 }
 ```
@@ -629,18 +632,26 @@ When subclassing, if a subclass defines its own `@demands` for a method, the res
 
 ```typescript
 class Base extends Contracted {
-    @demands((_self, [x]: [number]) => x >= 0)
+    @demands(({ args: [x] }) => x >= 0)
     foo(x: number) { /* ... */ }
 }
 
 class Sub extends Base {
-    @demands((_self, [x]: [number]) => x === 42)
+    @demands(({ args: [x] }) => x === 42)
     override foo(x: number) { /* ... */ }
 }
 // The effective demand for Sub#foo is: (x >= 0) || (x === 42)
 ```
 
-A demand receives the **argument list**, so destructure it: `(_self, [x])`. Writing `(_self, x: number) => x >= 0` does not compile, because the second parameter is the array rather than the first argument.
+A demand is called with a `DemandsSubject`: `{ self, args }`. `args` is the
+**argument list** of the invocation, so destructure it inside the parameter:
+`({ args: [x] }) => x >= 0`. Writing `({ args }) => args >= 0` does not compile,
+because `args` is the array rather than the first argument.
+
+A predicate takes one object rather than a positional list, so the shape it
+expects is visible where it is declared: a predicate that reads only `self` is
+written `({ self }) => ...`, and the parameter list says so. The runtime supplies
+every field listed above whether or not the predicate destructures it.
 
 ## Ensures
 
@@ -652,7 +663,7 @@ class Foo extends Contracted {
     get value() { return this._value; }
     set value(v: number) { this._value = v; }
 
-    @ensures(self => self.value >= 0)
+    @ensures(({ self }) => self.value >= 0)
     dec(): void { this.value--; }
 }
 ```
@@ -666,7 +677,7 @@ class Counter extends Contracted {
     protected _n = 0;
     get n() { return this._n; }
 
-    @ensures((self, _args, old) => self.n === old.n + 1)
+    @ensures(({ self, old }) => self.n === old.n + 1)
     inc(): void { this._n++; }
 }
 ```
@@ -693,21 +704,21 @@ When subclassing, if a subclass defines its own `@ensures` for a method, the res
 
 ```typescript
 class Base extends Contracted {
-    @ensures((_self, [x]: [number]) => x >= 0)
+    @ensures(({ args: [x] }) => x >= 0)
     foo(x: number) { /* ... */ }
 }
 
 class Sub extends Base {
-    @ensures((_self, [x]: [number]) => x <= 10)
+    @ensures(({ args: [x] }) => x <= 10)
     override foo(x: number) { /* ... */ }
 }
 // The effective ensures for Sub#foo is: (x >= 0) && (x <= 10)
 ```
 
-The signature is `(self, args, old, result)`: the argument list, the snapshot of
-the instance from before the feature ran, and the value the feature produced.
-Writing `(_self, _args, x: number) => x >= 0` does not compile — the third
-parameter is `old`, and comparing it to a number is always `false`.
+A postcondition is called with an `EnsuresSubject`: `{ self, args, old, result }`.
+`args` is the argument list, `old` is the snapshot of the instance from before the
+feature ran, and `result` is the value the feature produced. Destructure the
+fields the predicate reads; the runtime supplies the rest unused.
 
 ### The `result`
 
@@ -718,7 +729,7 @@ class Proposal extends Contracted {
     protected _state = 'Draft';
     get state() { return this._state; }
 
-    @ensures((self, _args, _old, result: any) => result.state === 'Proposed')
+    @ensures(({ result }: EnsuresSubject<Contracted, any[], any>) => result.state === 'Proposed')
     submit(): Proposal {
         this._state = 'Proposed';
         return this;
@@ -750,14 +761,14 @@ assigned.
 Use the `@rescue` decorator to handle exceptions thrown by a method, restore invariants, or retry execution:
 
 ```typescript
-import { rescue } from '@final-hill/decorator-contracts';
+import { Contracted, rescue } from '@final-hill/decorator-contracts';
 
 class Example extends Contracted {
     private _value = 3;
     get value() { return this._value; }
     set value(v) { this._value = v; }
 
-    @rescue(self => self.value = 5)
+    @rescue(({ self }) => self.value = 5)
     method1(): void { throw new Error('I am error'); }
 }
 ```
@@ -766,7 +777,7 @@ You can also use the `retry` function in your rescue handler to attempt the meth
 
 ```typescript
 class Example extends Contracted {
-    @rescue((_self, _error, _args, retry) => retry(3))
+    @rescue(({ retry }) => retry(3))
     method(value: number): number {
         if (value <= 0)
             throw new Error('value must be greater than 0');
@@ -779,7 +790,7 @@ class Example extends Contracted {
 `retry` passes **only** the arguments you give it — it does not replay the original arguments. To retry with the same arguments, forward the `args` you received:
 
 ```typescript
-@rescue((_self, _error, args, retry) => retry(...args))
+@rescue(({ args, retry }) => retry(...args))
 ```
 
 Calling `retry()` retries with no arguments.
@@ -787,7 +798,7 @@ Calling `retry()` retries with no arguments.
 A `@rescue` handler **cannot supply the feature's result**. Only `retry` can produce one, by running the body again; a value returned from the handler is ignored, and the original error is raised to the caller when `retry` is not called. To recover with a substitute value, restructure the body to accept the alternative and retry with it:
 
 ```typescript
-@rescue((_self, _error, args, retry) => {
+@rescue(({ args, retry }) => {
     // the handler restores state, then asks for a second attempt
     retry(...args);
 })
@@ -812,10 +823,13 @@ The last row is deliberate. A precondition rejects a call that has not begun, so
 The third row is what makes a broken instance recoverable. Once an instance fails its invariant, every accessor throws on exit, so without this a handler could not even reach the state it would fix:
 
 ```typescript
-@invariant((self: Account) => self._balance >= 0)
+import nodeAssert from 'node:assert/strict';
+import { Contracted, invariant, rescue } from '@final-hill/decorator-contracts';
+
+@invariant(({ self }) => self._balance >= 0)
 class Account extends Contracted {
     public _balance = 1;
-    @rescue((self: Account) => { self._balance = 0; })
+    @rescue(({ self }) => { self._balance = 0; })
     withdraw(amount: number): void { this._balance -= amount; }
 }
 
@@ -833,7 +847,9 @@ A handler is called **before** the invariant is re-tested, so it can repair the 
 When nothing has repaired the instance, the invariant failure supersedes the original on the way to the caller, and the original travels as `cause`:
 
 ```typescript
-@invariant((self: Account) => self._balance >= 0)
+import { Contracted, invariant } from '@final-hill/decorator-contracts';
+
+@invariant(({ self }) => self._balance >= 0)
 class Account extends Contracted {
     public _balance = 1;
 
@@ -845,7 +861,7 @@ class Account extends Contracted {
 
 try {
     Account.new().withdraw(5);   // body throws, and leaves the balance negative
-} catch (error) {
+} catch (error: any) {
     error.violation.contract;    // '@invariant'
     error.cause.message;         // 'insufficient funds'
 }
@@ -872,11 +888,18 @@ A retried invocation re-enters the full assertion lifecycle (`@invariant` -> `@d
 A dated example of this is performing ajax requests in a multi-browser environment:
 
 ```typescript
+import { Contracted, rescue } from '@final-hill/decorator-contracts';
+
+declare function legacyGet(url: string): string;
+declare function activeXGet(url: string): string;
+declare function xhrGet(url: string): string;
+declare const window: any;
+
 class AjaxRequest extends Contracted {
     private _version = 0;
     private _versions = ['legacy', 'activex', 'xhr'] as const;
 
-    @rescue((self: AjaxRequest, _error, args, retry) => {
+    @rescue(({ self, args, retry }) => {
         self._version++;
         retry(...args);
     }, { maxRetries: 2 })
@@ -900,7 +923,7 @@ class AjaxRequest extends Contracted {
 Because a rescue handler may retry unconditionally, retries are unbounded by default. Set the `maxRetries` option on the `@rescue` declaration to bound them; when the limit is reached the last error is raised to the caller:
 
 ```typescript
-@rescue((_self, _error, args, retry) => retry(...args), { maxRetries: 3 })
+@rescue(({ args, retry }) => retry(...args), { maxRetries: 3 })
 ```
 
 The option belongs to the declaration because the number of alternatives is a property of the feature, not of an individual failure. It is enforced per invocation of the feature, so a single call performs at most `maxRetries` retries however many `@rescue` executions that involves.
@@ -924,6 +947,7 @@ This approach leads to more maintainable and robust code, as error handling is o
 
 ```typescript
 import { z } from 'zod';
+import { Contracted, demands, ensures } from '@final-hill/decorator-contracts';
 
 const positive = z.number().positive();
 const quantity = z.tuple([z.number().positive()]);
@@ -975,7 +999,8 @@ An invariant's subject is the instance, and nothing replaces it. `normalize` is 
 @invariant cannot normalize: its subject is the instance, which no arm can replace.
 ```
 
-Accepting it had no effect, so the option read as an intention that was not in force.
+The option is refused for what it would do rather than for appearing, so
+`normalize: false` is still accepted.
 
 ### Composition follows variance
 
@@ -1050,11 +1075,16 @@ This is what turns "every public verb declares a precondition" into one
 architectural test rather than one test per verb:
 
 ```typescript
-import { Contracted, getContractMetadata, getFeatureContracts } from '@final-hill/decorator-contracts';
+import {
+    Contracted, getContractMetadata, getFeatureContracts, demands,
+} from '@final-hill/decorator-contracts';
 
 class Repository extends Contracted {
-    @demands((self: Repository) => self.connected)
-    read(id: string): unknown { /* ... */ }
+    public _connected = true;
+    get connected() { return this._connected; }
+
+    @demands(({ self }) => self.connected)
+    read(_id: string): unknown { return { id: _id }; }
 }
 
 const metadata = getContractMetadata(Repository);
@@ -1108,6 +1138,52 @@ If the retried invocation fails, its `@rescue` is executed again, so the handler
 If `@rescue` throws an error or does not call `retry` then the `@invariant` is checked before the error is raised to the caller.
 
 ![image](./docs/order-of-assertions.png)
+
+## The subject a predicate is called with
+
+Every contract calls its predicate with a single object. Destructuring is what
+makes the shape visible at the declaration, and it keeps every declaration to one
+parameter so a `max-params: 1` configuration is satisfied.
+
+| Contract | Subject fields |
+| --- | --- |
+| `@demands` | `{ self, args }` |
+| `@ensures` | `{ self, args, old, result }` |
+| `@invariant` | `{ self }` |
+| `@rescue` | `{ self, error, args, retry }` |
+
+Bind the fields a predicate reads and omit the rest; the runtime supplies them all
+whether or not the parameter list names them. A predicate that destructured its
+arguments as `[x]` writes `({ args: [x] }) => x > 0`, so the body is unchanged.
+
+The compiler rejects a parameter list that does not line up with the subject.
+A two-parameter leftover fails with *Target signature provides too few arguments*:
+`(self: Cart, [x]: [number]) => ...`. A one-parameter leftover is rejected
+because the instance is not assignable to a `DemandsSubject`: `(self: Cart) =>
+...`. Parameters typed `any` are the one case the compiler cannot check, and such
+a predicate receives the subject object where it expects the instance.
+
+`retry` is a field of the subject, so a handler that forwards its arguments
+writes `({ args, retry }) => retry(...args)`.
+
+The subject is **inferred**, so a predicate that reads instance state usually needs
+no annotation at all:
+
+```typescript
+@demands(({ self, args }) => self.total + args[0] >= 0)  // `self` is the class, `args` is the call tuple
+```
+
+An annotation is only needed when the runtime subject differs from the call
+signature. The one place that happens is a generator's `@ensures`, whose `args` is
+the value the step yielded rather than the call arguments:
+
+```typescript
+@ensures(({ args: [yielded] }: EnsuresSubject<Counter, [number]>) => ...)
+```
+
+`result` always stays `unknown`, because a method's return type and a getter's
+property type are both inference sites for it and the compiler would resolve it to
+their intersection. Name it on the subject when a predicate needs more.
 
 ## Further Reading
 

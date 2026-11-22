@@ -14,7 +14,7 @@ describe('The `old` instance is a snapshot of the state before the feature ran',
             protected _items: number[] = [];
             get items() { return this._items; }
 
-            @ensures((self: Bag, _args, old: Bag) => {
+            @ensures(({ self, old  }) => {
                 observedLength = old.items.length;
                 sharedReference = old.items === self.items;
                 return true;
@@ -35,7 +35,7 @@ describe('The `old` instance is a snapshot of the state before the feature ran',
             protected _state = { items: [{ n: 1 }], tags: new Set(['a']), when: new Date(0) };
             get state() { return this._state; }
 
-            @ensures((_self: Deep, _args, old: Deep) => {
+            @ensures(({ old }) => {
                 observed = old.state;
                 return true;
             })
@@ -61,7 +61,7 @@ describe('The `old` instance is a snapshot of the state before the feature ran',
             protected _counts = new Map<string, number>();
             get counts() { return this._counts; }
 
-            @ensures((_self: Bag, _args, old: Bag) => {
+            @ensures(({ old }) => {
                 observed = old.counts;
                 return true;
             })
@@ -83,7 +83,7 @@ describe('The `old` instance is a snapshot of the state before the feature ran',
             get name() { return this._name; }
             get state() { return this._state; }
 
-            @ensures((self: Node, _args, old: Node) => {
+            @ensures(({ old }) => {
                 observedName = old.state.name;
                 observedCyclePreserved = old.state.self === old.state;
                 return true;
@@ -110,7 +110,7 @@ describe('The `old` instance is a snapshot of the state before the feature ran',
             protected _n = 1;
             get n() { return this._n; }
 
-            @ensures((self: Counter, _args, old: Counter) => {
+            @ensures(({ self, old  }) => {
                 observedOld = old.n;
                 observedSelf = self.n;
                 return true;
@@ -136,7 +136,7 @@ describe('The `old` instance is a snapshot of the state before the feature ran',
             get child() { return this._child; }
             get fn() { return this._fn; }
 
-            @ensures((self: Holder, _args, old: Holder) => {
+            @ensures(({ self, old  }) => {
                 sameInstance = old.child === self.child;
                 sameFunction = old.fn === self.fn;
                 return true;
@@ -157,7 +157,7 @@ describe('The `old` instance is a snapshot of the state before the feature ran',
             protected _n = 0;
             get n() { return this._n; }
 
-            @ensures((_self: Lazy, _args, old: Lazy) => {
+            @ensures(({ old }) => {
                 // an accessor is copied as a descriptor, not evaluated
                 observed = Object.getOwnPropertyDescriptor(old, 'lazy')?.value;
                 return true;
@@ -180,7 +180,7 @@ describe('The `old` instance is a snapshot of the state before the feature ran',
             get n() { return this._n; }
             set n(value: number) { this._n = value; }
 
-            @ensures((_self: Counter, _args, old: Counter) => {
+            @ensures(({ old }) => {
                 observed = old.n;
                 return true;
             })
