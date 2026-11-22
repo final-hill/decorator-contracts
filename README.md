@@ -23,6 +23,7 @@
 - [Ensures](#ensures)
 - [Rescue](#rescue)
 - [Standard Schema](#standard-schema)
+- [Inspecting contracts](#inspecting-contracts)
 - [The order of assertions](#the-order-of-assertions)
 - [Further Reading](#further-reading)
 
@@ -1013,6 +1014,49 @@ Any implementation of the protocol works, and no provider is a dependency. The `
 ```typescript
 import type { StandardSchemaV1 } from '@final-hill/decorator-contracts';
 ```
+
+## Inspecting contracts
+
+`getContractMetadata(Class)` reports the contracts a class declares, and
+`getFeatureContracts(Class, feature)` reports the arms that apply to one feature
+in the order they are evaluated. Use them instead of reading `Contracted[Symbol.metadata]`
+directly: the symbol holds the record the runtime consults, so a consumer who edits
+it edits their own class's contracts. The accessors return frozen copies.
+
+This is what turns "every public verb declares a precondition" into one
+architectural test rather than one test per verb:
+
+```typescript
+import { Contracted, getContractMetadata, getFeatureContracts } from '@final-hill/decorator-contracts';
+
+class Repository extends Contracted {
+    @demands((self: Repository) => self.connected)
+    read(id: string): unknown { /* ... */ }
+}
+
+const metadata = getContractMetadata(Repository);
+
+metadata.invariants;                  // every class-level arm
+metadata.demands['read'].length;     // 1: the arms declared for `read`
+getFeatureContracts(Repository, 'read').demands.length;  // 1
+```
+
+The lists are already **effective**: a subclass's record contains its own
+declarations and the inherited ones, so there is no prototype chain to walk. The
+order is the evaluation order — inherited arms first, then the class's own, and
+within one class in **reverse source order**, because decorators evaluate
+bottom-up.
+
+A class that declares nothing has no record at all, so both accessors report empty
+lists rather than `undefined`.
+
+### The stability guarantee
+
+The shape of `ContractMetadata` and `FeatureContracts` is stable for the major
+version: fields may be added, but an existing field will not change meaning
+without one. The *arms* are whatever you declared — a predicate, a schema, and the
+options passed alongside it — so their identity is preserved and comparing an arm
+against the one you wrote works.
 
 ## The order of assertions
 
