@@ -1,8 +1,9 @@
 import { AssertionError } from './AssertionError.mjs';
-import { assertInvariants, InvariantPredicate } from './invariant.mjs';
-import { assertDemands, DemandsPredicate } from './demands.mjs';
+import { assertInvariants } from './invariant.mjs';
+import { assertDemands } from './demands.mjs';
 import { assertEnsures, EnsuresPredicate } from './ensures.mjs';
-import { applyRescueHandler as applyRescueHandler, getRescueDeclaration, RescueDeclaration } from './rescue.mjs';
+import { applyRescueHandler as applyRescueHandler, getRescueDeclaration } from './rescue.mjs';
+import type { ContractMetadata } from './metadata.mjs';
 
 // Symbol to store checked mode state
 export const checkedMode = Symbol.for('Contracted.checkedMode');
@@ -949,12 +950,20 @@ const proxyHandler: ProxyHandler<Contracted> = {
 };
 
 export class Contracted {
-    static [Symbol.metadata]: {
-        invariants: InvariantPredicate<typeof Contracted>[];
-        demands: Record<PropertyKey, DemandsPredicate<Contracted>[]>;
-        ensures: Record<PropertyKey, EnsuresPredicate<Contracted>[]>;
-        rescue: Record<PropertyKey, RescueDeclaration<Contracted>>;
-    };
+    /**
+     * The contracts declared on this class, keyed by the feature they belong to.
+     *
+     * `undefined` when the class declares none, because the metadata record is
+     * created by the first decorator to run rather than by the class itself.
+     *
+     * Read it through {@link getContractMetadata} rather than indexing this symbol:
+     * the accessor returns copies, so a consumer cannot corrupt the contracts a
+     * class is checked against by mutating what it was handed.
+     *
+     * The shape is stable for the major version. Fields may be added, but an
+     * existing field will not change meaning without one.
+     */
+    static [Symbol.metadata]: ContractMetadata | undefined;
 
     /**
      * Grants permission for exactly one `Contracted` constructor call.
