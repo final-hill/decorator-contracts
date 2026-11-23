@@ -1,5 +1,5 @@
 import { assert } from './assert.mjs';
-import { checkedMode, Contracted } from './Contracted.mjs';
+import { contractsEnabled, Contracted } from './Contracted.mjs';
 import { assertFeatureContractTarget } from './decorator.mjs';
 import type { FeatureDecoratorContext } from './types.mjs';
 
@@ -119,7 +119,7 @@ export function getRescueDeclaration(instance: Contracted, propertyKey: Property
  *   the handler throws.
  */
 export const applyRescueHandler = (instance: Contracted, propertyKey: PropertyKey, error: unknown, args: any): any[] => {
-    if (!Contracted[checkedMode]) throw error;
+    if (!contractsEnabled(instance.constructor)) throw error;
 
     const declaration = getRescueDeclaration(instance, propertyKey);
 

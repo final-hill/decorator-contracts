@@ -1,5 +1,5 @@
 import { assert, violationFailure } from './assert.mjs';
-import { checkedMode, Contracted } from './Contracted.mjs';
+import { contractsEnabled, Contracted } from './Contracted.mjs';
 import { assertDecoratorContext } from './decorator.mjs';
 import { armFailures, assertNotNormalizable, assertNotViolationFactory, describeArm, evaluateArm, recordFailure, type ArmOptions } from './admissibility.mjs';
 import type { StandardSchemaV1 } from './standard-schema.mjs';
@@ -58,7 +58,7 @@ export interface RegisteredInvariant {
 }
 
 export function assertInvariants<C extends typeof Contracted, T extends InstanceType<C>>(Class: C, instance: T) {
-    if (!Contracted[checkedMode]) return;
+    if (!contractsEnabled(Class)) return;
 
     const registered = (Class[Symbol.metadata]?.['invariants'] ?? []) as unknown as RegisteredInvariant[],
         failures = armFailures();

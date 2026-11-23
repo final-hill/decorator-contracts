@@ -1,5 +1,5 @@
 import { violationFailure } from './assert.mjs';
-import { checkedMode, Contracted } from "./Contracted.mjs";
+import { contractsEnabled, Contracted } from "./Contracted.mjs";
 import { assertFeatureContractTarget } from './decorator.mjs';
 import {
     armFailures, assertNormalizable, assertViolationFactory, describeArm, evaluateArm,
@@ -124,10 +124,11 @@ export function assertDemands(
     propertyKey: PropertyKey,
     args: any[],
 ): any[] {
-    if (!Contracted[checkedMode]) return args;
+    const Class = instance.constructor as typeof Contracted;
 
-    const Class = instance.constructor as typeof Contracted,
-        ds = Class[Symbol.metadata]?.demands?.[propertyKey] ?? NO_ARMS;
+    if (!contractsEnabled(Class)) return args;
+
+    const ds = Class[Symbol.metadata]?.demands?.[propertyKey] ?? NO_ARMS;
 
     if (ds.length === 0) return args;
 

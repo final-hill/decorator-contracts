@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test';
 import nodeAssert from 'node:assert/strict';
-import { checkedMode, Contracted, demands, invariant } from '@final-hill/decorator-contracts';
+import { checkedMode, Contracted, demands, encapsulationMode, invariant } from '@final-hill/decorator-contracts';
 
 /**
  * https://github.com/final-hill/decorator-contracts/issues/287
@@ -60,35 +60,42 @@ describe('Deletion follows the same rule as assignment', () => {
     });
 });
 
-describe('Deletion respects checked mode', () => {
-    test('deletion is unrestricted when checked mode is disabled', () => {
+describe('Deletion respects encapsulation mode', () => {
+    test('deletion is unrestricted when encapsulation mode is disabled', () => {
         class Foo extends Contracted {
             _private = 1;
             publicProp = 2;
+
+            static [encapsulationMode] = false;
         }
 
         const foo = Foo.new() as any;
-        Contracted[checkedMode] = false;
 
-        try {
-            nodeAssert.doesNotThrow(() => { delete foo.publicProp; });
-            nodeAssert.doesNotThrow(() => { delete foo._private; });
-            nodeAssert.strictEqual('publicProp' in foo, false);
-            nodeAssert.strictEqual('_private' in foo, false);
-        } finally {
-            Contracted[checkedMode] = true;
-        }
+        nodeAssert.doesNotThrow(() => { delete foo.publicProp; });
+        nodeAssert.doesNotThrow(() => { delete foo._private; });
+        nodeAssert.strictEqual('publicProp' in foo, false);
+        nodeAssert.strictEqual('_private' in foo, false);
     });
 
-    test('deletion is restricted again once checked mode is re-enabled', () => {
+    test('disabling `checkedMode` alone leaves deletion restricted', () => {
+        class Foo extends Contracted {
+            publicProp = 2;
+
+            static [checkedMode] = false;
+        }
+
+        nodeAssert.throws(() => { delete (Foo.new() as any).publicProp; }, TypeError);
+    });
+
+    test('deletion is restricted again once encapsulation mode is re-enabled', () => {
         class Foo extends Contracted {
             publicProp = 2;
         }
 
         const foo = Foo.new() as any;
 
-        Contracted[checkedMode] = false;
-        try { delete foo.publicProp; } finally { Contracted[checkedMode] = true; }
+        Foo[encapsulationMode] = false;
+        try { delete foo.publicProp; } finally { Foo[encapsulationMode] = true; }
 
         nodeAssert.throws(() => { delete foo.publicProp; }, TypeError);
     });

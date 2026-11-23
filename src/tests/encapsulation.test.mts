@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test';
 import nodeAssert from 'node:assert/strict';
-import { checkedMode, Contracted, demands, ensures, invariant, type DemandsSubject } from '@final-hill/decorator-contracts';
+import { Contracted, demands, encapsulationMode, ensures, invariant, type DemandsSubject } from '@final-hill/decorator-contracts';
 
 /**
  * https://github.com/final-hill/decorator-contracts/issues/305
@@ -200,21 +200,17 @@ describe('Encapsulation covers property definition', () => {
         nodeAssert.strictEqual(foo._value, 2);
     });
 
-    test('definition is unrestricted when checked mode is disabled', () => {
+    test('definition is unrestricted when encapsulation mode is disabled', () => {
         class Foo extends Contracted {
             publicProp = 1;
+
+            static [encapsulationMode] = false;
         }
 
         const foo = Foo.new() as any;
-        Contracted[checkedMode] = false;
 
-        try {
-            nodeAssert.doesNotThrow(() => Object.defineProperty(foo, 'publicProp', { value: 2 }));
-            nodeAssert.strictEqual(foo.publicProp, 2);
-        }
-        finally {
-            Contracted[checkedMode] = true;
-        }
+        nodeAssert.doesNotThrow(() => Object.defineProperty(foo, 'publicProp', { value: 2 }));
+        nodeAssert.strictEqual(foo.publicProp, 2);
     });
 });
 
@@ -249,20 +245,16 @@ describe('The prototype of an instance cannot be replaced', () => {
         nodeAssert.ok(foo instanceof Foo);
     });
 
-    test('a replacement is permitted when checked mode is disabled', () => {
+    test('a replacement is permitted when encapsulation mode is disabled', () => {
         class Foo extends Contracted {
             publicProp = 1;
+
+            static [encapsulationMode] = false;
         }
 
         const foo = Foo.new();
-        Contracted[checkedMode] = false;
 
-        try {
-            nodeAssert.doesNotThrow(() => Object.setPrototypeOf(foo, {}));
-        }
-        finally {
-            Contracted[checkedMode] = true;
-        }
+        nodeAssert.doesNotThrow(() => Object.setPrototypeOf(foo, {}));
     });
 });
 

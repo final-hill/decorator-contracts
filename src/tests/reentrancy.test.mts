@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test';
 import nodeAssert from 'node:assert/strict';
-import { checkedMode, Contracted, demands, ensures, invariant, rescue } from '@final-hill/decorator-contracts';
+import { checkedMode, Contracted, demands, encapsulationMode, ensures, invariant, rescue } from '@final-hill/decorator-contracts';
 
 /**
  * Contracts are `{ P } C { Q }`: `P` and `Q` are predicates evaluated against
@@ -20,7 +20,7 @@ describe('Contract evaluation does not re-enter the traps', () => {
             get value() { return this._value; }
 
             @demands(({ self }) => self.value >= 0)
-            @ensures(({ self, old  }) => self.value === old.value + 1)
+            @ensures(({ self, old }) => self.value === old.value + 1)
             @demands(() => true)
             inc(): void { this._value += 1; }
         }
@@ -105,21 +105,28 @@ describe('Checked mode remains the global on/off switch', () => {
         nodeAssert.throws(() => foo.method(), /@ensures failed/);
     });
 
-    test('disabling checked mode permits external writes', () => {
+    test('disabling `checkedMode` alone still permits external writes', () => {
+        // External writes are encapsulation, which `checkedMode` does not govern.
         class Foo extends Contracted {
             publicProp = 1;
+
+            static [checkedMode] = false;
+            static [encapsulationMode] = false;
         }
 
         const foo = Foo.new() as any;
-        Contracted[checkedMode] = false;
 
-        try {
-            nodeAssert.doesNotThrow(() => { foo.publicProp = 2; });
-        } finally {
-            Contracted[checkedMode] = true;
+        nodeAssert.doesNotThrow(() => { foo.publicProp = 2; });
+    });
+
+    test('disabling `checkedMode` alone leaves an external write refused', () => {
+        class Foo extends Contracted {
+            publicProp = 1;
+
+            static [checkedMode] = false;
         }
 
-        nodeAssert.throws(() => { foo.publicProp = 3; }, TypeError);
+        nodeAssert.throws(() => { (Foo.new() as any).publicProp = 2; }, TypeError);
     });
 
     test('checked mode is unaffected by a predicate that throws', () => {
