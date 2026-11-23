@@ -31,7 +31,7 @@ const PACKAGE = '@final-hill/decorator-contracts';
 
 /** Every name the package exports that an example might reference. */
 const LIBRARY_NAMES = [
-    'AssertionError', 'Contracted', 'checkedMode',
+    'AssertionError', 'Contracted', 'checkedMode', 'encapsulationMode',
     'demands', 'ensures', 'invariant', 'rescue', 'iff', 'implies', 'assert',
     'getContractMetadata', 'getFeatureContracts',
     'DemandsSubject', 'EnsuresSubject', 'InvariantSubject', 'RescueSubject',

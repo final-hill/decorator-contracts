@@ -169,21 +169,50 @@ This is required so that the instance is wrapped in a Proxy and invariants are a
 
 ## Checked Mode
 
-Checked Mode controls whether contract checking (invariants, demands, ensures, and rescue) is enabled or disabled at runtime. This feature allows you to turn off contract enforcement in production environments for maximum performance, while keeping it enabled during development and testing to catch bugs and contract violations early.
+Checked Mode controls whether the contracts (invariants, demands, ensures, and rescue) are evaluated at runtime, so a production build can skip the checking cost while development and tests keep it.
 
-Checked Mode is a coarse switch over the whole library, not a re-entrancy mechanism. When it is disabled, contract evaluation is skipped entirely and external encapsulation is not enforced either, so an instance behaves like a plain object.
+It is a coarse switch, not a re-entrancy mechanism: disabling it skips contract evaluation entirely, and every member is returned unwrapped, so a feature call and a field read look the same.
 
-By default, Checked Mode is enabled. You can control it via the static `[checkedMode]` symbol property of Contracted:
+**It is separate from encapsulation.** Encapsulation is the name rule: an external caller cannot assign, define, or delete a public property. It has its own switch, `[encapsulationMode]`. The two answer different questions — a test double may want the checks off while still refusing a write to a field it never declared, and a class may want the write protection without the checks.
 
-```typescript
-Contracted[checkedMode] = false; // Disable Checked Mode
-```
-
-One approach to managing this is to leverage environment variables. For example, you can interrogate `NODE_ENV` to determine whether to enable or disable Checked Mode:
+By default both are enabled. Assign the static on a class to change it for that class and the subclasses that do not declare their own:
 
 ```typescript
-Contracted[checkedMode] = process.env.NODE_ENV === 'development'
+import { checkedMode, Contracted, encapsulationMode } from '@final-hill/decorator-contracts';
+
+class DataHolder extends Contracted {
+    static [checkedMode] = false;          // skip the contracts
+}
+
+class OpenBox extends Contracted {
+    static [encapsulationMode] = false;    // allow external writes, keep the contracts
+}
 ```
+
+The nearest declaration on the class chain wins, and each switch is resolved independently, so a subclass can re-enable what an ancestor disabled. A sibling or a base class that declares nothing is unaffected. Assigning on `Contracted` itself sets the default for every class that declares neither.
+
+| | contracts on | contracts off |
+| --- | --- | --- |
+| **encapsulation on** | full enforcement | public writes still refused, no checks |
+| **encapsulation off** | public writes allowed, checks still run on the write | neither |
+
+Disabling encapsulation removes one verdict — whether the name may be written at all. It does not remove the write from the lifecycle: a permitted write is still an external mutation, so `@invariant` runs on entry and exit and a setter's `@demands` and `@ensures` describe it. Turning the contracts off is what removes the checks, in every quadrant.
+
+**The switch is set on the class, never on an instance.** Assigning, defining, or deleting either symbol on an instance raises a `TypeError`, including when both switches are off — a switch a caller can set is a guarantee a caller can remove.
+
+The switch is read on every trap rather than captured at construction, so a class assigned during a test affects instances that already exist.
+
+One approach to managing this is to leverage environment variables. For example, you can interrogate `NODE_ENV` to decide the default:
+
+```typescript
+Contracted[checkedMode] = process.env.NODE_ENV === 'development';
+```
+
+### Interaction with `@rescue`
+
+`@rescue` is one of the contracts, so disabling the contracts disables it: the body's own error reaches the caller and no handler runs. This is deliberate — a handler exists to translate and repair a contract failure, and with no contract failure to report there is nothing for it to act on.
+
+Note that a `@rescue` handler cannot observe a failed `@demands` at all, whatever the switch says: a rejected precondition never enters a body. See [What a `@rescue` observes](#what-a-rescue-observes).
 
 ## Assertions
 

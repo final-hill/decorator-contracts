@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test';
 import nodeAssert from 'node:assert/strict';
-import { AssertionError, checkedMode, Contracted, ensures } from '@final-hill/decorator-contracts'
+import { AssertionError, checkedMode, Contracted, encapsulationMode, ensures } from '@final-hill/decorator-contracts'
 
 /**
  * https://github.com/final-hill/decorator-contracts/issues/280
@@ -148,29 +148,25 @@ describe('Contracted class tests', () => {
         }, TypeError);
     })
 
-    test("Deletion is unrestricted when checked mode is disabled", () => {
+    test("Deletion is unrestricted when encapsulation mode is disabled", () => {
         class Foo extends Contracted {
             _private = 1;
             publicProp = 2;
+
+            static [encapsulationMode] = false;
         }
         const foo = Foo.new();
 
-        Contracted[checkedMode] = false;
-
-        try {
-            nodeAssert.doesNotThrow(() => {
-                // @ts-expect-error : Ignore type error
-                delete foo.publicProp;
-            });
-            nodeAssert.doesNotThrow(() => {
-                // @ts-expect-error : Ignore type error
-                delete foo._private;
-            });
-            nodeAssert.strictEqual('publicProp' in foo, false);
-            nodeAssert.strictEqual('_private' in foo, false);
-        } finally {
-            Contracted[checkedMode] = true;
-        }
+        nodeAssert.doesNotThrow(() => {
+            // @ts-expect-error : Ignore type error
+            delete foo.publicProp;
+        });
+        nodeAssert.doesNotThrow(() => {
+            // @ts-expect-error : Ignore type error
+            delete foo._private;
+        });
+        nodeAssert.strictEqual('publicProp' in foo, false);
+        nodeAssert.strictEqual('_private' in foo, false);
     })
 
 })

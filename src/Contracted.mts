@@ -9,6 +9,89 @@ import type { ContractMetadata } from './metadata.mjs';
 export const checkedMode = Symbol.for('Contracted.checkedMode');
 
 /**
+ * The switch for encapsulation, independent of {@link checkedMode}.
+ *
+ * Encapsulation is the `set`, `defineProperty`, and `deleteProperty` traps: the
+ * rule that an external caller may not mutate state without a postcondition to
+ * catch it. Contracts are whether `@invariant`, `@demands`, `@ensures`, and
+ * `@rescue` are evaluated at all.
+ *
+ * They are separate because they answer different questions. A test double or a
+ * plain data holder wants the contract checks off while still refusing an
+ * assignment to a field it never declared. A class that is deliberately
+ * configured with its state exposed wants the reverse. A single switch cannot
+ * express either, because it would have to answer both at once.
+ *
+ * A class opts out by assigning a static, exactly as with {@link checkedMode}, and
+ * the nearest declaration on the class chain wins.
+ */
+export const encapsulationMode = Symbol.for('Contracted.encapsulationMode');
+
+/** The switches in force for one class. */
+interface Enforcement {
+    /** Whether `@invariant`, `@demands`, `@ensures`, and `@rescue` are evaluated. */
+    readonly contracts: boolean;
+    /** Whether an external write, definition, or deletion is trapped. */
+    readonly encapsulation: boolean;
+}
+
+/**
+ * Reads one enforcement switch from the class chain.
+ *
+ * The nearest **own** declaration wins, which is why the walk tests ownership
+ * rather than the value: `Class[symbol]` would read an inherited declaration but
+ * cannot tell it apart from one this class made, and a class that declares
+ * nothing must fall through to the default rather than inherit from a sibling.
+ *
+ * The walk stops at `Function.prototype`, which is where a constructor chain ends.
+ * A key that is not a constructor — a plain object, `undefined` — yields the
+ * default rather than throwing, so a caller that has no `constructor` to offer
+ * still gets a defined answer.
+ *
+ * Not memoised: the switch is assignable at runtime, and a cache would have to be
+ * invalidated on every write, which is what a cache of a mutable switch gets
+ * wrong.
+ */
+const switchOn = (Class: unknown, symbol: symbol): boolean => {
+    for (let C: any = Class; typeof C === 'function' && C !== Function.prototype; C = Object.getPrototypeOf(C))
+        if (Object.hasOwn(C, symbol)) return Boolean(C[symbol]);
+
+    return true;
+};
+
+/**
+ * The enforcement switches in force for one class.
+ *
+ * Both default to on, and each is resolved independently so a class may want one
+ * without the other.
+ *
+ * @param Class - The constructor to resolve for, usually `instance.constructor`.
+ */
+const enforcementFor = (Class: unknown): Enforcement => ({
+    contracts: switchOn(Class, checkedMode),
+    encapsulation: switchOn(Class, encapsulationMode),
+});
+
+/**
+ * Whether the contracts of `Class` are evaluated.
+ *
+ * @internal
+ * Exported only because the four contract modules live in their own files and
+ * import it. It takes a constructor rather than an instance because the caller
+ * often has one without the other, and it is not part of the published surface.
+ */
+export const contractsEnabled = (Class: unknown): boolean => enforcementFor(Class).contracts;
+
+/**
+ * Whether `prop` names one of the enforcement switches.
+ *
+ * Set through the class, never through an instance. An instance write would land
+ * on the raw target where no trap could refuse it, and a switch a caller can set
+ * is a guarantee a caller can remove.
+ */
+const isSwitch = (prop: PropertyKey): boolean => prop === checkedMode || prop === encapsulationMode;
+
+/**
  * Type of value that `cloneState` copies rather than shares.
  *
  * The list is deliberately closed: arrays, dates, maps, sets, and plain objects
@@ -90,7 +173,7 @@ const cloneState = (value: any, seen: WeakMap<object, any>): any => {
  * through `this`.
  */
 const populateOld = (target: Contracted) => {
-    if (!Contracted[checkedMode]) return;
+    if (!contractsEnabled(target.constructor)) return;
 
     const old = Object.create(target),
         seen = new WeakMap<object, any>();
@@ -807,9 +890,60 @@ const assertNotThenable = (result: unknown, target: Contracted, prop: PropertyKe
     );
 }
 
+/**
+ * Performs the assignment a `set` trap authorised.
+ *
+ * `Reflect.set` is called without a receiver on purpose. Passing the proxy would
+ * route the write back through the `defineProperty` trap, which refuses an
+ * external definition of a public property. The name is already authorised by the
+ * caller, so writing the target directly performs exactly that mutation.
+ *
+ * @returns Whether the target accepted the write. A setter's assignment is
+ *   reported as accepted, because the setter ran.
+ */
+const performSet = (
+    target: Contracted,
+    prop: PropertyKey,
+    value: unknown,
+    setter: ((value: unknown) => void) | undefined,
+): boolean => {
+    if (setter) {
+        setter.call(target, value);
+
+        return true;
+    }
+
+    // A target that cannot accept the write, because `Object.freeze` or
+    // `Object.preventExtensions` was applied, reports `false`, which strict mode
+    // turns into a `TypeError`.
+    return Reflect.set(target, prop, value);
+};
+
+/**
+ * Refuses an instance-level write to an enforcement switch.
+ *
+ * The switches are static, so a write here could only land on the raw target,
+ * out of reach of every trap. A switch a caller can set is a guarantee a caller
+ * can remove, so the attempt is refused wherever it happens — including when both
+ * switches are off, because that is exactly the state a caller would want to
+ * escape from.
+ */
+const refuseSwitchWrite = (prop: PropertyKey): void => {
+    if (!isSwitch(prop)) return;
+
+    throw new TypeError(
+        `Cannot set '${String(prop)}' on a Contracted instance: enforcement is switched on the class, `
+        + `not on an instance. Assign '${String(prop)}' on the class itself.`,
+    );
+};
+
 const proxyHandler: ProxyHandler<Contracted> = {
     get(target, prop, receiver) {
-        if (!Contracted[checkedMode]) return Reflect.get(target, prop, receiver);
+        const { contracts } = enforcementFor(target.constructor);
+
+        // With the contracts off, every member is returned unwrapped, so a feature
+        // call and a field read look the same and no lifecycle starts.
+        if (!contracts) return Reflect.get(target, prop, receiver);
 
         const descriptor = getPropertyDescriptor(Object.getPrototypeOf(target), prop);
 
@@ -849,26 +983,30 @@ const proxyHandler: ProxyHandler<Contracted> = {
         else
             return Reflect.get(target, prop, receiver);
     },
-    set(target, prop, value, receiver) {
-        if (!Contracted[checkedMode]) return Reflect.set(target, prop, value, receiver);
+    set(target, prop, value) {
+        refuseSwitchWrite(prop);
 
-        const descriptor = getPropertyDescriptor(Object.getPrototypeOf(target), prop)
+        const { contracts, encapsulation } = enforcementFor(target.constructor),
+            descriptor = getPropertyDescriptor(Object.getPrototypeOf(target), prop),
+            setter = typeof descriptor?.set === 'function' ? descriptor.set : undefined;
 
-        // Encapsulation governs the external surface only. It exists so a caller
-        // cannot mutate state without a postcondition to catch it; inside a body,
-        // `@ensures` and `@invariant` provide that guarantee instead.
-        if (!(descriptor && typeof descriptor.set === 'function'))
-            if (typeof prop === 'string' && !prop.startsWith('_'))
-                throw new TypeError(`Cannot assign to property '${String(prop)}': only properties starting with '_' or with a setter can be set on Contracted instances.`);
-
-        const setter = typeof descriptor?.set === 'function' ? descriptor.set : undefined;
-
-        // `Reflect.set` is called without a receiver on purpose. Passing the
-        // proxy would route the write back through the `defineProperty` trap,
-        // which refuses an external definition of a public property. The name
-        // is already checked above, so writing the target directly performs
-        // exactly the mutation this trap authorises.
+        // Encapsulation is the name check below: it exists so a caller cannot
+        // mutate state without a postcondition to catch it. It governs the external
+        // surface only — inside a body, `@ensures` and `@invariant` provide that
+        // guarantee instead.
         //
+        // The switch removes this verdict, not the lifecycle. A permitted write is
+        // still a feature invocation, so it is bracketed like any other and a
+        // setter's postcondition describes it. Skipping the lifecycle here would
+        // make the two switches dependent after all: turning encapsulation off
+        // would silently stop the contracts running on every write.
+        if (encapsulation && !setter && typeof prop === 'string' && !prop.startsWith('_'))
+            throw new TypeError(`Cannot assign to property '${String(prop)}': only properties starting with '_' or with a setter can be set on Contracted instances.`);
+
+        // Only the contracts describe a feature; the write itself is a property of
+        // the trap. With the contracts off the assignment runs directly.
+        if (!contracts) return performSet(target, prop, value, setter);
+
         // A setter's lifecycle result is the assigned value, which is what a
         // postcondition describes. Whether the write was accepted is a property of
         // the trap rather than of the feature, so it is tracked separately instead
@@ -878,13 +1016,7 @@ const proxyHandler: ProxyHandler<Contracted> = {
 
         runLifecycle('set', target, prop, [value],
             (args) => {
-                if (setter)
-                    setter.call(target, args[0]);
-                else
-                    // A target that cannot accept the write, because `Object.freeze`
-                    // or `Object.preventExtensions` was applied, reports `false`,
-                    // which strict mode turns into a `TypeError`.
-                    accepted = Reflect.set(target, prop, args[0]);
+                accepted = performSet(target, prop, args[0], setter);
 
                 return args[0];
             });
@@ -892,7 +1024,10 @@ const proxyHandler: ProxyHandler<Contracted> = {
         return accepted;
     },
     defineProperty(target, prop, descriptor) {
-        if (!Contracted[checkedMode]) return Reflect.defineProperty(target, prop, descriptor);
+        refuseSwitchWrite(prop);
+
+        if (!enforcementFor(target.constructor).encapsulation)
+            return Reflect.defineProperty(target, prop, descriptor);
 
         // Defining a property is an external mutation, so it follows the same
         // rule as assignment. Redefining a public field escapes the
@@ -919,7 +1054,11 @@ const proxyHandler: ProxyHandler<Contracted> = {
         return Reflect.defineProperty(target, prop, descriptor);
     },
     setPrototypeOf(target, prototype) {
-        if (!Contracted[checkedMode]) return Reflect.setPrototypeOf(target, prototype);
+        // Replacing the prototype is an external mutation of the instance, so
+        // encapsulation governs whether it is permitted. It is not a feature call,
+        // so no lifecycle would have run for it either way.
+        if (!enforcementFor(target.constructor).encapsulation)
+            return Reflect.setPrototypeOf(target, prototype);
 
         // Replacing the prototype swaps which descriptors a feature resolves to.
         // The per-feature wrappers are cached against `prop` for the lifetime of
@@ -936,14 +1075,22 @@ const proxyHandler: ProxyHandler<Contracted> = {
         return Reflect.preventExtensions(target);
     },
     deleteProperty(target, prop) {
-        if (!Contracted[checkedMode]) return Reflect.deleteProperty(target, prop);
+        refuseSwitchWrite(prop);
 
-        // Deletion follows the same rule as assignment: it is an external
-        // mutation, so it is subject to encapsulation and to the lifecycle.
-        // Only `_`-prefixed properties, the ones a caller is allowed to mutate
-        // in the first place, may also be removed.
-        if (typeof prop === 'string' && !prop.startsWith('_'))
+        const { contracts, encapsulation } = enforcementFor(target.constructor);
+
+        // Deletion follows the same rule as assignment: it is an external mutation,
+        // so it is subject to encapsulation and to the lifecycle. Only `_`-prefixed
+        // properties, the ones a caller is allowed to mutate in the first place, may
+        // also be removed.
+        //
+        // The switch removes this verdict, not the lifecycle, for the reason `set`
+        // gives: a permitted deletion is still an external mutation of the instance,
+        // so its `@invariant` still has to hold afterwards.
+        if (encapsulation && typeof prop === 'string' && !prop.startsWith('_'))
             throw new TypeError(`Cannot delete property '${String(prop)}' from Contracted instances: only properties starting with '_' can be deleted.`);
+
+        if (!contracts) return Reflect.deleteProperty(target, prop);
 
         return runLifecycle('delete', target, prop, [], () => Reflect.deleteProperty(target, prop));
     },
@@ -979,8 +1126,38 @@ export class Contracted {
      */
     protected static _allowedConstructions = 0;
 
-    // Symbol-based checked mode state
+    /**
+     * Whether the contracts declared on this class are evaluated.
+     *
+     * Assign it on a class to opt that class — and any class extending it that
+     * does not declare its own — out of `@invariant`, `@demands`, `@ensures`, and
+     * `@rescue`, without affecting a sibling or the rest of the process:
+     *
+     * ```typescript
+     * class DataHolder extends Contracted {
+     *     static [checkedMode] = false;
+     * }
+     * ```
+     *
+     * It is separate from {@link encapsulationMode} so a class can keep the write
+     * protection while skipping the checks. Both default to `true`, and the
+     * nearest declaration on the class chain decides.
+     *
+     * Set it **through the class**. An instance write would land on the raw target,
+     * where no trap can refuse it.
+     */
     public static [checkedMode]: boolean = true;
+
+    /**
+     * Whether an external write, definition, or deletion on this class's instances
+     * is trapped.
+     *
+     * Assign it on a class exactly as {@link checkedMode}, with the same scope: the
+     * class and the subclasses that do not declare their own. Disabling it makes
+     * the instance behave like a plain object for mutation, while the contracts
+     * still run when `checkedMode` is left on.
+     */
+    public static [encapsulationMode]: boolean = true;
 
     static new<
         C extends typeof Contracted,
