@@ -77,6 +77,24 @@ export interface ArmOptions {
      * each attempt is a separate failure with its own violation.
      */
     onViolation?: ViolationFactory;
+
+    /**
+     * Suppress the warning a subclass `@demands` arm raises for narrowing.
+     *
+     * `@demands` is OR-composed, so an arm added below an inherited one cannot
+     * narrow the precondition — satisfying any inherited arm still permits the
+     * call. That is easy to misread as a restriction, so declaring an arm on a
+     * feature that already has inherited arms warns.
+     *
+     * The arm is a legal weakening, so the warning is a diagnostic and not a
+     * refusal. Set this when the weakening is what was meant.
+     *
+     * Only `@demands` reports it. `@ensures` and `@invariant` are AND-composed, so
+     * a subclass arm strengthens the obligation rather than appearing to restrict
+     * it, and those decorators **refuse** the option rather than accepting one that
+     * could never do anything.
+     */
+    allowWeakening?: boolean;
 }
 
 /**
@@ -229,6 +247,150 @@ export const selectViolationFactory = (
         if (options?.onViolation) return options.onViolation;
 
     return undefined;
+}
+
+/**
+ * Rejects `allowWeakening` on a contract that never reports a weakening.
+ *
+ * The option suppresses a diagnostic about OR-composition, which only a
+ * precondition has. On an AND-composed contract it would be a declaration record
+ * that says something the runtime has no use for, discoverable only by reading the
+ * source, so it is refused at the point it is written rather than silently ignored.
+ *
+ * This follows the rule the other options already follow: `normalize` is refused
+ * where nothing can be replaced and `onViolation` where the failure must stay an
+ * `AssertionError`. An option that cannot act is a mistake about which contract
+ * the declaration belongs to.
+ *
+ * The test is for what the option would **do**, not for its presence, so
+ * `allowWeakening: false` is accepted: it asks for nothing, exactly as
+ * `normalize: false` is accepted on `@invariant`.
+ *
+ * @param contract - The contract name, for the message.
+ * @param options - The declaration's options.
+ * @internal
+ * Exported only because the AND-composed contract modules live in their own
+ * files and import it.
+ */
+export const assertNotWeakenable = (contract: string, options: ArmOptions | undefined): void => {
+    if (!options?.allowWeakening) return;
+
+    throw new TypeError(
+        `${contract} cannot declare allowWeakening: only a precondition can be weakened, because only `
+        + '`@demands` is OR-composed. A subclass arm on an AND-composed contract strengthens the obligation '
+        + 'and takes effect, so there is no warning to suppress.',
+    );
+}
+
+/**
+ * The inherited precondition arms a class's new arm composes with.
+ *
+ * Read from the **metadata object's prototype**, not from
+ * `metadata.demands[feature]`. At the moment a decorator runs, that property still
+ * holds only what was inherited — the merged list is written afterwards — so both
+ * reads agree today. The prototype is used because it is the record the compiler
+ * gives each class for exactly this purpose — `Object.create(base[Symbol.metadata]
+ * ?? null)` — and it keeps working if a decorator ever runs after another one has
+ * already written the merged list.
+ *
+ * A class with no metadata of its own has a prototype of `null` and reports no
+ * inherited arms, which is correct: there is nothing to have weakened.
+ *
+ * @param metadata - The decorating class's metadata object.
+ * @param feature - The feature's name.
+ * @internal
+ * Exported only because `demands.mts` lives in its own file and imports it. The
+ * prototype walk relies on the compiler's metadata emission, which no consumer
+ * should build on.
+ */
+export const inheritedArms = (metadata: object | undefined, feature: unknown): readonly unknown[] => {
+    const inherited = Object.getPrototypeOf(metadata ?? {}) as
+        { demands?: Record<PropertyKey, readonly unknown[]> } | null;
+
+    return (inherited?.demands as Record<PropertyKey, readonly unknown[]> | undefined)?.[feature as PropertyKey] ?? [];
+}
+
+/**
+ * The features a metadata object has already been warned about.
+ *
+ * The diagnostic is a property of the feature, and a feature may carry several
+ * arms. Each decorator runs independently, so without this a subclass declaring
+ * two `@demands` arms on one method prints the same warning twice, which teaches
+ * the reader to ignore it. Keyed on the metadata object because that is the object
+ * the decorators share, and on the feature within it because one class may have
+ * several features, each deserving its own report. A `WeakMap` so it holds nothing
+ * alive.
+ */
+const reportedFeatures = new WeakMap<object, Set<unknown>>();
+
+/**
+ * Whether this class has already been warned about this feature, marking it if not.
+ *
+ * Call before reporting, not after: the pair is recorded on the first call, so a
+ * class whose arms are evaluated again is not reported again.
+ *
+ * @param metadata - The decorating class's metadata object.
+ * @param feature - The feature's name.
+ * @returns Whether a report has already been made for this pair.
+ * @internal
+ * Exported only because `demands.mts` lives in its own file and imports it.
+ */
+export const alreadyReported = (metadata: object, feature: unknown): boolean => {
+    const features = reportedFeatures.get(metadata);
+
+    if (features?.has(feature)) return true;
+
+    if (features) features.add(feature);
+    else reportedFeatures.set(metadata, new Set([feature]));
+
+    return false;
+}
+
+/**
+ * Describes an inherited precondition that a new arm cannot narrow.
+ *
+ * A subclass declaring `@demands` reads as a restriction — "the feature now
+ * requires this as well" — and it is not one. `@demands` is OR-composed, because a
+ * subtype may accept wider input but never narrower, so satisfying any inherited
+ * arm still permits the call and the new arm decides nothing on its own. The
+ * author believes the feature is stricter than it is.
+ *
+ * Returns `undefined` when the arm is a genuine weakening (nothing inherited to be
+ * weaker than) or when the diagnostic is switched off. It **warns** rather than
+ * throws by default: a declared arm is always a legal weakening, and the defect is
+ * the author's model of it, so refusing the class would break legitimate code. The
+ * return value is the message so a stricter policy, or a test, can act on it.
+ *
+ * `@ensures` and `@invariant` are unaffected: they are AND-composed, so a subclass
+ * arm genuinely strengthens the obligation and there is nothing to report. They
+ * refuse `allowWeakening` outright; see {@link assertNotWeakenable}.
+ *
+ * @param contract - The contract name, for the message.
+ * @param label - The feature, for the message.
+ * @param inherited - The inherited arms this class's arm composes with.
+ * @param options - The declaration's options, which may switch the diagnostic off.
+ * @internal
+ * Exported only because `demands.mts` lives in its own file and imports it. A
+ * consumer who wants the warning suppressed sets `allowWeakening`; the message
+ * text is not part of the surface.
+ */
+export const reportWeakeningArm = (
+    contract: string,
+    label: string,
+    inherited: readonly unknown[],
+    options: ArmOptions | undefined,
+): string | undefined => {
+    if (inherited.length === 0 || options?.allowWeakening) return undefined;
+
+    const message =
+        `${contract} on ${label} adds an arm to a precondition that already has ${inherited.length} inherited `
+        + 'arm(s). `@demands` is OR-composed, so this arm cannot narrow what the base permits: satisfying any '
+        + 'inherited arm still allows the call. Move the restriction to the base feature, or declare the arm '
+        + 'with `allowWeakening` if a genuine weakening is what was meant.';
+
+    console.warn(message);
+
+    return message;
 }
 
 /**

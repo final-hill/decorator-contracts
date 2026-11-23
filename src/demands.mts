@@ -2,8 +2,8 @@ import { violationFailure } from './assert.mjs';
 import { contractsEnabled, Contracted } from "./Contracted.mjs";
 import { assertFeatureContractTarget } from './decorator.mjs';
 import {
-    armFailures, assertNormalizable, assertViolationFactory, describeArm, evaluateArm,
-    recordFailure, selectViolationFactory, type ArmOptions,
+    alreadyReported, armFailures, assertNormalizable, assertViolationFactory, describeArm, evaluateArm,
+    inheritedArms, recordFailure, reportWeakeningArm, selectViolationFactory, type ArmOptions,
 } from './admissibility.mjs';
 import type { StandardSchemaV1 } from './standard-schema.mjs';
 import type { FeatureDecoratorContext } from './types.mjs';
@@ -88,6 +88,27 @@ export const demands: DemandsDecorator = (arm, options) => (feature, ctx) => {
     assertFeatureContractTarget('@demands', feature, ctx);
     assertNormalizable(arm, '@demands', options);
     assertViolationFactory('@demands', options);
+
+    // A subclass arm reads as a restriction and is not one: OR-composition keeps
+    // every inherited arm, so satisfying any of them still permits the call. The
+    // diagnostic names that where the arm is written, which is the only point the
+    // author is looking at it.
+    //
+    // Reported once per feature: a class may carry several arms on one method, and
+    // each decorator runs independently, so an unconditional report would print the
+    // same message for each of them.
+    //
+    // The feature is `ctx.name`; the decorator's `value` parameter is the element,
+    // so using it here would look the arms up under a function's source text. A
+    // member decorator's context carries no class name — the class is not in scope
+    // — so the label names the feature alone rather than inventing a class.
+    if (!alreadyReported(ctx.metadata, ctx.name))
+        reportWeakeningArm(
+            '@demands',
+            String(ctx.name),
+            inheritedArms(ctx.metadata, ctx.name),
+            options,
+        );
 
     // The cast is the protocol's, not this contract's: `ctx.metadata` is
     // `DecoratorMetadataObject`, an open `Record<PropertyKey, unknown>`, so the

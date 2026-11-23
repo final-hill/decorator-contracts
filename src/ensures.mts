@@ -2,7 +2,7 @@ import { violationFailure } from './assert.mjs';
 import { contractsEnabled, Contracted } from './Contracted.mjs';
 import { assertFeatureContractTarget } from './decorator.mjs';
 import {
-    armFailures, assertNormalizable, assertViolationFactory, describeArm, evaluateArm,
+    armFailures, assertNormalizable, assertNotWeakenable, assertViolationFactory, describeArm, evaluateArm,
     recordFailure, selectViolationFactory, type ArmOptions,
 } from './admissibility.mjs';
 import type { StandardSchemaV1 } from './standard-schema.mjs';
@@ -90,6 +90,7 @@ export const ensures: EnsuresDecorator = (arm, options) => (feature, ctx) => {
     assertFeatureContractTarget('@ensures', feature, ctx);
     assertNormalizable(arm, '@ensures', options);
     assertViolationFactory('@ensures', options);
+    assertNotWeakenable('@ensures', options);
 
     // See `@demands` for why the metadata record needs an assertion here.
     const es = [

@@ -1,7 +1,7 @@
 import { assert, violationFailure } from './assert.mjs';
 import { contractsEnabled, Contracted } from './Contracted.mjs';
 import { assertDecoratorContext } from './decorator.mjs';
-import { armFailures, assertNotNormalizable, assertNotViolationFactory, describeArm, evaluateArm, recordFailure, type ArmOptions } from './admissibility.mjs';
+import { armFailures, assertNotNormalizable, assertNotViolationFactory, assertNotWeakenable, describeArm, evaluateArm, recordFailure, type ArmOptions } from './admissibility.mjs';
 import type { StandardSchemaV1 } from './standard-schema.mjs';
 
 /**
@@ -101,6 +101,7 @@ export const invariant: InvariantDecorator = (arm, options) => (OriginalClass, c
     assertDecoratorContext('@invariant', context);
     assertNotNormalizable('@invariant', options);
     assertNotViolationFactory('@invariant', options);
+    assertNotWeakenable('@invariant', options);
 
     const { metadata } = context;
 

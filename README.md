@@ -1083,6 +1083,41 @@ A schema arm composes exactly like a predicate arm, which is why no separate dec
 
 **A narrowing subtype precondition has no effect, and that is correct.** Writing `@demands(z.number().min(5))` in a subtype does not restrict anything, because OR-composition keeps the inherited arm. A subtype is not permitted to narrow what its supertype accepts, so the runtime refuses to give it that power. TypeScript will not catch the mistake either — **method parameters are bivariant** under `strictFunctionTypes` — so this is a review obligation. Declare input schemas on the base feature.
 
+Because that mistake is easy to make and silent, declaring a `@demands` arm on a feature that already has inherited arms **warns** at decoration time, naming the feature and the inherited arm count:
+
+```text
+@demands on add adds an arm to a precondition that already has 2 inherited arm(s).
+`@demands` is OR-composed, so this arm cannot narrow what the base permits:
+satisfying any inherited arm still allows the call. Move the restriction to the
+base feature, or declare the arm with `allowWeakening` if a genuine weakening is
+what was meant.
+```
+
+It warns rather than throws because the arm is always a legal weakening — the defect is the author's model of it, not the declaration. Pass `{ allowWeakening: true }` when the wider precondition is what you meant.
+
+The warning is issued once per feature however many arms the class declares, since it describes the feature rather than any one arm.
+
+`allowWeakening` is refused on `@ensures` and `@invariant`. It suppresses a diagnostic about OR-composition, which only a precondition has, so on an AND-composed contract it would be a declaration that could never do anything. This is the same rule `normalize` and `onViolation` follow: an option that cannot act is a mistake about which contract the declaration belongs to.
+
+**This asymmetry is `@demands`-only.** An `@ensures` arm on a subclass is AND-composed, so it genuinely strengthens the obligation and takes effect:
+
+```typescript
+class Base extends Contracted {
+    @ensures(({ result }: { result: number }) => result >= 0)
+    m(): number { return 5; }
+}
+
+class Sub extends Base {
+    @ensures(({ result }: { result: number }) => result <= 3)   // does restrict the result
+    override m(): number { return 5; }
+}
+
+Base.new().m();   // 5
+Sub.new().m();    // @ensures failed: the base arm passes, the subclass arm does not
+```
+
+`@invariant` behaves like `@ensures`: it is AND-composed and covariant. Only a precondition is contravariant, which is why only a precondition has an arm that cannot narrow.
+
 ### Failure reporting
 
 A schema failure carries the provider's own `issues` in the structured payload, and renders them into the message:
