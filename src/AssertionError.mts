@@ -15,7 +15,14 @@ export type ContractKind = '@invariant' | '@demands' | '@ensures';
 export interface ContractViolation {
     /** Which contract failed. */
     contract: ContractKind;
-    /** The class the contract belongs to. */
+    /**
+     * The class the contract belongs to.
+     *
+     * This is the class's declared `contractName` when it has one, and the
+     * constructor's name otherwise — which is the build's output rather than the
+     * author's declaration, and degrades under minification. Declare a name for a
+     * `className` that survives a production build.
+     */
     className: string;
     /** The feature the contract belongs to, absent for `@invariant`. */
     feature?: string;

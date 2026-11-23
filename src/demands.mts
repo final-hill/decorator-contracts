@@ -1,5 +1,6 @@
 import { violationFailure } from './assert.mjs';
 import { contractsEnabled, Contracted } from "./Contracted.mjs";
+import { classNameOf } from './name.mjs';
 import { assertFeatureContractTarget } from './decorator.mjs';
 import {
     alreadyReported, armFailures, assertNormalizable, assertViolationFactory, describeArm, evaluateArm,
@@ -153,7 +154,8 @@ export function assertDemands(
 
     if (ds.length === 0) return args;
 
-    const label = `${instance.constructor.name}.${String(propertyKey)}`,
+    const className = classNameOf(Class),
+        label = `${className}.${String(propertyKey)}`,
         failures = armFailures();
 
     for (const [index, { arm, options }] of ds.entries()) {
@@ -185,7 +187,7 @@ export function assertDemands(
     // so a typed error survives.
     throw violationFailure(
         '@demands',
-        instance.constructor.name,
+        className,
         String(propertyKey),
         ds.map(entry => entry.arm),
         failures,

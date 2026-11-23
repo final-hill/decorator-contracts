@@ -1,5 +1,6 @@
 import { assert, violationFailure } from './assert.mjs';
 import { contractsEnabled, Contracted } from './Contracted.mjs';
+import { classNameOf } from './name.mjs';
 import { assertDecoratorContext } from './decorator.mjs';
 import { armFailures, assertNotNormalizable, assertNotViolationFactory, assertNotWeakenable, describeArm, evaluateArm, recordFailure, type ArmOptions } from './admissibility.mjs';
 import type { StandardSchemaV1 } from './standard-schema.mjs';
@@ -60,7 +61,16 @@ export interface RegisteredInvariant {
 export function assertInvariants<C extends typeof Contracted, T extends InstanceType<C>>(Class: C, instance: T) {
     if (!contractsEnabled(Class)) return;
 
-    const registered = (Class[Symbol.metadata]?.['invariants'] ?? []) as unknown as RegisteredInvariant[],
+    const registered = (Class[Symbol.metadata]?.['invariants'] ?? []) as unknown as RegisteredInvariant[];
+
+    // A class with no invariant arms is the common case, and this runs on entry and
+    // exit of every feature. The name is only needed to label an arm, so it is
+    // resolved after the loop has decided one failed rather than on every call: a
+    // declaration may be an accessor, and reading it twice per invocation to name a
+    // failure that did not happen is cost the caller pays for nothing.
+    if (registered.length === 0) return;
+
+    const className = classNameOf(Class),
         failures = armFailures();
 
     // AND-composed: every arm must hold for the instance to be valid. Invariants
@@ -71,7 +81,7 @@ export function assertInvariants<C extends typeof Contracted, T extends Instance
             entry.arm,
             { predicate: () => ({ self: instance }), schema: () => instance },
             '@invariant',
-            Class.name,
+            className,
             index,
             entry.options,
         );
@@ -88,7 +98,7 @@ export function assertInvariants<C extends typeof Contracted, T extends Instance
 
     throw violationFailure(
         '@invariant',
-        Class.name,
+        className,
         undefined,
         registered.map(entry => entry.arm),
         failures,
