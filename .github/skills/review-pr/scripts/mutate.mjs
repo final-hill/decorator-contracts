@@ -38,7 +38,7 @@
  * measurement, not a convenience.
  *
  * Usage:
- *   node .github/skills/pr-review/scripts/mutate.mjs \
+ *   node .github/skills/review-pr/scripts/mutate.mjs \
  *     --file src/admissibility.mts \
  *     --test src/tests/standard-schema.test.mts \
  *     --find "    if (!options?.normalize || isSchema(arm)) return;" \

@@ -150,8 +150,8 @@ authoritative, so the next reader trusts it instead of checking.
   generated; `npm run build` from a clean tree is the check.
 - **A test that passes because of the `prebuild` lint hook.** `npm run build` lints
   first, so a mutation experiment must call `npx webpack` directly.
-- **Line-ending churn.** `src/**/*.mts` are LF; `README.md`, `package.json`,
-  `tsconfig*.json`, and `.github/**` are CRLF. A one-line change with a
+- **Line-ending churn.** Every text file is LF, enforced by `.gitattributes` and
+  `.editorconfig`; `*.png` is binary. A one-line change with a
   hundreds-of-lines diff is this defect.
 
 ### Evidence that cannot support its claim

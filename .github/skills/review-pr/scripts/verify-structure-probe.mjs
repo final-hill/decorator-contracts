@@ -27,7 +27,7 @@
  * KIND, or reports a finding for a construct that is legitimate.
  *
  * Usage:
- *   node .github/skills/pr-review/scripts/verify-structure-probe.mjs
+ *   node .github/skills/review-pr/scripts/verify-structure-probe.mjs
  *
  * Exit code: 0 all checks pass, 1 a check regressed.
  */

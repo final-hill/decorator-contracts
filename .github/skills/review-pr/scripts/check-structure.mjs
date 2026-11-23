@@ -49,9 +49,9 @@
  * to the standard it applies to the product.
  *
  * Usage:
- *   node .github/skills/pr-review/scripts/check-structure.mjs --changed
- *   node .github/skills/pr-review/scripts/check-structure.mjs server/application
- *   node .github/skills/pr-review/scripts/check-structure.mjs --baseline origin/master
+ *   node .github/skills/review-pr/scripts/check-structure.mjs --changed
+ *   node .github/skills/review-pr/scripts/check-structure.mjs server/application
+ *   node .github/skills/review-pr/scripts/check-structure.mjs --baseline origin/master
  *
  * Exit code: 0 clean, 1 findings survive the baseline, so it can gate a review.
  */
