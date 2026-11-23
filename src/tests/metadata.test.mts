@@ -129,6 +129,7 @@ describe('Effective arms are reported in evaluation order', () => {
         nodeAssert.deepStrictEqual(metadata.demands, {});
         nodeAssert.deepStrictEqual(metadata.ensures, {});
         nodeAssert.deepStrictEqual(metadata.rescue, {});
+        nodeAssert.strictEqual(metadata.classRescue, undefined);
     });
 
     test('`Contracted` itself has no metadata', () => {

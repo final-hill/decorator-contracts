@@ -939,13 +939,59 @@ try {
 
 A handler that repairs the state before declining to retry prevents that: the instance is valid by the time the invariant is re-tested, so the body's own error is what the caller receives.
 
-Because a handler runs before the invariant is re-tested, it receives the error that failed rather than the invariant failure that may supersede it. A per-feature handler knows which feature it was attached to, so that is unambiguous; a class-level handler would not, and the [class-level `@rescue`](https://github.com/final-hill/decorator-contracts/issues/344) design has to settle what context such a handler receives.
+Because a handler runs before the invariant is re-tested, it receives the error that failed rather than the invariant failure that may supersede it. A per-feature handler knows which feature it was attached to, so that is unambiguous; a class-level handler covers every feature, which is why the subject carries `feature` (see [One handler for a whole class](#one-handler-for-a-whole-class)).
 
 ### Retry bounds
 
 `retry` restarts the body, so it can always be attempted again. The one boundary that cannot be restarted is the *entry* check: nothing has run yet, so a retry can only re-check the state the handler just set. That repair is attempted **once**; if the invariant still fails, the failure is raised rather than looping, because every further attempt would fail identically.
 
 Everywhere else, retries are unbounded by default and `maxRetries` bounds them, as described under [N-Version programming](#robustness-organized-panic-and-the-benefits-of-rescue). An unbounded handler that never repairs will therefore loop until it does — that is the price of allowing a handler to choose the next alternative.
+
+### One handler for a whole class
+
+`@rescue` also applies to a class, where it covers every feature that declares none of its own:
+
+```typescript
+import { Contracted, rescue } from '@final-hill/decorator-contracts';
+
+@rescue(({ feature, error }) => {
+    // one translation and one telemetry event, whichever verb failed
+    console.log(`${String(feature)} failed`, error);
+})
+class Service extends Contracted {
+    charge(_amount: number): void { /* ... */ }
+    refund(_amount: number): void { /* ... */ }
+}
+```
+
+The subject is unchanged, and `feature` is what makes the form usable: a per-feature handler knows its own name because it was written next to it, while a class-level handler serves all of them. It holds the property key the lifecycle was running for, so `delete` reports the deleted property and an accessor reports its own name.
+
+**Precedence** is fixed, and the two rules answer different questions:
+
+1. A **feature-level** declaration wins over any class-level one, including one on the class that declares the feature. Inheriting a feature declaration from a base class already works, and being inherited is not a reason to lose to the class-level form.
+2. Otherwise the **nearest class-level** declaration walking up the constructor chain applies, so a subclass overrides a handler its base declared without restating it per feature.
+
+```typescript
+class Base extends Contracted {
+    @rescue(({ self }) => { self._reset(); })     // 1: wins for `run`
+    run(): void { throw new Error('boom'); }
+
+    _reset(): void { /* ... */ }
+}
+
+@rescue(({ error }) => { console.log(error); })   // 2: wins for `other`
+class Sub extends Base {
+    other(): void { throw new Error('boom'); }
+}
+```
+
+**What it covers** is every feature the lifecycle runs for: methods, getters, setters, async functions, generators, and the `delete` trap. A getter has no body to re-run, so `retry` on a failing read restarts the read rather than supplying a value, which is what a per-feature handler does already.
+
+A `_`-prefixed feature is covered by neither form. The decorator refuses a feature-level `@rescue` on one, so the class-level form leaves it out too: a feature a consumer cannot override is a feature they could not exempt from the class handler.
+
+**What it does not solve.** A class-level handler inherits the per-feature semantics exactly, so it does not make a typed precondition reachable: a failed `@demands` still never consults a handler, because nothing ran. Rescue means "resume the body", and a failed precondition has no body to resume; use the [`onViolation` factory](#raising-a-typed-error-with-onviolation) for that.
+
+`maxRetries` is counted per invocation of the feature the handler served, not across the class, so two failing calls each get their own budget, and one failing feature does not spend another's.
 
 ### Robustness, Organized Panic, and the Benefits of `@rescue`
 
@@ -1007,7 +1053,7 @@ Unlike traditional `try/catch`, where exceptions are non-resumable and often han
 
 **Inheritance:**
 
-If a base class declares a `@rescue` handler for a method, that handler is inherited by subclasses unless the subclass overrides it with its own `@rescue` declaration. This ensures that robust error handling is preserved throughout the inheritance chain, unless explicitly changed.
+If a base class declares a `@rescue` handler for a method, that handler is inherited by subclasses unless the subclass overrides it with its own `@rescue` declaration. A class-level declaration follows the same rule and is inherited by a subclass that declares none of its own; see [One handler for a whole class](#one-handler-for-a-whole-class) for how the two forms rank against each other.
 
 This approach leads to more maintainable and robust code, as error handling is organized and closely tied to the contract of the class feature, rather than being scattered throughout the call stack.
 
@@ -1208,6 +1254,12 @@ bottom-up.
 A class that declares nothing has no record at all, so both accessors report empty
 lists rather than `undefined`.
 
+`@rescue` is reported as the declaration the runtime would apply. A feature’s own
+handler is `metadata.rescue[feature]`; when it declares none, `metadata.classRescue`
+is the handler a [class-level declaration](#one-handler-for-a-whole-class) gives it,
+and `getFeatureContracts` returns that one. A `_`-prefixed feature has neither, so
+both report `undefined` for it.
+
 ### The stability guarantee
 
 The shape of `ContractMetadata` and `FeatureContracts` is stable for the major
@@ -1255,7 +1307,7 @@ parameter so a `max-params: 1` configuration is satisfied.
 | `@demands` | `{ self, args }` |
 | `@ensures` | `{ self, args, old, result }` |
 | `@invariant` | `{ self }` |
-| `@rescue` | `{ self, error, args, retry }` |
+| `@rescue` | `{ self, error, args, retry, feature }` |
 
 Bind the fields a predicate reads and omit the rest; the runtime supplies them all
 whether or not the parameter list names them. A predicate that destructured its

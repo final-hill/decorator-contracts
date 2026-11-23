@@ -87,7 +87,7 @@ describe('A contract predicate is called with one subject object', () => {
         nodeAssert.deepStrictEqual(keys, ['args', 'old', 'result', 'self']);
     });
 
-    test('@rescue supplies `self`, `error`, `args`, and `retry`', () => {
+    test('@rescue supplies `self`, `error`, `args`, `retry`, and `feature`', () => {
         let keys: string[] = [];
 
         class Foo extends Contracted {
@@ -98,7 +98,7 @@ describe('A contract predicate is called with one subject object', () => {
         }
 
         nodeAssert.throws(() => (Foo.new() as Foo).method(), { message: 'boom' });
-        nodeAssert.deepStrictEqual(keys, ['args', 'error', 'retry', 'self']);
+        nodeAssert.deepStrictEqual(keys, ['args', 'error', 'feature', 'retry', 'self']);
     });
 });
 

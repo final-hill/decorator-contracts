@@ -363,8 +363,8 @@ function attemptRescue(
         // consequence is that a handler observes the error that failed — the body's
         // own error when the body threw — while the caller may receive the superseding
         // invariant failure. A class-level `@rescue` serves features that fail in
-        // different ways, so that asymmetry becomes visible there and may have to be
-        // revisited. See https://github.com/final-hill/decorator-contracts/issues/344
+        // different ways, so that asymmetry is visible there; the handler's subject
+        // carries the failing feature's name, which is what it dispatches on.
         throw surfaceInvariantFailure(Class, target, error);
     }
 

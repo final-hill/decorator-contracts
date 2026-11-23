@@ -154,3 +154,49 @@ describe('The published package resolves its type declarations', () => {
         }
     });
 });
+
+/**
+ * The entry point is a promise about what a consumer can reach, and the
+ * difference is invisible to the type checker: a `@internal` helper reaches the
+ * runtime entry through `export *` whether or not it is re-exported on purpose.
+ *
+ * These helpers take a raw instance and a raw error and return the live
+ * declaration, which is the capability `getContractMetadata` exists to deny by
+ * returning copies. The module's declaration surface is therefore listed
+ * explicitly in `src/index.mts`, and this pins the list.
+ */
+describe('The entry point exposes the contract surface and not the runtime plumbing', () => {
+    const entry = (): string[] => {
+        const dist = join(projectRoot, 'dist', 'index.mjs');
+
+        nodeAssert.ok(existsSync(dist), 'run `npm run build` first');
+
+        return JSON.parse(
+            execFileSync(process.execPath, [
+                '--input-type=module',
+                '-e',
+                `const m = await import(${JSON.stringify(`file://${dist}`)});`
+                + 'console.log(JSON.stringify(Object.keys(m)))',
+            ], { encoding: 'utf8' }),
+        );
+    };
+
+    test('the resolver the proxy and the accessors share stays internal', () => {
+        const exported = entry();
+
+        nodeAssert.ok(exported.includes('rescue'), 'the entry point loaded');
+
+        // It takes a raw metadata record and returns the live declaration, which is
+        // what `getContractMetadata` exists to deny.
+        nodeAssert.ok(!exported.includes('rescueDeclarationOf'), 'runtime plumbing, not API');
+    });
+
+    test('the rescue surface it joined keeps its names', () => {
+        const exported = entry();
+
+        for (const name of ['rescue', 'getRescueDeclaration', 'applyRescueHandler'])
+            nodeAssert.ok(exported.includes(name), `${name} was already exported`);
+        for (const name of ['getContractMetadata', 'getFeatureContracts'])
+            nodeAssert.ok(exported.includes(name), `${name} is missing from the entry point`);
+    });
+});

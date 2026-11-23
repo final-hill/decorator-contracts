@@ -1,6 +1,6 @@
 import { assert } from './assert.mjs';
 import { contractsEnabled, Contracted } from './Contracted.mjs';
-import { assertFeatureContractTarget } from './decorator.mjs';
+import { assertDecoratorContext, assertFeatureContractTarget } from './decorator.mjs';
 import type { FeatureDecoratorContext } from './types.mjs';
 
 /**
@@ -16,12 +16,20 @@ import type { FeatureDecoratorContext } from './types.mjs';
  * `this: This` annotation for the same reason: the `this` context of a bare call
  * is `void`, so a declared `this` makes every consumer-written handler fail to
  * type-check. The subject carries the instance instead.
+ *
+ * `feature` names the feature whose invocation failed. A per-feature declaration
+ * already knows it, because the handler was written next to that feature; a
+ * class-level declaration serves every feature, so without this field a handler
+ * that translates or logs per feature has nothing to key on. The value is the
+ * property key the lifecycle was running for, so a `delete` reports the deleted
+ * property and an accessor reports the accessor's name.
  */
 export interface RescueSubject<This> {
     readonly self: This;
     readonly error: unknown;
     readonly args: any[];
     readonly retry: (...args: any[]) => any;
+    readonly feature: PropertyKey;
 }
 
 /**
@@ -51,7 +59,7 @@ export interface RescueDeclaration<This extends Contracted> {
 }
 
 /**
- * Declares a rescue handler for a feature.
+ * Declares a rescue handler for a feature, or for every feature of a class.
  *
  * `retry` is explicit: it passes only the arguments it is given and never
  * replays the original arguments. Forward the `args` field to retry with the
@@ -59,18 +67,65 @@ export interface RescueDeclaration<This extends Contracted> {
  *
  * Options are declaration level because they describe the feature rather than an
  * individual failure. `maxRetries` bounds how many times `retry` may restart the
- * lifecycle for one invocation; it defaults to unbounded.
+ * lifecycle for one invocation; it defaults to unbounded, and it is counted per
+ * invocation of the feature the handler served rather than across the class.
+ *
+ * On a class the declaration applies to every feature that declares none of its
+ * own. Precedence is feature-level first, then the nearest class-level
+ * declaration walking up the constructor chain, so a subclass may override a
+ * class-level handler its base declared without restating it per feature.
+ *
+ * The returned decorator takes one call signature whose context is the **union**
+ * of the two positions, rather than two overloads. An overload pair cannot be
+ * selected for a decorator expression: TypeScript resolves the class position
+ * against the first signature and does not fall through, so a member-first pair
+ * is rejected on a class and a class-first pair is rejected on a member. A union
+ * is accepted in both positions and needs no ordering.
+ *
+ * `This` reaches both positions, and each supplies it differently: the member
+ * context carries it through the decorated element's own signature, and the
+ * class context through the constructor being decorated. Only the class context
+ * is named by this type; the member context is left to `FeatureDecoratorContext`,
+ * which already threads the instance through its three kind variants.
+ *
+ * The decorated element itself is typed `unknown` in both positions. Its type is
+ * the feature's signature, which no handler reads, and naming it would make it a
+ * second inference site for `This` — `typeof A` where the handler said `A` — and
+ * a decorator expression has no way to unify the two.
  */
-export type RescueDecorator = <This extends Contracted, Args extends any[] = any[]>(
+export type RescueDecorator = <This extends Contracted>(
     handler: RescueHandler<This>,
     options?: RescueOptions,
-) => (
+) => <Args extends any[]>(
     value: unknown,
     context: FeatureDecoratorContext<This, Args>
+        | ClassDecoratorContext<abstract new (...args: any[]) => This>,
 ) => void;
 
-export const rescue: RescueDecorator = (handler, options) => (feature, ctx) => {
-    assertFeatureContractTarget('@rescue', feature, ctx);
+export const rescue: RescueDecorator = (handler, options) => (element: unknown, ctx: unknown) => {
+    assertDecoratorContext('@rescue', ctx);
+
+    if (ctx.kind === 'class') {
+        const Class = element as typeof Contracted;
+
+        // A class decorator receives no instance, so there is no `this` to test in
+        // `addInitializer`; the prototype chain is what says whether a subclass of
+        // `Contracted` is being declared.
+        assert(Class.prototype instanceof Contracted, '@rescue decorator can only be applied to classes that extend Contracted');
+        assert(options?.maxRetries === undefined || options.maxRetries >= 0, 'maxRetries must not be negative');
+
+        // A class decorator runs once for the class rather than once per member, so
+        // it stores under its own key. `ctx.name` is the class name, which a feature
+        // could also be called, so sharing the feature map would make the two forms
+        // collide.
+        ctx.metadata.classRescue = { handler, maxRetries: options?.maxRetries };
+
+        return;
+    }
+
+    // The placement gate runs first, so a misplaced declaration reports that rather
+    // than an option the placement made meaningless.
+    assertFeatureContractTarget('@rescue', element, ctx);
     assert(options?.maxRetries === undefined || options.maxRetries >= 0, 'maxRetries must not be negative');
 
     // Register at decoration time. `addInitializer` runs once per instance, so
@@ -86,16 +141,56 @@ export const rescue: RescueDecorator = (handler, options) => (feature, ctx) => {
 }
 
 /**
- * Resolves the `@rescue` declaration for `propertyKey`, walking the prototype
- * chain so that a declaration on an ancestor feature is inherited.
+ * The `@rescue` declaration a metadata record holds for `feature`.
+ *
+ * A feature-level declaration wins over a class-level one, which is what lets a
+ * class serve a uniform handler and still let one feature state its own. A
+ * feature's own entry is an own property of the map, copied into a subclass's
+ * record by the spread a decorator performs; a class-level declaration is one
+ * property, reached through the metadata prototype chain when this class did not
+ * declare its own.
+ *
+ * A `_`-prefixed feature takes neither form: the decorator refuses one wherever it
+ * is written, because `@rescue` is the only contract a handler applies, and a
+ * lifecycle that starts for a `_` name would otherwise inherit a class-level
+ * handler for it. Leaving the name out of both answers keeps the two forms
+ * consistent, so a consumer never has a feature they can cover but not override.
+ *
+ * @internal
+ * Exported because `metadata.mts` reports the same effective declaration this
+ * module applies, so both have to answer the question one way. It is not
+ * re-exported from the package entry: it returns the live declaration, and a
+ * consumer has to read a copy through `getContractMetadata`.
+ */
+export const rescueDeclarationOf = (
+    metadata: {
+        rescue?: Readonly<Record<PropertyKey, RescueDeclaration<Contracted>>>,
+        classRescue?: RescueDeclaration<Contracted>,
+    } | undefined,
+    feature: PropertyKey,
+): RescueDeclaration<Contracted> | undefined =>
+    String(feature).startsWith('_')
+        ? undefined
+        : metadata?.rescue?.[feature] ?? metadata?.classRescue;
+
+/**
+ * Resolves the `@rescue` declaration for `propertyKey`, walking the constructor
+ * chain so that a declaration on an ancestor is inherited.
+ *
+ * The walk covers the case where a class inherited its base's metadata record by
+ * `Symbol.metadata` lookup rather than owning one, so the record it sees is the
+ * one its ancestor wrote; the first class whose record resolves a declaration
+ * supplies it.
  */
 export function getRescueDeclaration(instance: Contracted, propertyKey: PropertyKey): RescueDeclaration<Contracted> | undefined {
-    let proto: any = instance.constructor;
-    while (proto && proto !== Function.prototype) {
-        const declaration = proto[Symbol.metadata]?.rescue?.[propertyKey] as RescueDeclaration<Contracted> | undefined;
+    for (let proto: any = instance.constructor; proto && proto !== Function.prototype; proto = Object.getPrototypeOf(proto)) {
+        const metadata = proto[Symbol.metadata] as Parameters<typeof rescueDeclarationOf>[0];
+
+        if (!metadata) continue;
+
+        const declaration = rescueDeclarationOf(metadata, propertyKey);
 
         if (declaration) return declaration;
-        proto = Object.getPrototypeOf(proto);
     }
 
     return undefined;
@@ -139,6 +234,7 @@ export const applyRescueHandler = (instance: Contracted, propertyKey: PropertyKe
             hasRetried = true;
             retryArgs = retryArguments;
         },
+        feature: propertyKey,
     });
     if (!hasRetried)
         throw error;
