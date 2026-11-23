@@ -1,4 +1,5 @@
 import { AssertionError } from './AssertionError.mjs';
+import { installInspect } from './inspect.mjs';
 import { assertInvariants } from './invariant.mjs';
 import { assertDemands } from './demands.mjs';
 import { assertEnsures, EnsuresPredicate } from './ensures.mjs';
@@ -1192,3 +1193,11 @@ export class Contracted {
         Class._allowedConstructions--;
     }
 }
+
+/**
+ * Installs the `util.inspect` rendering on every contracted class.
+ *
+ * The surface itself lives in `inspect.mts`, which owns the key it is registered
+ * under; this is the one place a library class is available to attach it to.
+ */
+installInspect(Contracted.prototype);

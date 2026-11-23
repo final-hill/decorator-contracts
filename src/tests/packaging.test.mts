@@ -208,4 +208,13 @@ describe('The entry point exposes the contract surface and not the runtime plumb
         // here, so the resolver is plumbing rather than a capability the surface owes.
         nodeAssert.ok(!exported.includes('classNameOf'), 'runtime plumbing, not API');
     });
+
+    test('the serialization decorator is published and its helpers are not', () => {
+        const exported = entry();
+
+        nodeAssert.ok(exported.includes('serializable'), 'the decorator is the surface');
+        // The rendering, its key and the installation are the runtime's own machinery.
+        for (const name of ['inspectInstance', 'installInspect', 'inspectKey'])
+            nodeAssert.ok(!exported.includes(name), `${name} is runtime plumbing, not API`);
+    });
 });
