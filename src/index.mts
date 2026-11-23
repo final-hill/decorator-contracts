@@ -10,3 +10,7 @@ export * from './demands.mjs'
 export * from './ensures.mjs'
 export * from './rescue.mjs'
 export * from './metadata.mjs'
+// Declaration options are named by consumers that build an arm separately from
+// the decorator registering it, so the types are part of the surface. The
+// module's helpers stay internal: only the two option shapes are re-exported.
+export type { ArmOptions, ViolationFactory } from './admissibility.mjs'

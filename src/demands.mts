@@ -1,7 +1,10 @@
 import { violationFailure } from './assert.mjs';
 import { checkedMode, Contracted } from "./Contracted.mjs";
 import { assertFeatureContractTarget } from './decorator.mjs';
-import { armFailures, assertNormalizable, describeArm, evaluateArm, recordFailure, type ArmOptions } from './admissibility.mjs';
+import {
+    armFailures, assertNormalizable, assertViolationFactory, describeArm, evaluateArm,
+    recordFailure, selectViolationFactory, type ArmOptions,
+} from './admissibility.mjs';
 import type { StandardSchemaV1 } from './standard-schema.mjs';
 import type { FeatureDecoratorContext } from './types.mjs';
 
@@ -84,6 +87,7 @@ export interface RegisteredDemands {
 export const demands: DemandsDecorator = (arm, options) => (feature, ctx) => {
     assertFeatureContractTarget('@demands', feature, ctx);
     assertNormalizable(arm, '@demands', options);
+    assertViolationFactory('@demands', options);
 
     // The cast is the protocol's, not this contract's: `ctx.metadata` is
     // `DecoratorMetadataObject`, an open `Record<PropertyKey, unknown>`, so the
@@ -154,8 +158,9 @@ export function assertDemands(
     }
 
     // Every arm failed. All of them are reported, because OR-composition means
-    // any of them could have permitted the call. A thrown value is raised in place
-    // of the AssertionError when there is one, so a typed error survives.
+    // any of them could have permitted the call. A declared factory decides the
+    // error; failing that, a thrown value is raised in place of the AssertionError
+    // so a typed error survives.
     throw violationFailure(
         '@demands',
         instance.constructor.name,
@@ -164,5 +169,6 @@ export function assertDemands(
         failures,
         'A precondition was not satisfied, so the feature was not entered.',
         describeArm,
+        selectViolationFactory(ds),
     );
 }

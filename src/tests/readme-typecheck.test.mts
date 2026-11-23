@@ -36,14 +36,16 @@ const LIBRARY_NAMES = [
     'getContractMetadata', 'getFeatureContracts',
     'DemandsSubject', 'EnsuresSubject', 'InvariantSubject', 'RescueSubject',
     'DemandsPredicate', 'EnsuresPredicate', 'InvariantPredicate', 'RescueHandler',
-    'ArmOptions', 'StandardSchemaV1', 'ContractMetadata', 'FeatureContracts',
+    'ArmOptions', 'ViolationFactory', 'ContractViolation',
+    'StandardSchemaV1', 'ContractMetadata', 'FeatureContracts',
 ];
 
 /** Names exported as types rather than values. */
 const TYPE_NAMES = new Set([
     'DemandsSubject', 'EnsuresSubject', 'InvariantSubject', 'RescueSubject',
     'DemandsPredicate', 'EnsuresPredicate', 'InvariantPredicate', 'RescueHandler',
-    'ArmOptions', 'StandardSchemaV1', 'ContractMetadata', 'FeatureContracts',
+    'ArmOptions', 'ViolationFactory', 'ContractViolation',
+    'StandardSchemaV1', 'ContractMetadata', 'FeatureContracts',
 ]);
 
 interface Fence {

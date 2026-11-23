@@ -1,7 +1,10 @@
 import { violationFailure } from './assert.mjs';
 import { checkedMode, Contracted } from './Contracted.mjs';
 import { assertFeatureContractTarget } from './decorator.mjs';
-import { armFailures, assertNormalizable, describeArm, evaluateArm, recordFailure, type ArmOptions } from './admissibility.mjs';
+import {
+    armFailures, assertNormalizable, assertViolationFactory, describeArm, evaluateArm,
+    recordFailure, selectViolationFactory, type ArmOptions,
+} from './admissibility.mjs';
 import type { StandardSchemaV1 } from './standard-schema.mjs';
 import type { FeatureDecoratorContext } from './types.mjs';
 
@@ -86,6 +89,7 @@ export interface RegisteredEnsures {
 export const ensures: EnsuresDecorator = (arm, options) => (feature, ctx) => {
     assertFeatureContractTarget('@ensures', feature, ctx);
     assertNormalizable(arm, '@ensures', options);
+    assertViolationFactory('@ensures', options);
 
     // See `@demands` for why the metadata record needs an assertion here.
     const es = [
@@ -179,5 +183,6 @@ export function assertEnsures(
         failures,
         'A postcondition was not satisfied after the feature ran.',
         describeArm,
+        selectViolationFactory(es),
     );
 }
