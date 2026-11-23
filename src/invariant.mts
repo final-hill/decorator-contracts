@@ -2,7 +2,7 @@ import { assert, violationFailure } from './assert.mjs';
 import { contractsEnabled, Contracted } from './Contracted.mjs';
 import { classNameOf } from './name.mjs';
 import { assertDecoratorContext } from './decorator.mjs';
-import { armFailures, assertNotAwaitable, assertNotNormalizable, assertNotViolationFactory, assertNotWeakenable, describeArm, evaluateArm, recordFailure, type ArmOptions } from './admissibility.mjs';
+import { failureLog, assertNotAwaitable, assertNotNormalizable, assertNotViolationFactory, assertNotWeakenable, describeArm, evaluateArm, type ArmOptions } from './admissibility.mjs';
 import type { StandardSchemaV1 } from './standard-schema.mjs';
 
 /**
@@ -58,8 +58,12 @@ export interface RegisteredInvariant {
     options?: ArmOptions;
 }
 
-export function assertInvariants<C extends typeof Contracted, T extends InstanceType<C>>(Class: C, instance: T) {
-    if (!contractsEnabled(Class)) return;
+export function assertInvariants<C extends typeof Contracted, T extends InstanceType<C>>(
+    Class: C,
+    instance: T,
+    enabled: boolean = contractsEnabled(Class),
+) {
+    if (!enabled) return;
 
     const registered = (Class[Symbol.metadata]?.['invariants'] ?? []) as unknown as RegisteredInvariant[];
 
@@ -70,8 +74,8 @@ export function assertInvariants<C extends typeof Contracted, T extends Instance
     // failure that did not happen is cost the caller pays for nothing.
     if (registered.length === 0) return;
 
-    const className = classNameOf(Class),
-        failures = armFailures();
+    const className = () => classNameOf(Class),
+        failures = failureLog();
 
     // AND-composed: every arm must hold for the instance to be valid. Invariants
     // are covariant, so a subtype may strengthen the obligation but never weaken
@@ -91,17 +95,17 @@ export function assertInvariants<C extends typeof Contracted, T extends Instance
         // Every arm is evaluated even after one rejects, because a report naming
         // only the first broken invariant hides the others the instance violates
         // at the same moment.
-        recordFailure(failures, index, result);
+        failures.record(index, result);
     }
 
-    if (failures.failed.length === 0) return;
+    if (failures.entries === undefined) return;
 
     throw violationFailure(
         '@invariant',
-        className,
+        className(),
         undefined,
         registered.map(entry => entry.arm),
-        failures,
+        failures.entries,
         'The instance left the invariant unsatisfied.',
         describeArm,
     );

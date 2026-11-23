@@ -3,9 +3,9 @@ import { contractsEnabled, Contracted } from './Contracted.mjs';
 import { classNameOf } from './name.mjs';
 import { assertAwaitableFeature, assertFeatureContractTarget } from './decorator.mjs';
 import {
-    armFailures, assertAwaitableArm, assertNormalizable, assertNotWeakenable, assertViolationFactory, describeArm,
-    evaluateArm, evaluateArmAsync, recordFailure, selectViolationFactory, type Admissibility, type ArmFailures,
-    type ArmOptions, type ArmSubjects,
+    failureLog, assertAwaitableArm, assertNormalizable, assertNotWeakenable, assertViolationFactory, describeArm,
+    evaluateArm, evaluateArmAsync, selectViolationFactory, type ArmFailures,
+    type Admissibility, type ArmOptions, type ArmSubjects, type FailureLog,
 } from './admissibility.mjs';
 import type { StandardSchemaV1 } from './standard-schema.mjs';
 import type { FeatureDecoratorContext } from './types.mjs';
@@ -214,22 +214,19 @@ function raiseEnsuresFailure(
 /**
  * Folds one arm's outcome into the composition's running result.
  *
- * Every arm is evaluated even after one rejects, so a failed arm is recorded and
-the running value passes through unchanged. A passing arm replaces the value only
-when it normalized one, which is how a schema arm's `Output` reaches the caller.
- *
- * The decision is the same whether the verdict was synchronous or awaited, so it is
- * stated once for both loops. It is also the part a reader has to get right: the
-`result` a predicate was shown is not the `result` a later arm sees.
+ * A rejected arm is recorded and the running value passes through unchanged; a
+ * passing arm replaces it only when it normalized one, which is how a schema arm's
+ * `Output` reaches the caller. The rule is the same whether the verdict was
+ * synchronous or awaited, so it is stated once for both loops.
  */
 const foldOutcome = (
-    failures: ArmFailures,
+    failures: FailureLog,
     index: number,
     outcome: Admissibility,
     normalized: unknown,
 ): unknown => {
     if (!outcome.ok) {
-        recordFailure(failures, index, outcome);
+        failures.record(index, outcome);
 
         return normalized;
     }
@@ -257,23 +254,25 @@ export function assertEnsures(
     args: any[],
     result: unknown,
     oldArgs: any[] = [],
+    enabled: boolean = contractsEnabled(instance.constructor),
 ): unknown {
-    const Class = instance.constructor as typeof Contracted;
+    if (!enabled) return result;
 
-    if (!contractsEnabled(Class)) return result;
-
-    const es = Class[Symbol.metadata]?.ensures?.[propertyKey] ?? NO_ARMS;
+    const Class = instance.constructor as typeof Contracted,
+        es = Class[Symbol.metadata]?.ensures?.[propertyKey] ?? NO_ARMS;
 
     if (es.length === 0) return result;
 
-    const className = classNameOf(Class),
-        label = `${className}.${String(propertyKey)}`,
-        failures = armFailures();
+    const label = () => `${classNameOf(Class)}.${String(propertyKey)}`;
+
+    const failures = failureLog();
 
     let normalized = result;
 
     // ALL arms must hold for the obligation to be fulfilled.
-    for (const [index, entry] of es.entries())
+    for (let index = 0; index < es.length; index++) {
+        const entry = es[index];
+
         normalized = foldOutcome(failures, index, evaluateArm(
             entry.arm,
             ensuresSubjects(instance, args, old, oldArgs, result),
@@ -282,10 +281,11 @@ export function assertEnsures(
             index,
             entry.options,
         ), normalized);
+    }
 
-    if (failures.failed.length === 0) return normalized;
+    if (failures.entries === undefined) return normalized;
 
-    raiseEnsuresFailure(es, className, propertyKey, failures);
+    raiseEnsuresFailure(es, classNameOf(Class), propertyKey, failures.entries);
 }
 
 /**
@@ -331,22 +331,23 @@ export async function assertEnsuresAsync(
     args: any[],
     result: unknown,
     oldArgs: any[] = [],
+    enabled: boolean = contractsEnabled(instance.constructor),
 ): Promise<unknown> {
-    const Class = instance.constructor as typeof Contracted;
+    if (!enabled) return result;
 
-    if (!contractsEnabled(Class)) return result;
-
-    const es = Class[Symbol.metadata]?.ensures?.[propertyKey] ?? NO_ARMS;
+    const Class = instance.constructor as typeof Contracted,
+        es = Class[Symbol.metadata]?.ensures?.[propertyKey] ?? NO_ARMS;
 
     if (es.length === 0) return result;
 
-    const className = classNameOf(Class),
-        label = `${className}.${String(propertyKey)}`,
-        failures = armFailures();
+    const label = () => `${classNameOf(Class)}.${String(propertyKey)}`,
+        failures = failureLog();
 
     let normalized = result;
 
-    for (const [index, entry] of es.entries())
+    for (let index = 0; index < es.length; index++) {
+        const entry = es[index];
+
         normalized = foldOutcome(failures, index, await evaluateArmAsync(
             entry.arm,
             ensuresSubjects(instance, args, old, oldArgs, result),
@@ -355,8 +356,9 @@ export async function assertEnsuresAsync(
             index,
             entry.options,
         ), normalized);
+    }
 
-    if (failures.failed.length === 0) return normalized;
+    if (failures.entries === undefined) return normalized;
 
-    raiseEnsuresFailure(es, className, propertyKey, failures);
+    raiseEnsuresFailure(es, classNameOf(Class), propertyKey, failures.entries);
 }
