@@ -17,9 +17,9 @@
  * script never stages anything.
  *
  * Usage:
- *   node .github/skills/pr-review/scripts/collect-diff.mjs
- *   node .github/skills/pr-review/scripts/collect-diff.mjs --base origin/master
- *   node .github/skills/pr-review/scripts/collect-diff.mjs --out /tmp/review.patch
+ *   node .github/skills/review-pr/scripts/collect-diff.mjs
+ *   node .github/skills/review-pr/scripts/collect-diff.mjs --base origin/master
+ *   node .github/skills/review-pr/scripts/collect-diff.mjs --out /tmp/review.patch
  */
 import { execFileSync } from 'node:child_process'
 import { mkdtempSync, writeFileSync } from 'node:fs'
