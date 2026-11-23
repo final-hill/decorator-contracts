@@ -25,7 +25,12 @@ import { join, resolve } from 'node:path';
  */
 const projectRoot = resolve(import.meta.dirname, '..', '..'),
     tscPath = join(projectRoot, 'node_modules', 'typescript', 'lib', 'tsc.js'),
-    readmePath = join(projectRoot, 'README.md');
+    readmePath = join(projectRoot, 'README.md'),
+    // The long-form guide is documentation in the same sense as the README, so it is
+    // held to the same rule: a documented example that does not compile teaches a
+    // shape the library rejects. Listing the file rather than globbing keeps the
+    // check explicit about what it covers.
+    guidePaths = [join(projectRoot, 'docs', 'testing.md')];
 
 const PACKAGE = '@final-hill/decorator-contracts';
 
@@ -53,9 +58,9 @@ interface Fence {
     body: string;
 }
 
-/** Every ```typescript fence in the README, with the line its body starts on. */
-const typescriptFences = (): Fence[] => {
-    const lines = readFileSync(readmePath, 'utf8').split('\n'),
+/** Every ```typescript fence in `markdownPath`, with the line its body starts on. */
+const typescriptFences = (markdownPath: string = readmePath): Fence[] => {
+    const lines = readFileSync(markdownPath, 'utf8').split('\n'),
         fences: Fence[] = [];
 
     let open = -1;
@@ -153,51 +158,75 @@ describe('The README examples type-check', () => {
         if (!existsSync(tscPath)) return;
         if (!existsSync(join(projectRoot, 'dist', 'index.d.mts'))) return;
 
-        const dir = join(projectRoot, '.readme-typecheck');
+        nodeAssert.deepStrictEqual(compileFailures(readmePath, 'README'), [], 'documented examples must compile');
+    });
 
-        rmSync(dir, { recursive: true, force: true });
-        mkdirSync(dir, { recursive: true });
+    test('every complete example in the testing guide compiles', () => {
+        if (!existsSync(tscPath)) return;
+        if (!existsSync(join(projectRoot, 'dist', 'index.d.mts'))) return;
 
-        try {
-            const failures: string[] = [];
-
-            for (const [index, fence] of typescriptFences().entries()) {
-                if (!isCompleteExample(fence.body)) continue;
-
-                const source = withImports(fence.body);
-
-                if (!new RegExp(`from '${PACKAGE}'`).test(source)) continue;
-
-                const file = join(dir, `fence-${index}.mts`);
-
-                writeFileSync(file, source);
-
-                try {
-                    execFileSync(process.execPath, [
-                        tscPath, '--noEmit', '--strict', '--target', 'ES2024',
-                        '--module', 'NodeNext', '--moduleResolution', 'nodenext',
-                        '--ignoreConfig', '--types', 'node', file,
-                    ], { cwd: projectRoot, encoding: 'utf8', stdio: 'pipe' });
-                } catch (error: any) {
-                    const output = `${error.stdout ?? ''}${error.stderr ?? ''}`;
-
-                    // Missing context is the one error a complete-looking
-                    // example may still produce legitimately: a helper the
-                    // prose defines. A type error is a claim about the API.
-                    const real = output
-                        .split('\n')
-                        .filter((line: string) => line.includes('error TS')
-                            && !line.includes('TS2304')
-                            && !line.includes('TS2307'));
-
-                    if (real.length > 0)
-                        failures.push(`README line ${fence.line}:\n${real.slice(0, 4).join('\n')}`);
-                }
-            }
-
-            nodeAssert.deepStrictEqual(failures, [], 'documented examples must compile');
-        } finally {
-            rmSync(dir, { recursive: true, force: true });
-        }
+        for (const guide of guidePaths)
+            nodeAssert.deepStrictEqual(
+                compileFailures(guide, 'docs/testing.md'),
+                [],
+                'a guide whose examples do not run teaches a shape the library rejects',
+            );
     });
 });
+
+/**
+ * Type-checks each complete fence in one markdown file and reports the real errors.
+ *
+ * A fence is checked only when it declares a `Contracted` subclass, references the
+ * package, and elides nothing: a fragment that omits its body cannot compile, and
+ * reporting that would train the reader to ignore this test. `label` names the file
+ * in the failure message.
+ */
+function compileFailures(markdownPath: string, label: string): string[] {
+    const dir = join(projectRoot, '.readme-typecheck');
+
+    rmSync(dir, { recursive: true, force: true });
+    mkdirSync(dir, { recursive: true });
+
+    try {
+        const failures: string[] = [];
+
+        for (const [index, fence] of typescriptFences(markdownPath).entries()) {
+            if (!isCompleteExample(fence.body)) continue;
+
+            const source = withImports(fence.body);
+
+            if (!new RegExp(`from '${PACKAGE}'`).test(source)) continue;
+
+            const file = join(dir, `fence-${index}.mts`);
+
+            writeFileSync(file, source);
+
+            try {
+                execFileSync(process.execPath, [
+                    tscPath, '--noEmit', '--strict', '--target', 'ES2024',
+                    '--module', 'NodeNext', '--moduleResolution', 'nodenext',
+                    '--ignoreConfig', '--types', 'node', file,
+                ], { cwd: projectRoot, encoding: 'utf8', stdio: 'pipe' });
+            } catch (error: any) {
+                const output = `${error.stdout ?? ''}${error.stderr ?? ''}`;
+
+                // Missing context is the one error a complete-looking
+                // example may still produce legitimately: a helper the
+                // prose defines. A type error is a claim about the API.
+                const real = output
+                    .split('\n')
+                    .filter((line: string) => line.includes('error TS')
+                        && !line.includes('TS2304')
+                        && !line.includes('TS2307'));
+
+                if (real.length > 0)
+                    failures.push(`${label} line ${fence.line}:\n${real.slice(0, 4).join('\n')}`);
+            }
+        }
+
+        return failures;
+    } finally {
+        rmSync(dir, { recursive: true, force: true });
+    }
+}
