@@ -95,6 +95,34 @@ export interface ArmOptions {
      * could never do anything.
      */
     allowWeakening?: boolean;
+
+    /**
+     * Allow the predicate to answer with a promise, which the lifecycle awaits
+     * before it decides the arm.
+     *
+     * Off by default, and off is load-bearing: a `Promise` is always truthy, so
+     * coercing a verdict that has not settled yet would treat a contract that has
+     * not been checked as satisfied. Accepting one only where the feature's own
+     * boundary is a promise keeps that rule intact — the check moves to the same
+     * microtask the exit checks already occupy.
+     *
+     * Only an `async` method qualifies. A synchronous feature has evaluated its
+     * contracts by the time a promise could settle; a generator hands the caller an
+     * iterator rather than a promise; and `@invariant` runs on every accessor read
+     * and write, where nothing can be awaited. Each of those refuses the option
+     * where it is written, and a schema arm refuses it too because `validate` is
+     * synchronous.
+     *
+     * A rejected predicate is a failed arm, exactly as a throwing predicate is: the
+     * rejection is recorded and composition continues, so a sibling `@demands` arm
+     * can still permit the call. Only a value that resolves to `true` or `false`
+     * decides anything.
+     *
+     * The cost is a window: the instance stays reachable across one more await
+     * boundary between the precondition and the body, so a concurrent caller can
+     * observe it in the state the precondition just approved.
+     */
+    awaitPredicate?: boolean;
 }
 
 /**
@@ -181,6 +209,43 @@ export const assertNotNormalizable = (contract: string, options: ArmOptions | un
     if (!options?.normalize) return;
 
     throw new TypeError(`${contract} cannot normalize: its subject is the instance, which no arm can replace.`);
+}
+
+/**
+ * Rejects `awaitPredicate` on an arm that cannot answer with a promise.
+ *
+ * A schema's `validate` that returns a promise is refused when it runs, because
+ * contract evaluation is synchronous at that point. Accepting the option on a
+ * schema arm would therefore declare that waiting is in force when it is not, so
+ * the mistake is refused where it is written rather than on the first call.
+ */
+export const assertAwaitableArm = (arm: unknown, contract: string, options: ArmOptions | undefined): void => {
+    if (!options?.awaitPredicate || !isSchema(arm)) return;
+
+    throw new TypeError(
+        `${contract} cannot declare awaitPredicate on a schema arm: \`validate\` is evaluated synchronously, so `
+        + 'there is no verdict to await.',
+    );
+}
+
+/**
+ * Rejects `awaitPredicate` on a contract whose boundaries nothing can await.
+ *
+ * `@invariant` is evaluated on entry and exit of every feature, on both halves of
+ * an accessor, and once after construction. An accessor read has no promise for a
+ * caller to await, so the option could only be honoured where it is not needed and
+ * silently skipped where it is — an invisible semantic hole in the one contract
+ * that is supposed to hold always. Refusing it keeps the declaration and the
+ * behaviour in agreement, following `normalize` and `onViolation`.
+ */
+export const assertNotAwaitable = (contract: string, options: ArmOptions | undefined): void => {
+    if (!options?.awaitPredicate) return;
+
+    throw new TypeError(
+        `${contract} cannot declare awaitPredicate: an invariant is evaluated after construction and on every `
+        + 'accessor read and write, where there is no promise a caller could await. Declare the option on the arm '
+        + 'of an `async` feature instead.',
+    );
 }
 
 /**
@@ -418,27 +483,77 @@ export const evaluateArm = (
             contract,
             label,
             index,
+            options,
         );
 
 /**
- * Applies a predicate arm, reusing the strict-boolean rule from #283.
+ * Checks one arm, awaiting a predicate that was declared awaitable.
  *
- * Reusing `assertContractResult` keeps the diagnostic identical whether the
- * predicate was declared on its own or alongside a schema.
+ * The only difference from {@link evaluateArm} is that a predicate declared
+ * awaitable has its verdict awaited. Every other arm is decided synchronously, so
+ * a predicate that returns a promise without the option is still refused by the
+ * strict-boolean rule rather than quietly awaited — on an `async` feature as much
+ * as anywhere else.
  *
- * The instance is passed as a read-only view. A predicate answers a question, so
- * it must not be able to change the state it is asked about — see `read-only.mts`
- * for why this is a scoped proxy rather than `Object.freeze`. The view is applied
- * here rather than by the caller so that a predicate can never be invoked with
- * the raw target by mistake.
+ * Awaiting decides when the verdict arrives, not what it means: a rejection is a
+ * failed arm with the reason in `thrown`, and a resolution that is not a boolean
+ * is still a defect rather than a decision.
  */
-const evaluatePredicate = (
+export const evaluateArmAsync = async (
+    arm: unknown,
+    subjects: ArmSubjects,
+    contract: string,
+    label: string,
+    index: number,
+    options?: ArmOptions,
+): Promise<Admissibility> => {
+    if (isSchema(arm))
+        return evaluateSchema(arm, subjects.schema(), contract, label, index, options);
+
+    const predicate = arm as (...args: any[]) => unknown,
+        subject = subjects.predicate();
+
+    return options?.awaitPredicate
+        ? awaitPredicate(predicate, subject, contract, label, index)
+        : evaluatePredicate(predicate, subject, contract, label, index, options);
+};
+
+/**
+ * Applies a predicate arm whose verdict may be a promise.
+ *
+ * The read-only view and the guarded call are shared with {@link evaluatePredicate}
+ * through {@link invokePredicate}; only the settlement differs. A rejection is
+ * caught here for the same reason a synchronous throw is caught there: an arm that
+ * could not answer has not *permitted* anything, and propagating would make a
+ * legal sibling arm unreachable.
+ */
+const awaitPredicate = async (
     predicate: (...args: any[]) => unknown,
     subject: PredicateSubject,
     contract: string,
     label: string,
     index: number,
-): Admissibility => {
+): Promise<Admissibility> => {
+    let verdict: unknown;
+
+    try {
+        verdict = await invokePredicate(predicate, subject);
+    } catch (thrown) {
+        return { ok: false, thrown };
+    }
+
+    return { ok: assertContractResult(verdict, contract, label, index) };
+}
+
+/**
+ * Calls a predicate with the guarded subject.
+ *
+ * The synchronously evaluated arm and the awaited one must observe the same
+ * thing — the read-only view of `self`, and every other field untouched — so the
+ * call is made in one place. Two copies would be free to disagree about which
+ * fields are guarded.
+ */
+const invokePredicate = (predicate: (...args: any[]) => unknown, subject: PredicateSubject): unknown => {
     // Only `self` is guarded, and the guard is a property of the field rather
     // than of its position. Every other field describes the invocation rather
     // than the instance: `args` and `result` are readable data shared with the
@@ -450,24 +565,58 @@ const evaluatePredicate = (
             ? readOnlyView(self)
             : self;
 
+    return predicate({ self: guarded, ...rest });
+}
+
+/**
+ * Applies a predicate arm, reusing the strict-boolean rule from #283.
+ *
+ * Reusing `assertContractResult` keeps the diagnostic identical whether the
+ * predicate was declared on its own or alongside a schema.
+ *
+ * The instance is passed as a read-only view through {@link invokePredicate}. A
+ * predicate answers a question, so it must not be able to change the state it is
+ * asked about — see `read-only.mts` for why this is a scoped proxy rather than
+ * `Object.freeze`. The view is applied at the call rather than by the caller so
+ * that a predicate can never be invoked with the raw target by mistake.
+ */
+const evaluatePredicate = (
+    predicate: (...args: any[]) => unknown,
+    subject: PredicateSubject,
+    contract: string,
+    label: string,
+    index: number,
+    options: ArmOptions | undefined,
+): Admissibility => {
     // A predicate that throws has answered "no": the call it guards must not be
     // denied on its say-so when a sibling arm permits it. The value is carried in
     // `thrown` rather than propagated, so the contract can decide whether it still
     // matters once every arm has been evaluated.
-    //
-    // The guard covers the predicate **call** only. The verdict is validated
-    // outside it, because a non-boolean return is a defect in the predicate rather
-    // than a decision about the call: a Promise is truthy, so treating it as a
-    // failed arm would let a sibling excuse a contract that never ran. That is the
-    // rule `assertContractResult` exists to enforce, and it stays fatal.
     let verdict: unknown;
 
     try {
-        verdict = predicate({ self: guarded, ...rest });
+        verdict = invokePredicate(predicate, subject);
     } catch (thrown) {
         return { ok: false, thrown };
     }
 
+    // The arm may declare `awaitPredicate` on a feature that is not `async`: a
+    // subclass can override an async feature with a synchronous one while the
+    // metadata record still carries the inherited arm. Nothing at this boundary can
+    // wait, so the verdict is named for what it is rather than reported as a
+    // predicate that forgot to return a boolean.
+    if (options?.awaitPredicate && typeof (verdict as { then?: unknown } | null)?.then === 'function')
+        throw new TypeError(
+            `${contract} predicate #${index + 1} for ${label} declared awaitPredicate but returned a Promise, `
+            + 'and the feature it guards is not `async`, so nothing can await it. Declare the feature `async`, '
+            + 'or drop the option.',
+        );
+
+    // The verdict is validated outside the guard, because a non-boolean return is a
+    // defect in the predicate rather than a decision about the call: a Promise is
+    // truthy, so treating it as a failed arm would let a sibling excuse a contract
+    // that never ran. That is the rule `assertContractResult` exists to enforce, and
+    // it stays fatal.
     return { ok: assertContractResult(verdict, contract, label, index) };
 };
 

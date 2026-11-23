@@ -23,8 +23,8 @@ describe('README asynchronous feature examples', () => {
         // to satisfy the invariant, so the fixture must not bypass the proxy.
         seed(balance: number): void { this._balance = balance; }
 
-        @demands(({ self, args: [amount]  }) => self.balance + amount >= 0)
-        @ensures(({ self, args: [amount], old  }) => self.balance === old.balance + amount)
+        @demands(({ self, args: [amount] }) => self.balance + amount >= 0)
+        @ensures(({ self, args: [amount], old }) => self.balance === old.balance + amount)
         async deposit(amount: number): Promise<void> {
             await this._ledger.record(amount);
             this._balance += amount;
@@ -79,5 +79,44 @@ describe('README asynchronous feature examples', () => {
 
         await nodeAssert.rejects(() => guarded.drain(), AssertionError);
         nodeAssert.deepEqual(balances, [0, -1], 'entry then exit, across the suspension');
+    });
+});
+
+/**
+ * https://github.com/final-hill/decorator-contracts/issues/362
+ *
+ * Mirrors the README's "An awaited predicate" example, so the documented
+ * behaviour is executable rather than aspirational.
+ */
+describe('README awaited-predicate example', () => {
+    class Account extends Contracted {
+        protected _limit = 100;
+        protected _balance = 0;
+
+        @demands(async ({ self, args: [amount] }) => self._balance + amount <= self._limit, { awaitPredicate: true })
+        @ensures(async ({ self, args: [amount], old }) => self._balance === old._balance + amount, { awaitPredicate: true })
+        async deposit(amount: number): Promise<void> {
+            this._balance += amount;
+        }
+
+        get balance() { return this._balance; }
+    }
+
+    test('an awaited precondition and postcondition both hold', async () => {
+        const account = Account.new() as Account;
+
+        await account.deposit(40);
+
+        nodeAssert.equal(account.balance, 40);
+    });
+
+    test('an awaited precondition that overdraws the limit rejects', async () => {
+        const account = Account.new() as Account;
+
+        await nodeAssert.rejects(() => account.deposit(140), {
+            name: 'AssertionError',
+            message: /@demands failed for Account\.deposit/,
+        });
+        nodeAssert.equal(account.balance, 0);
     });
 });

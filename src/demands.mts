@@ -1,10 +1,11 @@
 import { violationFailure } from './assert.mjs';
 import { contractsEnabled, Contracted } from "./Contracted.mjs";
 import { classNameOf } from './name.mjs';
-import { assertFeatureContractTarget } from './decorator.mjs';
+import { assertAwaitableFeature, assertFeatureContractTarget } from './decorator.mjs';
 import {
-    alreadyReported, armFailures, assertNormalizable, assertViolationFactory, describeArm, evaluateArm,
-    inheritedArms, recordFailure, reportWeakeningArm, selectViolationFactory, type ArmOptions,
+    alreadyReported, armFailures, assertAwaitableArm, assertNormalizable, assertViolationFactory, describeArm,
+    evaluateArm, evaluateArmAsync, inheritedArms, recordFailure, reportWeakeningArm, selectViolationFactory,
+    type ArmFailures, type ArmOptions, type ArmSubjects,
 } from './admissibility.mjs';
 import type { StandardSchemaV1 } from './standard-schema.mjs';
 import type { FeatureDecoratorContext } from './types.mjs';
@@ -52,7 +53,12 @@ export type DemandsPredicate<This extends Contracted, Args extends any[] = any[]
     (subject: DemandsSubject<This, Args>) => boolean;
 
 /**
- * A precondiction arm: a predicate, or a schema the argument tuple must satisfy.
+ * A precondition arm: a predicate, or a schema the argument tuple must satisfy.
+ *
+ * A predicate may answer with a promise, but only when the declaration sets
+ * {@link ArmOptions.awaitPredicate} — the option is what makes the verdict
+ * awaited rather than coerced, and the overload on `DemandsDecorator` refuses the
+ * asynchronous form without it.
  *
  * A schema validates the **argument tuple**, which is the subject `@demands`
  * already describes, so a method with two parameters is written as
@@ -66,15 +72,35 @@ export type DemandsPredicate<This extends Contracted, Args extends any[] = any[]
  * obligation on the declaration, checked at runtime by the schema itself.
  */
 export type DemandsArm<This extends Contracted, Args extends any[] = any[]> =
-    DemandsPredicate<This, Args> | StandardSchemaV1<unknown, any>;
+    DemandsPredicate<This, Args>
+    | ((subject: DemandsSubject<This, Args>) => boolean | Promise<boolean>)
+    | StandardSchemaV1<unknown, any>;
 
-export type DemandsDecorator = <This extends Contracted, Args extends any[]>(
-    arm: DemandsArm<This, Args>,
-    options?: ArmOptions,
-) => (
-    value: unknown,
-    context: FeatureDecoratorContext<This, Args>
-) => void;
+/**
+ * The `@demands` decorator.
+ *
+ * The two overloads are the opt-in. The first admits a synchronous verdict or a
+ * schema, so an accidentally `async` predicate is a compile error there; the
+ * second admits a promise and requires `awaitPredicate: true` to say so. Inference
+ * of `self` and `args` comes from the decorated member either way, and an options
+ * object built separately still matches the first overload.
+ */
+export type DemandsDecorator = {
+    <This extends Contracted, Args extends any[]>(
+        arm: DemandsPredicate<This, Args> | StandardSchemaV1<unknown, any>,
+        options?: ArmOptions,
+    ): (
+        value: unknown,
+        context: FeatureDecoratorContext<This, Args>
+    ) => void;
+    <This extends Contracted, Args extends any[]>(
+        arm: DemandsArm<This, Args>,
+        options: ArmOptions & { awaitPredicate: true },
+    ): (
+        value: unknown,
+        context: FeatureDecoratorContext<This, Args>
+    ) => void;
+};
 
 /** No arm is declared for a feature, so none is evaluated. */
 const NO_ARMS: readonly RegisteredDemands[] = Object.freeze([]);
@@ -87,6 +113,8 @@ export interface RegisteredDemands {
 
 export const demands: DemandsDecorator = (arm, options) => (feature, ctx) => {
     assertFeatureContractTarget('@demands', feature, ctx);
+    assertAwaitableFeature('@demands', feature, ctx, options);
+    assertAwaitableArm(arm, '@demands', options);
     assertNormalizable(arm, '@demands', options);
     assertViolationFactory('@demands', options);
 
@@ -127,6 +155,37 @@ export const demands: DemandsDecorator = (arm, options) => (feature, ctx) => {
     };
 }
 
+/** What a precondition arm observes: the instance and the invocation's arguments. */
+const demandsSubjects = (instance: Contracted, args: any[]): ArmSubjects => ({
+    predicate: () => ({ self: instance, args }),
+    schema: () => args,
+});
+
+/**
+ * Raises the failure for a precondition no arm satisfied.
+ *
+ * All arms are reported, because OR-composition means any of them could have
+ * permitted the call. A declared factory decides the error; failing that, a thrown
+ * value is raised in place of the `AssertionError`, so a typed error survives.
+ */
+function raiseDemandsFailure(
+    ds: readonly RegisteredDemands[],
+    className: string,
+    propertyKey: PropertyKey,
+    failures: ArmFailures,
+): never {
+    throw violationFailure(
+        '@demands',
+        className,
+        String(propertyKey),
+        ds.map(entry => entry.arm),
+        failures,
+        'A precondition was not satisfied, so the feature was not entered.',
+        describeArm,
+        selectViolationFactory(ds),
+    );
+}
+
 /**
  * Evaluates the precondition for an invocation.
  *
@@ -159,14 +218,7 @@ export function assertDemands(
         failures = armFailures();
 
     for (const [index, { arm, options }] of ds.entries()) {
-        const result = evaluateArm(
-            arm,
-            { predicate: () => ({ self: instance, args }), schema: () => args },
-            '@demands',
-            label,
-            index,
-            options,
-        );
+        const result = evaluateArm(arm, demandsSubjects(instance, args), '@demands', label, index, options);
 
         // A later arm may still permit the call, so a rejected arm is recorded
         // rather than returned from. Propagating a throw here would make a legal
@@ -181,18 +233,70 @@ export function assertDemands(
         return result.value === undefined ? args : result.value as any[];
     }
 
-    // Every arm failed. All of them are reported, because OR-composition means
-    // any of them could have permitted the call. A declared factory decides the
-    // error; failing that, a thrown value is raised in place of the AssertionError
-    // so a typed error survives.
-    throw violationFailure(
-        '@demands',
-        className,
-        String(propertyKey),
-        ds.map(entry => entry.arm),
-        failures,
-        'A precondition was not satisfied, so the feature was not entered.',
-        describeArm,
-        selectViolationFactory(ds),
-    );
+    raiseDemandsFailure(ds, className, propertyKey, failures);
+}
+
+/**
+ * Whether any registered arm declared `awaitPredicate`.
+ *
+ * The asynchronous lifecycle asks this before choosing the awaited composition, so
+ * a feature whose arms are all synchronous pays nothing for the capability: the
+ * awaited form returns a promise from every call, which is one extra microtask the
+ * caller would wait on for a verdict that was already decided synchronously.
+ *
+ * @param instance - The instance whose class holds the record.
+ * @param propertyKey - The feature being invoked.
+ * @internal
+ * Exported only so the lifecycle in `Contracted.mts` can import it; `index.mts`
+ * does not re-export it.
+ */
+export function demandsAwaitable(instance: Contracted, propertyKey: PropertyKey): boolean {
+    const Class = instance.constructor as typeof Contracted;
+
+    return (Class[Symbol.metadata]?.demands?.[propertyKey] ?? NO_ARMS).some(entry => entry.options?.awaitPredicate);
+}
+
+/**
+ * Evaluates the precondition for an invocation whose arms may answer with a promise.
+ *
+ * OR-composition decides the arms here too: a subtype may weaken a precondition,
+ * so satisfying any arm is enough. Only the settlement differs, and it is stated
+ * separately from {@link assertDemands} because the two boundaries differ: this
+ * one hands back a promise, and a synchronous feature's precondition must be
+ * decided before its body starts rather than in a microtask afterwards.
+ *
+ * A rejected predicate is a failed arm, exactly as a throwing one is, so a sibling
+ * arm may still permit the call and the rejection is raised only if every arm
+ * fails.
+ */
+export async function assertDemandsAsync(
+    instance: Contracted,
+    propertyKey: PropertyKey,
+    args: any[],
+): Promise<any[]> {
+    const Class = instance.constructor as typeof Contracted;
+
+    if (!contractsEnabled(Class)) return args;
+
+    const ds = Class[Symbol.metadata]?.demands?.[propertyKey] ?? NO_ARMS;
+
+    if (ds.length === 0) return args;
+
+    const className = classNameOf(Class),
+        label = `${className}.${String(propertyKey)}`,
+        failures = armFailures();
+
+    for (const [index, { arm, options }] of ds.entries()) {
+        const result = await evaluateArmAsync(arm, demandsSubjects(instance, args), '@demands', label, index, options);
+
+        if (!result.ok) {
+            recordFailure(failures, index, result);
+
+            continue;
+        }
+
+        return result.value === undefined ? args : result.value as any[];
+    }
+
+    raiseDemandsFailure(ds, className, propertyKey, failures);
 }
