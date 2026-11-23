@@ -1,5 +1,7 @@
 import { assert } from './assert.mjs';
 import { Contracted } from './Contracted.mjs';
+import { featureKindOf } from './feature-kind.mjs';
+import type { ArmOptions } from './admissibility.mjs';
 
 /**
  * Rejects a call that did not receive a standard decorator context.
@@ -70,4 +72,58 @@ export function assertFeatureContractTarget(contract: string, feature: unknown, 
     context.addInitializer(function () {
         assert(this instanceof Contracted, `${contract} decorator can only be applied to classes that extend Contracted`);
     });
+}
+
+/**
+ * Rejects `awaitPredicate` on a feature whose boundary cannot await it.
+ *
+ * The option moves a precondition's verdict to a microtask, which is only sound
+ * where the feature's own result is already behind a promise: an `async` body is
+ * awaited before its exit checks run, so awaiting its entry checks moves nothing
+ * the caller could observe. The other three boundaries cannot absorb the wait.
+ *
+ * - A getter or setter is an accessor. Its caller reads or assigns synchronously,
+ *   so there is no promise to attach a pending verdict to.
+ * - A generator hands the caller an iterator and runs nothing until it is
+ *   resumed. Its contracts bracket a *step*, and awaiting one would make every
+ *   `next()` asynchronous — a different protocol, not a slower check.
+ * - An async generator has the same per-step boundary.
+ *
+ * Each case is refused where it is written, with the reason, rather than accepted
+ * and then ignored by a lifecycle that cannot honour it. The element is the
+ * decorated member itself, so its kind is readable here; a class body that
+ * overrides an `async` feature with a synchronous one is caught separately, at the
+ * boundary, because the inherited declaration is not in scope at this point.
+ *
+ * @param contract - The contract name, for the message.
+ * @param element - The decorated member, whose kind decides.
+ * @param context - The member's decorator context.
+ * @param options - The declaration's options.
+ */
+export function assertAwaitableFeature(
+    contract: string,
+    element: unknown,
+    context: { kind: string },
+    options: ArmOptions | undefined,
+): void {
+    if (!options?.awaitPredicate) return;
+
+    if (context.kind !== 'method')
+        throw new TypeError(
+            `${contract} cannot declare awaitPredicate on ${context.kind === 'getter' ? 'a getter' : 'a setter'}: `
+            + 'an accessor is read or assigned synchronously, so there is no promise a pending verdict could join.',
+        );
+
+    const kind = featureKindOf(element as (...args: any[]) => unknown);
+
+    if (kind === 'async') return;
+
+    const reason = kind === 'generator' || kind === 'async-generator'
+        ? 'a generator has one contract boundary per step, and awaiting a step would make every `next()` asynchronous rather than merely slower'
+        : 'a synchronous feature has evaluated its contracts by the time the verdict could settle';
+
+    throw new TypeError(
+        `${contract} cannot declare awaitPredicate on this feature: ${reason}. `
+        + 'The option is available on an `async` method only.',
+    );
 }

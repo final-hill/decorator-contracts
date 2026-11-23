@@ -19,6 +19,8 @@
 - [Contract failures](#contract-failures)
 - [Encapsulation](#encapsulation)
 - [Inspecting and serializing](#inspecting-and-serializing)
+- [Asynchronous features](#asynchronous-features)
+- [An awaited predicate](#an-awaited-predicate)
 - [Internal calls are not contracted](#an-internal-call-runs-none-of-the-callees-contracts)
 - [Invariants](#invariants)
 - [Demands](#demands)
@@ -750,6 +752,36 @@ thenable(): Promise<void> {           // AssertionError: not declared 'async'
 
 Declare the feature `async` instead. Awaiting arbitrary thenables was rejected as a rule because it would make the `async` keyword optional while silently changing when failures are reported: a plain function cannot return pending work *and* raise the resulting failure itself.
 
+### An awaited predicate
+
+An `async` feature's exit checks already sit behind its promise, so its entry checks can wait for one too. Declaring `awaitPredicate` allows a `@demands` or `@ensures` predicate to answer with a promise, which the lifecycle awaits before it decides the arm:
+
+```typescript
+class Account extends Contracted {
+    protected _limit = 100;
+    protected _balance = 0;
+
+    @demands(async ({ self, args: [amount] }) => self._balance + amount <= self._limit, { awaitPredicate: true })
+    @ensures(async ({ self, args: [amount], old }) => self._balance === old._balance + amount, { awaitPredicate: true })
+    async deposit(amount: number): Promise<void> {
+        this._balance += amount;
+    }
+}
+```
+
+The option is the opt-in, not the predicate's shape. Without it an `async` predicate is a compile error and, at runtime, the same refusal a synchronous feature gives: a verdict that has not settled must not be read as a yes.
+
+Awaiting a predicate decides only *when* the verdict arrives, not what it means:
+
+- Only a resolved `true` permits the call. A resolved non-boolean is refused, exactly as a synchronous non-boolean is.
+- A predicate that throws or rejects is a **failed arm**, not an abort. `@demands` is OR-composed, so a sibling arm may still permit the call; the rejection is raised only if every arm fails. `@ensures` is AND-composed, so every arm is still evaluated and the rejection is reported with the others.
+
+The option is refused where nothing could await it: a getter or setter (read or assigned synchronously), a generator or async generator (one boundary per step — awaiting one would make every `next()` asynchronous), `@invariant` (evaluated on every accessor access), and a schema arm (`validate` is synchronous). Each refusal happens where the declaration is written, naming the reason.
+
+The exit checks keep their place. When no arm asked to be awaited, `@ensures` and the exit `@invariant` run in the tick the body settles in, so a caller that resumes cannot observe state the invariant has not approved. Only a declaring arm adds a suspension, and the exit `@invariant` runs as soon as that suspension settles.
+
+An awaited `@demands` keeps the instance reachable across one more await boundary, so a concurrent caller can observe it between the check and the body. That window is the same one a hand-written guard that reads a database already has; it is not hidden here.
+
 ### Generators
 
 A generator has a contract boundary per **step**, not one per call. Calling the feature runs nothing; each `next()` runs the body from where it was suspended up to the following `yield`. When `next()` returns the segment has finished and the instance holds the state it will be observed with, so the contracts bracket each step:
@@ -847,7 +879,7 @@ class Foo extends Contracted {
 
 This is deliberate. A `Promise` is always truthy, so coercing the result would silently treat an accidentally asynchronous predicate — one that has not actually checked anything yet — as a satisfied contract. Failing closed is the only safe option, and the message points at the mistake.
 
-Asynchronous *predicates* are therefore not supported: a predicate that needs the result of an asynchronous operation cannot be expressed as a boolean.
+A predicate that needs an asynchronous answer is supported on an `async` feature, when the declaration opts in: see [An awaited predicate](#an-awaited-predicate).
 
 Asynchronous *features* are supported; see [Asynchronous features](#asynchronous-features).
 

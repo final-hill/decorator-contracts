@@ -1,9 +1,10 @@
 import { AssertionError } from './AssertionError.mjs';
 import { installInspect } from './inspect.mjs';
 import { assertInvariants } from './invariant.mjs';
-import { assertDemands } from './demands.mjs';
-import { assertEnsures, EnsuresPredicate } from './ensures.mjs';
+import { assertDemands, assertDemandsAsync, demandsAwaitable } from './demands.mjs';
+import { assertEnsures, assertEnsuresAsync, ensuresAwaitable, EnsuresPredicate } from './ensures.mjs';
 import { classNameOf } from './name.mjs';
+import { featureKindOf, type FeatureKind } from './feature-kind.mjs';
 import { applyRescueHandler as applyRescueHandler, getRescueDeclaration } from './rescue.mjs';
 import type { ContractMetadata } from './metadata.mjs';
 
@@ -191,34 +192,15 @@ const populateOld = (target: Contracted) => {
 }
 
 /**
- * How a feature's body hands its result back to the caller.
+ * Caches the contract wrapper per instance and feature, so `f.m === f.m`.
  *
- * A Hoare triple `{ P } C { Q }` only means something if `Q` is evaluated after
- * `C` has finished. "Finished" is not the same event for every kind of feature:
- * an `async` body finishes when its promise settles, and a generator finishes a
- * *segment* every time it yields. The kind decides where the exit boundary
- * therefore sits.
+ * The cache is keyed on the property and resolves the descriptor once, so it
+ * assumes the function a property resolves to does not change while the instance
+ * lives. Replacing the member on the class prototype is outside both traps and
+ * leaves the cache bound to the function it first saw; the prototype an instance
+ * resolves through is therefore part of what the cache depends on, which is why the
+ * `setPrototypeOf` trap refuses to change it while encapsulation is on.
  */
-type FeatureKind = 'sync' | 'async' | 'generator' | 'async-generator';
-
-/**
- * Classifies a feature body by how it delivers its results.
- *
- * `Reflect.apply` on an `async` function returns its promise immediately, and on
- * a generator it returns an iterator, so the only reliable signal is the
- * function's constructor, which is stable across bundling and minification
- * (unlike `Function.prototype.name`).
- */
-const featureKindOf = (fn: (...args: any[]) => unknown): FeatureKind => {
-    switch (fn.constructor.name) {
-        case 'AsyncFunction': return 'async';
-        case 'GeneratorFunction': return 'generator';
-        case 'AsyncGeneratorFunction': return 'async-generator';
-        default: return 'sync';
-    }
-};
-
-// Caches the contract wrapper per instance and feature so that `f.m === f.m`.
 const wrapperCache = new WeakMap<object, Map<PropertyKey, (...args: any[]) => any>>();
 
 // Utility to walk up the prototype chain to find a property descriptor
@@ -504,6 +486,70 @@ function runSyncLifecycle(
 }
 
 /**
+ * Runs the exit half of an `async` feature: its postcondition, then the invariant.
+ *
+ * The two are one unit because both belong to the moment the body's value becomes
+ * observable, and separating them would let a caller check the postcondition and
+ * forget the invariant.
+ *
+ * It is deliberately not `async`. A promise is returned only when an arm declared
+ * `awaitPredicate`, so a feature whose arms all answer synchronously keeps both
+ * checks in the tick the body settled in. Awaiting unconditionally would schedule
+ * the exit `@invariant` a microtask later for every `@ensures`, and a concurrent
+ * caller resuming into that tick could observe state the check has not approved.
+ *
+ * @returns The value to hand the caller, or a promise for it when an arm must be
+ *   awaited.
+ */
+function runExit(
+    Class: typeof Contracted,
+    descriptorType: DescriptorType,
+    target: Contracted,
+    prop: PropertyKey,
+    args: any[],
+    result: unknown,
+    old: Contracted | undefined,
+    hasEnsures: boolean,
+    awaitEnsures: boolean,
+): unknown {
+    if (!hasEnsures) {
+        assertInvariants(Class, target);
+
+        return result;
+    }
+
+    const subject = ensuresArgs(descriptorType, result, args);
+
+    if (!awaitEnsures) {
+        const checked = assertEnsures(target, old!, prop, subject, result);
+
+        assertInvariants(Class, target);
+
+        return checked;
+    }
+
+    return runAwaitedPostcondition(Class, target, assertEnsuresAsync(target, old!, prop, subject, result));
+}
+
+/**
+ * Waits for a pending postcondition and then checks the exit invariant.
+ *
+ * The invariant runs after the settlement because that is the only point at which
+ * the feature's value and the state the body reached are both final.
+ */
+async function runAwaitedPostcondition(
+    Class: typeof Contracted,
+    target: Contracted,
+    pending: Promise<unknown>,
+): Promise<unknown> {
+    const settled = await pending;
+
+    assertInvariants(Class, target);
+
+    return settled;
+}
+
+/**
  * Runs the contract lifecycle whose exit boundary is a promise settlement.
  *
  * An `async` body returns its promise from `Reflect.apply` before a single line
@@ -512,7 +558,7 @@ function runSyncLifecycle(
  * waits for the promise to settle and then runs `@ensures` and the exit
  * `@invariant` against the settled state.
  *
- * Two consequences shape the code below.
+ * Two consequences shape this loop.
  *
  * The first is failure surface. A contract that is violated on entry is a
  * synchronous throw in `runSyncLifecycle`, but that would be a lie here: an
@@ -538,7 +584,12 @@ async function runAsyncLifecycle(
 ): Promise<any> {
     const Class = target.constructor as typeof Contracted,
         es = Class[Symbol.metadata]?.ensures?.[prop] ?? [] as EnsuresPredicate<Contracted>[],
-        hasEnsures = es.length > 0;
+        hasEnsures = es.length > 0,
+        // Resolved once: the metadata record is fixed for the class, so whether an
+        // arm asked to be awaited cannot change during a call. Each reports false
+        // for a feature with no arms, so neither needs a separate check.
+        awaitDemands = demandsAwaitable(target, prop),
+        awaitEnsures = ensuresAwaitable(target, prop);
 
     let args = invokeArgs,
         retries = 0;
@@ -559,15 +610,28 @@ async function runAsyncLifecycle(
         // Outside the rescuable scope, for the reason given in the synchronous
         // lifecycle: a rejected precondition has no body to resume, and a retry
         // whose argument it also rejects would recurse without end.
-        args = assertDemands(target, prop, args);
+        //
+        // The awaited composition is chosen only when an arm declared
+        // `awaitPredicate`; otherwise the synchronous one decides the precondition
+        // without handing the caller a promise to wait on for a verdict that is
+        // already settled.
+        args = awaitDemands
+            ? await assertDemandsAsync(target, prop, args)
+            : assertDemands(target, prop, args);
 
         let result: any;
         try {
             result = await invoke(args);
-            if (hasEnsures)
-                result = assertEnsures(target, old, prop, ensuresArgs(descriptorType, result, args), result);
 
-            assertInvariants(Class, target);
+            // The postcondition and the exit invariant form one boundary, and the
+            // invariant must not be skipped when a postcondition has to be awaited,
+            // so the two are run together rather than inline here. `awaitEnsures`
+            // alone decides the wait: it is false when there is no postcondition to
+            // check as well as when none of its arms asked to be awaited.
+            const exit = runExit(
+                Class, descriptorType, target, prop, args, result, old, hasEnsures, awaitEnsures);
+
+            result = awaitEnsures ? await exit : exit;
         } catch (error) {
             args = attemptRescue(Class, target, prop, error, retries,
                 rescueArguments(descriptorType, args));

@@ -6,8 +6,25 @@ export * from './iff.mjs'
 export * from './implies.mjs'
 export * from './Contracted.mjs'
 export * from './invariant.mjs'
-export * from './demands.mjs'
-export * from './ensures.mjs'
+// Listed rather than `export *` so the lifecycle plumbing stays off the entry
+// point. `assertDemands`, `assertEnsures`, and the registered-arm shapes are the
+// surface each module already carried; the awaited compositions and the
+// awaitability probes are called only by the lifecycle, which imports the module
+// directly.
+export {
+    assertDemands,
+    demands,
+} from './demands.mjs'
+export type {
+    DemandsArm, DemandsDecorator, DemandsPredicate, DemandsSubject, RegisteredDemands,
+} from './demands.mjs'
+export {
+    assertEnsures,
+    ensures,
+} from './ensures.mjs'
+export type {
+    EnsuresArm, EnsuresDecorator, EnsuresPredicate, EnsuresSubject, RegisteredEnsures,
+} from './ensures.mjs'
 // Listed rather than `export *` so `rescueDeclarationOf` stays off the entry
 // point. It is the resolution rule the proxy and `getFeatureContracts` share, it
 // takes a raw metadata record, and it returns the live declaration — which is the
