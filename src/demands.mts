@@ -3,8 +3,8 @@ import { contractsEnabled, Contracted } from "./Contracted.mjs";
 import { classNameOf } from './name.mjs';
 import { assertAwaitableFeature, assertFeatureContractTarget } from './decorator.mjs';
 import {
-    alreadyReported, armFailures, assertAwaitableArm, assertNormalizable, assertViolationFactory, describeArm,
-    evaluateArm, evaluateArmAsync, inheritedArms, recordFailure, reportWeakeningArm, selectViolationFactory,
+    alreadyReported, failureLog, assertAwaitableArm, assertNormalizable, assertViolationFactory, describeArm,
+    evaluateArm, evaluateArmAsync, inheritedArms, reportWeakeningArm, selectViolationFactory,
     type ArmFailures, type ArmOptions, type ArmSubjects,
 } from './admissibility.mjs';
 import type { StandardSchemaV1 } from './standard-schema.mjs';
@@ -197,6 +197,10 @@ function raiseDemandsFailure(
  * arguments, and because OR-composition short-circuits, the **first passing arm**
  * decides what that value is. That is deterministic and matches evaluation order.
  *
+ * @param enabled - Whether the contracts are evaluated for this class. The lifecycle
+ *   has already resolved the switch, so it passes its verdict rather than making this
+ *   function walk the class chain a second time; a caller that reaches this function
+ *   on its own omits it and the switch is resolved here.
  * @returns The arguments to use, which are the originals unless an arm
  *   normalized them.
  */
@@ -204,27 +208,27 @@ export function assertDemands(
     instance: Contracted,
     propertyKey: PropertyKey,
     args: any[],
+    enabled: boolean = contractsEnabled(instance.constructor),
 ): any[] {
-    const Class = instance.constructor as typeof Contracted;
+    if (!enabled) return args;
 
-    if (!contractsEnabled(Class)) return args;
-
-    const ds = Class[Symbol.metadata]?.demands?.[propertyKey] ?? NO_ARMS;
+    const Class = instance.constructor as typeof Contracted,
+        ds = Class[Symbol.metadata]?.demands?.[propertyKey] ?? NO_ARMS;
 
     if (ds.length === 0) return args;
 
-    const className = classNameOf(Class),
-        label = `${className}.${String(propertyKey)}`,
-        failures = armFailures();
+    const label = () => `${classNameOf(Class)}.${String(propertyKey)}`,
+        failures = failureLog();
 
-    for (const [index, { arm, options }] of ds.entries()) {
-        const result = evaluateArm(arm, demandsSubjects(instance, args), '@demands', label, index, options);
+    for (let index = 0; index < ds.length; index++) {
+        const { arm, options } = ds[index],
+            result = evaluateArm(arm, demandsSubjects(instance, args), '@demands', label, index, options);
 
         // A later arm may still permit the call, so a rejected arm is recorded
         // rather than returned from. Propagating a throw here would make a legal
         // weakening arm unreachable.
         if (!result.ok) {
-            recordFailure(failures, index, result);
+            failures.record(index, result);
 
             continue;
         }
@@ -233,7 +237,7 @@ export function assertDemands(
         return result.value === undefined ? args : result.value as any[];
     }
 
-    raiseDemandsFailure(ds, className, propertyKey, failures);
+    raiseDemandsFailure(ds, classNameOf(Class), propertyKey, failures.entries!);
 }
 
 /**
@@ -273,24 +277,24 @@ export async function assertDemandsAsync(
     instance: Contracted,
     propertyKey: PropertyKey,
     args: any[],
+    enabled: boolean = contractsEnabled(instance.constructor),
 ): Promise<any[]> {
-    const Class = instance.constructor as typeof Contracted;
+    if (!enabled) return args;
 
-    if (!contractsEnabled(Class)) return args;
-
-    const ds = Class[Symbol.metadata]?.demands?.[propertyKey] ?? NO_ARMS;
+    const Class = instance.constructor as typeof Contracted,
+        ds = Class[Symbol.metadata]?.demands?.[propertyKey] ?? NO_ARMS;
 
     if (ds.length === 0) return args;
 
-    const className = classNameOf(Class),
-        label = `${className}.${String(propertyKey)}`,
-        failures = armFailures();
+    const label = () => `${classNameOf(Class)}.${String(propertyKey)}`,
+        failures = failureLog();
 
-    for (const [index, { arm, options }] of ds.entries()) {
-        const result = await evaluateArmAsync(arm, demandsSubjects(instance, args), '@demands', label, index, options);
+    for (let index = 0; index < ds.length; index++) {
+        const { arm, options } = ds[index],
+            result = await evaluateArmAsync(arm, demandsSubjects(instance, args), '@demands', label, index, options);
 
         if (!result.ok) {
-            recordFailure(failures, index, result);
+            failures.record(index, result);
 
             continue;
         }
@@ -298,5 +302,5 @@ export async function assertDemandsAsync(
         return result.value === undefined ? args : result.value as any[];
     }
 
-    raiseDemandsFailure(ds, className, propertyKey, failures);
+    raiseDemandsFailure(ds, classNameOf(Class), propertyKey, failures.entries!);
 }

@@ -176,7 +176,7 @@ This is required so that the instance is wrapped in a Proxy and invariants are a
 
 Checked Mode controls whether the contracts (invariants, demands, ensures, and rescue) are evaluated at runtime, so a production build can skip the checking cost while development and tests keep it.
 
-It is a coarse switch, not a re-entrancy mechanism: disabling it skips contract evaluation entirely, and every member is returned unwrapped, so a feature call and a field read look the same.
+It is a coarse switch, not a re-entrancy mechanism: disabling it skips contract evaluation entirely, so a feature call and a field read look the same and no lifecycle starts. A body still runs on the instance itself, so it may mutate its own state exactly as it may with the checks on — the switch removes the checks, not the place the body runs.
 
 **It is separate from encapsulation.** Encapsulation is the name rule: an external caller cannot assign, define, or delete a public property. It has its own switch, `[encapsulationMode]`. The two answer different questions — a test double may want the checks off while still refusing a write to a field it never declared, and a class may want the write protection without the checks.
 
@@ -1065,9 +1065,13 @@ the body actually receives — a normalizing precondition has already replaced i
 a mutation the body makes is not visible through it. A `@rescue` that retries takes a
 fresh snapshot for the retried attempt.
 
-It is taken whenever the feature declares any `@ensures`, whether or not an arm reads
-`oldArgs`, because the arms are not inspectable for what they reference. Two
-consequences follow:
+It is taken whenever the feature declares a predicate `@ensures` arm, whether or
+not that particular arm reads it, because an arm is not inspectable for what it
+references. One case is excluded on the strength of the declaration rather than a
+guess: when **every** `@ensures` arm is a Standard Schema, no arm is handed the
+subject at all — a schema validates the result — so neither snapshot is taken.
+
+Two consequences follow when an arm could read it:
 
 - An argument that cannot be described fails the call. A `Proxy` with a throwing
   `getPrototypeOf`, for instance, raises a `TypeError` naming the feature and the

@@ -1,8 +1,9 @@
 import { AssertionError } from './AssertionError.mjs';
+import { observesNoSubject } from './admissibility.mjs';
 import { installInspect } from './inspect.mjs';
 import { assertInvariants } from './invariant.mjs';
 import { assertDemands, assertDemandsAsync, demandsAwaitable } from './demands.mjs';
-import { assertEnsures, assertEnsuresAsync, ensuresAwaitable, EnsuresPredicate } from './ensures.mjs';
+import { assertEnsures, assertEnsuresAsync, ensuresAwaitable, type RegisteredEnsures } from './ensures.mjs';
 import { classNameOf } from './name.mjs';
 import { featureKindOf, type FeatureKind } from './feature-kind.mjs';
 import { applyRescueHandler as applyRescueHandler, getRescueDeclaration } from './rescue.mjs';
@@ -30,14 +31,6 @@ export const checkedMode = Symbol.for('Contracted.checkedMode');
  */
 export const encapsulationMode = Symbol.for('Contracted.encapsulationMode');
 
-/** The switches in force for one class. */
-interface Enforcement {
-    /** Whether `@invariant`, `@demands`, `@ensures`, and `@rescue` are evaluated. */
-    readonly contracts: boolean;
-    /** Whether an external write, definition, or deletion is trapped. */
-    readonly encapsulation: boolean;
-}
-
 /**
  * Reads one enforcement switch from the class chain.
  *
@@ -63,19 +56,6 @@ const switchOn = (Class: unknown, symbol: symbol): boolean => {
 };
 
 /**
- * The enforcement switches in force for one class.
- *
- * Both default to on, and each is resolved independently so a class may want one
- * without the other.
- *
- * @param Class - The constructor to resolve for, usually `instance.constructor`.
- */
-const enforcementFor = (Class: unknown): Enforcement => ({
-    contracts: switchOn(Class, checkedMode),
-    encapsulation: switchOn(Class, encapsulationMode),
-});
-
-/**
  * Whether the contracts of `Class` are evaluated.
  *
  * @internal
@@ -83,7 +63,16 @@ const enforcementFor = (Class: unknown): Enforcement => ({
  * import it. It takes a constructor rather than an instance because the caller
  * often has one without the other, and it is not part of the published surface.
  */
-export const contractsEnabled = (Class: unknown): boolean => enforcementFor(Class).contracts;
+export const contractsEnabled = (Class: unknown): boolean => switchOn(Class, checkedMode);
+
+/**
+ * Whether an external mutation of an instance of `Class` is trapped.
+ *
+ * The counterpart of {@link contractsEnabled} for the other switch, stated
+ * separately so a trap that reads only this one does not walk the class chain twice
+ * and allocate an object it immediately discards.
+ */
+const encapsulationEnabled = (Class: unknown): boolean => switchOn(Class, encapsulationMode);
 
 /**
  * Whether `prop` names one of the enforcement switches.
@@ -192,10 +181,78 @@ const copyDescriptors = (
 ): void => {
     for (const key of Reflect.ownKeys(source)) {
         const descriptor = Object.getOwnPropertyDescriptor(source, key)!;
-        Reflect.defineProperty(copy, key, 'value' in descriptor
+        const cloned = 'value' in descriptor
             ? { ...descriptor, value: cloneState(descriptor.value, seen) }
-            : descriptor);
+            : descriptor;
+
+        defineOrAssign(copy, key, cloned);
     }
+}
+
+/**
+ * Defines one copied property, assigning instead when the descriptor is ordinary.
+ *
+ * A class field is a writable, enumerable, configurable data property, so most of an
+ * instance is described by that case and defining costs an order of magnitude more
+ * than writing the same value. Anything else — an accessor, or a read-only or
+ * non-configurable property — is defined from its descriptor, so a copy reproduces
+ * the instance's property attributes rather than flattening them into writable data.
+ */
+const defineOrAssign = (copy: object, key: PropertyKey, descriptor: PropertyDescriptor): void => {
+    if ('value' in descriptor && descriptor.writable && descriptor.enumerable && descriptor.configurable)
+        (copy as Record<PropertyKey, unknown>)[key] = descriptor.value;
+    else
+        Reflect.defineProperty(copy, key, descriptor);
+}
+
+/**
+ * The own state of an instance as it is at one moment, with its values already
+ * cloned.
+ *
+ * The values are cloned at capture time rather than when the object is built. A
+ * snapshot describes the state the body is about to change, so reading the live
+ * target later would observe the change instead; deferring the read is not an
+ * available optimisation, only deferring the construction is.
+ */
+interface CapturedState {
+    /** The instance whose prototype the snapshot inherits. */
+    readonly target: object;
+    /** Each own key with the descriptor it is defined by, its value already cloned. */
+    readonly entries: [PropertyKey, PropertyDescriptor][];
+}
+
+/**
+ * Captures the own state of `target` as it is now.
+ *
+ * `Reflect.ownKeys` is what also enumerates symbol keys, which a snapshot copies
+ * because a symbol field is ordinary state.
+ */
+const captureState = (target: object, seen: WeakMap<object, any>): CapturedState => {
+    const entries: [PropertyKey, PropertyDescriptor][] = [];
+
+    for (const key of Reflect.ownKeys(target)) {
+        const descriptor = Object.getOwnPropertyDescriptor(target, key)!;
+
+        entries.push([key, 'value' in descriptor
+            ? { ...descriptor, value: cloneState(descriptor.value, seen) }
+            : descriptor]);
+    }
+
+    return { target, entries };
+}
+
+/**
+ * Builds the snapshot object from previously captured state.
+ *
+ * The object inherits from the instance, so prototype members — including getters —
+ * remain reachable and a getter reads the historical own state through `this`.
+ */
+const buildState = ({ target, entries }: CapturedState): object => {
+    const copy: Record<PropertyKey, unknown> = Object.create(target);
+
+    for (const [key, descriptor] of entries) defineOrAssign(copy, key, descriptor);
+
+    return copy;
 }
 
 /**
@@ -205,16 +262,15 @@ const copyDescriptors = (
  * methods) remain reachable, while own state is a copy taken at this moment.
  * Getters defined on the prototype therefore read the historical own state
  * through `this`.
+ *
+ * @param enabled - Whether the contracts are evaluated for this class, already
+ *   resolved by the lifecycle. `undefined` when they are not, which is the value
+ *   the call site's `needsSnapshot` guard already implies.
  */
-const populateOld = (target: Contracted) => {
-    if (!contractsEnabled(target.constructor)) return;
+const populateOld = (target: Contracted, enabled: boolean): Contracted | undefined => {
+    if (!enabled) return undefined;
 
-    const old = Object.create(target),
-        seen = new WeakMap<object, any>();
-
-    copyDescriptors(target, old, seen);
-
-    return old;
+    return buildState(captureState(target, new WeakMap<object, any>())) as Contracted;
 }
 
 /**
@@ -302,6 +358,31 @@ const preStateOfArguments = (
  * `setPrototypeOf` trap refuses to change it while encapsulation is on.
  */
 const wrapperCache = new WeakMap<object, Map<PropertyKey, (...args: any[]) => any>>();
+
+/**
+ * Stores a wrapper in the instance's cache and returns it.
+ *
+ * The map is created on first use rather than at construction, because an instance
+ * that never has a function read would otherwise carry one for its whole lifetime.
+ * Returning the wrapper from here is what lets a caller write the store and the
+ * answer as one expression.
+ */
+const cacheWrapper = (
+    target: object,
+    prop: PropertyKey,
+    wrapper: (...args: any[]) => any,
+): (...args: any[]) => any => {
+    let cache = wrapperCache.get(target);
+
+    if (!cache) {
+        cache = new Map();
+        wrapperCache.set(target, cache);
+    }
+
+    cache.set(prop, wrapper);
+
+    return wrapper;
+}
 
 // Utility to walk up the prototype chain to find a property descriptor
 function getPropertyDescriptor(obj: object, prop: PropertyKey): PropertyDescriptor | undefined {
@@ -399,11 +480,12 @@ const surfaceInvariantFailure = (
     Class: typeof Contracted,
     target: Contracted,
     error: unknown,
+    enabled: boolean,
 ): unknown => {
     if (isInvariantFailure(error)) return error;
 
     try {
-        assertInvariants(Class, target);
+        assertInvariants(Class, target, enabled);
     } catch (invariantError) {
         return supersede(invariantError, error);
     }
@@ -433,6 +515,7 @@ function attemptRescue(
     error: unknown,
     retries: number,
     args: any[],
+    enabled: boolean,
 ): any[] {
     const declaration = getRescueDeclaration(target, prop),
         maxRetries = declaration?.maxRetries ?? Infinity;
@@ -449,7 +532,7 @@ function attemptRescue(
         // invariant failure. A class-level `@rescue` serves features that fail in
         // different ways, so that asymmetry is visible there; the handler's subject
         // carries the failing feature's name, which is what it dispatches on.
-        throw surfaceInvariantFailure(Class, target, error);
+        throw surfaceInvariantFailure(Class, target, error, enabled);
     }
 
     try {
@@ -460,7 +543,7 @@ function attemptRescue(
         // invalid is reported rather than passed over, and the original is carried as
         // `cause`. Routing through the same helper keeps the caller's error identical
         // whichever path produced it.
-        throw surfaceInvariantFailure(Class, target, rescuedError);
+        throw surfaceInvariantFailure(Class, target, rescuedError, enabled);
     }
 }
 
@@ -485,16 +568,17 @@ function enterWithRepair(
     target: Contracted,
     prop: PropertyKey,
     state: { args: any[], retries: number },
+    enabled: boolean,
 ): void {
     for (let repairs = 0; ;) {
         try {
-            assertInvariants(Class, target);
+            assertInvariants(Class, target, enabled);
 
             return;
         } catch (error) {
             if (repairs++ > 0) throw error;
 
-            state.args = attemptRescue(Class, target, prop, error, state.retries, state.args);
+            state.args = attemptRescue(Class, target, prop, error, state.retries, state.args, enabled);
             state.retries++;
         }
     }
@@ -536,16 +620,17 @@ function runSyncLifecycle(
     prop: PropertyKey,
     invokeArgs: any[],
     invoke: (args: any[]) => any,
+    enabled: boolean,
 ): any {
     const Class = target.constructor as typeof Contracted,
-        es = Class[Symbol.metadata]?.ensures?.[prop] ?? [] as EnsuresPredicate<Contracted>[],
+        es = (Class[Symbol.metadata]?.ensures?.[prop] ?? []) as readonly RegisteredEnsures[],
         hasEnsures = es.length > 0;
 
     let args = invokeArgs,
         retries = 0;
 
     for (; ;) {
-        const old = hasEnsures ? populateOld(target) : undefined;
+        const old = needsSnapshot(es) ? populateOld(target, enabled) : undefined;
 
         // The entry invariant may be repaired once by a `@rescue`; see `enterWithRepair`.
         // It is inside the lifecycle so that a broken instance is not unrecoverable:
@@ -553,7 +638,7 @@ function runSyncLifecycle(
         // state it would fix.
         const state = { args, retries };
 
-        enterWithRepair(Class, target, prop, state);
+        enterWithRepair(Class, target, prop, state, enabled);
         args = state.args;
         retries = state.retries;
 
@@ -561,13 +646,13 @@ function runSyncLifecycle(
         // not begun, so there is no body to resume, and a handler that retried with
         // an argument the precondition also rejects would recurse without end. A
         // failed precondition therefore reaches the caller directly.
-        args = assertDemands(target, prop, args);
+        args = assertDemands(target, prop, args, enabled);
 
         // The pre-state of the arguments the body is about to receive. Taken after
         // `@demands` so a normalizing arm is reflected, and before the body so a
         // mutation it makes is not visible through `oldArgs`. A retry loops back here
         // and takes a fresh snapshot, so an attempt is described by its own arguments.
-        const oldArgs = preStateOfArguments(hasEnsures, args, prop);
+        const oldArgs = preStateOfArguments(needsSnapshot(es), args, prop);
 
         let result: any;
         try {
@@ -576,14 +661,17 @@ function runSyncLifecycle(
             if (deliversValue(descriptorType))
                 assertNotThenable(result, target, prop);
 
+            // `old` is absent only when no arm can observe it, which is the one case
+            // `assertEnsures` does not need it in: it evaluates a predicate arm only,
+            // and there is none.
             if (hasEnsures)
                 result = assertEnsures(
-                    target, old, prop, ensuresArgs(descriptorType, result, args), result, oldArgs);
+                    target, old!, prop, ensuresArgs(descriptorType, result, args), result, oldArgs, enabled);
 
-            assertInvariants(Class, target);
+            assertInvariants(Class, target, enabled);
         } catch (error) {
             args = attemptRescue(Class, target, prop, error, retries,
-                rescueArguments(descriptorType, args));
+                rescueArguments(descriptorType, args), enabled);
             retries++;
             continue;
         }
@@ -619,9 +707,10 @@ function runExit(
     oldArgs: any[] | undefined,
     hasEnsures: boolean,
     awaitEnsures: boolean,
+    enabled: boolean,
 ): unknown {
     if (!hasEnsures) {
-        assertInvariants(Class, target);
+        assertInvariants(Class, target, enabled);
 
         return result;
     }
@@ -630,15 +719,15 @@ function runExit(
 
     if (!awaitEnsures) {
         const checked = assertEnsures(
-            target, old!, prop, subject, result, oldArgs);
+            target, old!, prop, subject, result, oldArgs, enabled);
 
-        assertInvariants(Class, target);
+        assertInvariants(Class, target, enabled);
 
         return checked;
     }
 
     return runAwaitedPostcondition(Class, target, assertEnsuresAsync(
-        target, old!, prop, subject, result, oldArgs));
+        target, old!, prop, subject, result, oldArgs, enabled), enabled);
 }
 
 /**
@@ -651,10 +740,11 @@ async function runAwaitedPostcondition(
     Class: typeof Contracted,
     target: Contracted,
     pending: Promise<unknown>,
+    enabled: boolean,
 ): Promise<unknown> {
     const settled = await pending;
 
-    assertInvariants(Class, target);
+    assertInvariants(Class, target, enabled);
 
     return settled;
 }
@@ -691,9 +781,10 @@ async function runAsyncLifecycle(
     prop: PropertyKey,
     invokeArgs: any[],
     invoke: (args: any[]) => any,
+    enabled: boolean,
 ): Promise<any> {
     const Class = target.constructor as typeof Contracted,
-        es = Class[Symbol.metadata]?.ensures?.[prop] ?? [] as EnsuresPredicate<Contracted>[],
+        es = (Class[Symbol.metadata]?.ensures?.[prop] ?? []) as readonly RegisteredEnsures[],
         hasEnsures = es.length > 0,
         // Resolved once: the metadata record is fixed for the class, so whether an
         // arm asked to be awaited cannot change during a call. Each reports false
@@ -705,7 +796,7 @@ async function runAsyncLifecycle(
         retries = 0;
 
     for (; ;) {
-        const old = hasEnsures ? populateOld(target) : undefined;
+        const old = needsSnapshot(es) ? populateOld(target, enabled) : undefined;
 
         // The same entry boundary as the synchronous lifecycle. Because this function
         // is `async`, an entry failure is delivered as a rejection rather than a
@@ -713,7 +804,7 @@ async function runAsyncLifecycle(
         // undecorated body's.
         const state = { args, retries };
 
-        enterWithRepair(Class, target, prop, state);
+        enterWithRepair(Class, target, prop, state, enabled);
         args = state.args;
         retries = state.retries;
 
@@ -726,12 +817,12 @@ async function runAsyncLifecycle(
         // without handing the caller a promise to wait on for a verdict that is
         // already settled.
         args = awaitDemands
-            ? await assertDemandsAsync(target, prop, args)
-            : assertDemands(target, prop, args);
+            ? await assertDemandsAsync(target, prop, args, enabled)
+            : assertDemands(target, prop, args, enabled);
 
         // Taken after `@demands` and before the body, exactly as in the synchronous
         // lifecycle, so it describes the arguments this attempt's body receives.
-        const oldArgs = preStateOfArguments(hasEnsures, args, prop);
+        const oldArgs = preStateOfArguments(needsSnapshot(es), args, prop);
 
         let result: any;
         try {
@@ -743,12 +834,13 @@ async function runAsyncLifecycle(
             // alone decides the wait: it is false when there is no postcondition to
             // check as well as when none of its arms asked to be awaited.
             const exit = runExit(
-                Class, descriptorType, target, prop, args, result, old, oldArgs, hasEnsures, awaitEnsures);
+                Class, descriptorType, target, prop, args, result, old, oldArgs,
+                hasEnsures, awaitEnsures, enabled);
 
             result = awaitEnsures ? await exit : exit;
         } catch (error) {
             args = attemptRescue(Class, target, prop, error, retries,
-                rescueArguments(descriptorType, args));
+                rescueArguments(descriptorType, args), enabled);
             retries++;
             continue;
         }
@@ -801,9 +893,10 @@ function runGeneratorLifecycle(
     invokeArgs: any[],
     invoke: (args: any[]) => any,
     kind: 'generator' | 'async-generator',
+    enabled: boolean,
 ): any {
     const Class = target.constructor as typeof Contracted,
-        es = Class[Symbol.metadata]?.ensures?.[prop] ?? [] as EnsuresPredicate<Contracted>[],
+        es = (Class[Symbol.metadata]?.ensures?.[prop] ?? []) as readonly RegisteredEnsures[],
         hasEnsures = es.length > 0;
 
     /*
@@ -848,7 +941,7 @@ function runGeneratorLifecycle(
      * precondition with `undefined`.
      */
     const enter = (stepArgs: any[]): any[] => {
-        assertInvariants(Class, target);
+        assertInvariants(Class, target, enabled);
 
         if (needsEntry) {
             needsEntry = false;
@@ -870,9 +963,9 @@ function runGeneratorLifecycle(
      * grounds as a getter's. The step's pre-state is already `old`.
      */
     const exit = (value: any, old: Contracted | undefined) => {
-        if (hasEnsures) assertEnsures(target, old!, prop, [value], value, []);
+        if (hasEnsures) assertEnsures(target, old!, prop, [value], value, [], enabled);
 
-        assertInvariants(Class, target);
+        assertInvariants(Class, target, enabled);
 
         // A value was delivered, so the retry that recovered the traversal has
         // been observed and the error it handled no longer needs reporting.
@@ -885,7 +978,7 @@ function runGeneratorLifecycle(
      * triggered the rescue is told why rather than being handed `undefined`.
      */
     const reportRetried = () => {
-        assertInvariants(Class, target);
+        assertInvariants(Class, target, enabled);
 
         if (retriedError === undefined) return;
 
@@ -904,7 +997,7 @@ function runGeneratorLifecycle(
      * loop back to `@invariant` in `docs/order-of-assertions.png` says it does.
      */
     const prepareRetry = (error: unknown) => {
-        args = attemptRescue(Class, target, prop, error, retries, args);
+        args = attemptRescue(Class, target, prop, error, retries, args, enabled);
         retries++;
         iterator = invoke(args);
         needsEntry = true;
@@ -924,7 +1017,7 @@ function runGeneratorLifecycle(
 
                 // `old` describes the state the segment is about to change, so
                 // it is taken before the body advances.
-                const old = hasEnsures ? populateOld(target) : undefined,
+                const old = needsSnapshot(es) ? populateOld(target, enabled) : undefined,
                     result = advance(iterator, stepArgs);
 
                 if (result.done) {
@@ -950,7 +1043,7 @@ function runGeneratorLifecycle(
             try {
                 stepArgs = enter(stepArgs);
 
-                const old = hasEnsures ? populateOld(target) : undefined,
+                const old = needsSnapshot(es) ? populateOld(target, enabled) : undefined,
                     result = await advance(iterator, stepArgs);
 
                 if (result.done) {
@@ -978,7 +1071,7 @@ function runGeneratorLifecycle(
     // again would recurse without end.
     const entry = { args, retries };
 
-    enterWithRepair(Class, target, prop, entry);
+    enterWithRepair(Class, target, prop, entry, enabled);
     args = entry.args;
     retries = entry.retries;
 
@@ -1036,15 +1129,124 @@ function runLifecycle(
     prop: PropertyKey,
     invokeArgs: any[],
     invoke: (args: any[]) => any,
+    enabled: boolean,
     kind: FeatureKind = 'sync',
 ): any {
     if (kind === 'async')
-        return runAsyncLifecycle(descriptorType, target, prop, invokeArgs, invoke);
+        return runAsyncLifecycle(descriptorType, target, prop, invokeArgs, invoke, enabled);
 
     if (kind === 'generator' || kind === 'async-generator')
-        return runGeneratorLifecycle(target, prop, invokeArgs, invoke, kind);
+        return runGeneratorLifecycle(target, prop, invokeArgs, invoke, kind, enabled);
 
-    return runSyncLifecycle(descriptorType, target, prop, invokeArgs, invoke);
+    return runSyncLifecycle(descriptorType, target, prop, invokeArgs, invoke, enabled);
+}
+
+/**
+ * The kind of each getter, keyed by the getter function.
+ *
+ * A getter is not cached as a wrapper the way a method is: the value depends on the
+ * instance's state, so a read has to run its lifecycle every time. The *kind* does
+ * not depend on either, and reading it classifies a function's constructor on every
+ * read, so it is remembered per function. A `WeakMap` so a replaced accessor holds
+ * nothing alive.
+ */
+const getterKinds = new WeakMap<(...args: any[]) => unknown, FeatureKind>();
+
+/** The argument list of an accessor read, which never has any. */
+const NO_READ_ARGS: any[] = [];
+
+/**
+ * Whether an invocation of a feature with these arms needs a pre-state snapshot.
+ *
+ * Two circumstances say it does not. A feature with no postcondition has nothing that
+ * could read one, and a composition made only of schemas cannot observe the predicate
+ * subject at all — see `observesNoSubject`. Both are properties of the declaration, so
+ * neither depends on guessing what a predicate reads.
+ */
+const needsSnapshot = (es: readonly RegisteredEnsures[]): boolean =>
+    es.length > 0 && !observesNoSubject(es);
+
+/**
+ * Classifies a getter, remembering the answer for that function.
+ *
+ * The kind is a property of the function object, and the instance cannot change
+ * which function its prototype holds while encapsulation is on, so the classification
+ * is stable for as long as the getter is.
+ */
+const getterKindOf = (getter: (...args: any[]) => unknown): FeatureKind => {
+    const known = getterKinds.get(getter);
+
+    if (known !== undefined) return known;
+
+    const kind = featureKindOf(getter);
+
+    getterKinds.set(getter, kind);
+
+    return kind;
+}
+
+/**
+ * Performs one feature invocation, bracketed by its contracts when they are on.
+ *
+ * The switch is resolved here, once, and it decides whether the lifecycle runs at
+ * all. Every contract module guards itself as well, because each is published and
+ * may be called on its own, but a feature invocation reaches the lifecycle through
+ * this one decision rather than through each of them.
+ *
+ * The body is performed on the **raw target** whether the contracts run or not.
+ * `invoke` is what binds `this`, so skipping the lifecycle here cannot change the
+ * receiver a body sees: a body is `C` in `{ P } C { Q }`, and its own writes must
+ * land on the instance rather than re-enter the traps as though they came from a
+ * caller.
+ *
+ * @param invoke - Performs the body with an argument list, on the raw target.
+ */
+function invokeFeature(
+    descriptorType: DescriptorType,
+    target: Contracted,
+    prop: PropertyKey,
+    invokeArgs: any[],
+    invoke: (args: any[]) => any,
+    kind: FeatureKind,
+): any {
+    const enabled = contractsEnabled(target.constructor);
+
+    // The body runs on the raw target whether the contracts run or not: `invoke` is
+    // what binds `this`, so skipping the lifecycle cannot change the receiver a body
+    // sees.
+    if (!enabled) return invoke(invokeArgs);
+
+    return runLifecycle(descriptorType, target, prop, invokeArgs, invoke, enabled, kind);
+}
+
+/**
+ * Wraps a method so each invocation is bracketed by its contracts.
+ *
+ * One wrapper serves both switch positions, and it resolves the switch per
+ * invocation rather than capturing it at read time. The switch is assignable on the
+ * class at any moment, so a wrapper that remembered the position would keep
+ * enforcing after a caller had turned the checks off — or stop enforcing after it
+ * had turned them back on.
+ *
+ * The body receives the raw target as `this`, so an internal access never re-enters
+ * a trap. The descriptor is resolved once, from the instance's prototype chain,
+ * which is fixed for the lifetime of the instance; the `setPrototypeOf` trap is what
+ * keeps that assumption true.
+ *
+ * @internal
+ * Shared by the proxy's `get` trap and its checks-off path so the two cannot drift.
+ */
+function methodWrapper(
+    target: Contracted,
+    prop: PropertyKey,
+    method: (...args: any[]) => any,
+): (...args: any[]) => any {
+    const kind = featureKindOf(method);
+
+    return function (this: Contracted, ...methodArgs: any[]) {
+        return invokeFeature('func', target, prop, methodArgs,
+            (args) => Reflect.apply(method, target, args), kind);
+    };
 }
 
 /**
@@ -1121,56 +1323,69 @@ const refuseSwitchWrite = (prop: PropertyKey): void => {
     );
 };
 
+/**
+ * Returns the cached wrapper for a feature, creating it on the first read.
+ *
+ * A wrapper is reusable because it is bound to the instance and the property, and the
+ * function it dispatches to is resolved from a prototype chain the instance cannot
+ * change while encapsulation is on. Caching is also what keeps `instance.feature` a
+ * stable reference, so a detached method call keeps working.
+ */
+const wrapperFor = (
+    target: Contracted,
+    prop: PropertyKey,
+    method: (...args: any[]) => any,
+): (...args: any[]) => any =>
+    wrapperCache.get(target)?.get(prop) ?? cacheWrapper(target, prop, methodWrapper(target, prop, method));
+
+/**
+ * Resolves one member read for the `get` trap.
+ *
+ * JavaScript resolves an own property before the prototype chain, and the trap has
+ * to do the same: an own property is what a field initializer or a body wrote, and it
+ * shadows the prototype member of the same name. A chain walk alone cannot see it.
+ * Reading the own descriptor first is also the cheaper order, because own state is
+ * read far more often than a prototype feature and a miss cannot happen.
+ *
+ * An own property is **state**, never a declared feature: a decorator refuses a
+ * private name, so every contracted member's descriptor stays on the prototype. The
+ * read is therefore an ordinary `Reflect.get`, with no wrapper. Wrapping a
+ * function-valued own property would break the `get` invariant on a frozen instance
+ * (the trap must return the property's actual value), would run the lifecycle for a
+ * callback that is not a feature, and would report a replaced callback through the
+ * wrapper cached against the property name.
+ *
+ * @param own - The target's own descriptor, if it has one.
+ */
+const readMember = (
+    target: Contracted,
+    prop: PropertyKey,
+    receiver: unknown,
+    own: PropertyDescriptor | undefined,
+): any => {
+    if (own) return Reflect.get(target, prop, receiver);
+
+    const descriptor = getPropertyDescriptor(Object.getPrototypeOf(target), prop);
+
+    if (typeof descriptor?.value === 'function')
+        return wrapperFor(target, prop, descriptor.value);
+
+    if (typeof descriptor?.get === 'function')
+        return invokeFeature('get', target, prop, NO_READ_ARGS,
+            () => descriptor.get!.call(target), getterKindOf(descriptor.get!));
+
+    return Reflect.get(target, prop, receiver);
+}
+
 const proxyHandler: ProxyHandler<Contracted> = {
     get(target, prop, receiver) {
-        const { contracts } = enforcementFor(target.constructor);
-
-        // With the contracts off, every member is returned unwrapped, so a feature
-        // call and a field read look the same and no lifecycle starts.
-        if (!contracts) return Reflect.get(target, prop, receiver);
-
-        const descriptor = getPropertyDescriptor(Object.getPrototypeOf(target), prop);
-
-        if (typeof descriptor?.value === 'function') {
-            let cache = wrapperCache.get(target);
-
-            if (!cache) {
-                cache = new Map();
-                wrapperCache.set(target, cache);
-            }
-
-            const cached = cache.get(prop);
-
-            if (cached) return cached;
-
-            const kind = featureKindOf(descriptor.value);
-
-            // The descriptor is resolved from the instance's prototype chain,
-            // which is fixed for the lifetime of the instance, so the wrapper
-            // can be reused for that feature.
-            //
-            // The body receives the raw target as `this`. A feature body is `C`
-            // in `{ P } C { Q }`: what it does internally is unconstrained, so
-            // internal accesses must not re-enter the traps.
-            const wrapper = function (this: Contracted, ...methodArgs: any[]) {
-                return runLifecycle('func', target, prop, methodArgs,
-                    (args) => Reflect.apply(descriptor.value!, target, args), kind);
-            };
-
-            cache.set(prop, wrapper);
-
-            return wrapper;
-        }
-        else if (typeof descriptor?.get === 'function')
-            return runLifecycle('get', target, prop, [],
-                () => descriptor.get!.call(target), featureKindOf(descriptor.get!));
-        else
-            return Reflect.get(target, prop, receiver);
+        return readMember(target, prop, receiver,
+            Object.getOwnPropertyDescriptor(target, prop));
     },
     set(target, prop, value) {
         refuseSwitchWrite(prop);
 
-        const { contracts, encapsulation } = enforcementFor(target.constructor),
+        const encapsulation = encapsulationEnabled(target.constructor),
             descriptor = getPropertyDescriptor(Object.getPrototypeOf(target), prop),
             setter = typeof descriptor?.set === 'function' ? descriptor.set : undefined;
 
@@ -1188,8 +1403,9 @@ const proxyHandler: ProxyHandler<Contracted> = {
             throw new TypeError(`Cannot assign to property '${String(prop)}': only properties starting with '_' or with a setter can be set on Contracted instances.`);
 
         // Only the contracts describe a feature; the write itself is a property of
-        // the trap. With the contracts off the assignment runs directly.
-        if (!contracts) return performSet(target, prop, value, setter);
+        // the trap. With the contracts off the assignment runs directly, so the
+        // contracts switch is not resolved on this path.
+        if (!contractsEnabled(target.constructor)) return performSet(target, prop, value, setter);
 
         // A setter's lifecycle result is the assigned value, which is what a
         // postcondition describes. Whether the write was accepted is a property of
@@ -1203,14 +1419,14 @@ const proxyHandler: ProxyHandler<Contracted> = {
                 accepted = performSet(target, prop, args[0], setter);
 
                 return args[0];
-            });
+            }, true);
 
         return accepted;
     },
     defineProperty(target, prop, descriptor) {
         refuseSwitchWrite(prop);
 
-        if (!enforcementFor(target.constructor).encapsulation)
+        if (!encapsulationEnabled(target.constructor))
             return Reflect.defineProperty(target, prop, descriptor);
 
         // Defining a property is an external mutation, so it follows the same
@@ -1241,7 +1457,7 @@ const proxyHandler: ProxyHandler<Contracted> = {
         // Replacing the prototype is an external mutation of the instance, so
         // encapsulation governs whether it is permitted. It is not a feature call,
         // so no lifecycle would have run for it either way.
-        if (!enforcementFor(target.constructor).encapsulation)
+        if (!encapsulationEnabled(target.constructor))
             return Reflect.setPrototypeOf(target, prototype);
 
         // Replacing the prototype swaps which descriptors a feature resolves to.
@@ -1261,7 +1477,7 @@ const proxyHandler: ProxyHandler<Contracted> = {
     deleteProperty(target, prop) {
         refuseSwitchWrite(prop);
 
-        const { contracts, encapsulation } = enforcementFor(target.constructor);
+        const encapsulation = encapsulationEnabled(target.constructor);
 
         // Deletion follows the same rule as assignment: it is an external mutation,
         // so it is subject to encapsulation and to the lifecycle. Only `_`-prefixed
@@ -1274,9 +1490,7 @@ const proxyHandler: ProxyHandler<Contracted> = {
         if (encapsulation && typeof prop === 'string' && !prop.startsWith('_'))
             throw new TypeError(`Cannot delete property '${String(prop)}' from Contracted instances: only properties starting with '_' can be deleted.`);
 
-        if (!contracts) return Reflect.deleteProperty(target, prop);
-
-        return runLifecycle('delete', target, prop, [], () => Reflect.deleteProperty(target, prop));
+        return invokeFeature('delete', target, prop, [], () => Reflect.deleteProperty(target, prop), 'sync');
     },
 };
 

@@ -49,7 +49,9 @@ const describeContractResult = (value: unknown): string => {
  *
  * @param result - The value returned by the predicate.
  * @param contract - The name of the contract, e.g. `@demands`.
- * @param label - A human-readable description of the feature, e.g. `Foo.method`.
+ * @param label - Builds a human-readable description of the feature, e.g.
+ *   `Foo.method`. A thunk so the name is resolved only for the message it appears
+ *   in: a boolean verdict is the common case and never reads it.
  * @param index - The zero-based index of the predicate in its composition list.
  * @returns The predicate result, narrowed to `boolean`.
  * @throws {AssertionError} If the predicate did not return a boolean.
@@ -57,15 +59,18 @@ const describeContractResult = (value: unknown): string => {
 export function assertContractResult(
     result: unknown,
     contract: string,
-    label: string,
+    label: () => string,
     index: number,
 ): boolean {
-    assert(
-        typeof result === 'boolean',
-        `${contract} predicate #${index + 1} for ${label} returned ${describeContractResult(result)}; contract predicates must return a boolean`
-    );
+    // A boolean is the case this function exists to pass through, so the message is
+    // built only when it is about to be thrown. Naming the feature is a declaration
+    // read and a concatenation, which a passing verdict pays for nothing.
+    if (typeof result === 'boolean') return result;
 
-    return result;
+    throw new AssertionError(
+        `${contract} predicate #${index + 1} for ${label()} returned `
+        + `${describeContractResult(result)}; contract predicates must return a boolean`
+    );
 }
 
 const pluralise = (count: number, total: number, singular: string, plural: string): string =>

@@ -459,12 +459,31 @@ export const reportWeakeningArm = (
 }
 
 /**
+ * Whether every arm is a schema, so no predicate will be shown the subject.
+ *
+ * A schema arm is handed the value it validates, never the predicate subject. When
+ * *every* arm of a contract is a schema, the fields that exist only for a predicate
+ * — `self`, `old`, `oldArgs` — cannot be observed by anything, so the work of
+ * producing them is unobservable too. That is a property of the declaration rather
+ * than an inference about code, which is what makes it safe to act on.
+ *
+ * An empty list answers `false`: a contract with no arms evaluates nothing, so there
+ * is no snapshot to skip and no reason to claim otherwise.
+ *
+ * @param arms - The contract's registered arms, in evaluation order.
+ */
+export const observesNoSubject = (arms: readonly { arm: unknown }[]): boolean =>
+    arms.length > 0 && arms.every(entry => isSchema(entry.arm));
+
+/**
  * Checks one arm against the subject that belongs to it.
  *
  * @param arm - A predicate or a `StandardSchemaV1` value.
  * @param subjects - What the arm observes, chosen by the calling contract.
  * @param contract - The contract name, for the diagnostic.
- * @param label - The feature, for the diagnostic.
+ * @param label - Builds the feature's name **for a diagnostic**. A thunk because
+ *   the name is a declaration read and a string concatenation that a satisfied
+ *   arm never shows to anyone; see `classNameOf`.
  * @param index - The arm's position in its composition list.
  * @param options - Declaration options for this arm.
  */
@@ -472,7 +491,7 @@ export const evaluateArm = (
     arm: unknown,
     subjects: ArmSubjects,
     contract: string,
-    label: string,
+    label: () => string,
     index: number,
     options?: ArmOptions,
 ): Admissibility => isSchema(arm)
@@ -503,7 +522,7 @@ export const evaluateArmAsync = async (
     arm: unknown,
     subjects: ArmSubjects,
     contract: string,
-    label: string,
+    label: () => string,
     index: number,
     options?: ArmOptions,
 ): Promise<Admissibility> => {
@@ -531,7 +550,7 @@ const awaitPredicate = async (
     predicate: (...args: any[]) => unknown,
     subject: PredicateSubject,
     contract: string,
-    label: string,
+    label: () => string,
     index: number,
 ): Promise<Admissibility> => {
     let verdict: unknown;
@@ -560,12 +579,14 @@ const invokePredicate = (predicate: (...args: any[]) => unknown, subject: Predic
     // caller, `old` is a detached copy taken by `populateOld`, and `error` and
     // `retry` belong to `@rescue`, which is exempt from the view because
     // restoring corrupted state is its purpose.
-    const { self, ...rest } = subject,
-        guarded = typeof self === 'object' && self !== null
-            ? readOnlyView(self)
-            : self;
-
-    return predicate({ self: guarded, ...rest });
+    //
+    // The guarded subject is built with one spread and an override rather than by
+    // destructuring `self` out and spreading the remainder: the two produce the same
+    // object, and the rest half of a destructuring pattern re-enumerates every key
+    // into a second object for no gain.
+    return predicate(typeof subject.self === 'object' && subject.self !== null
+        ? { ...subject, self: readOnlyView(subject.self) }
+        : subject);
 }
 
 /**
@@ -584,7 +605,7 @@ const evaluatePredicate = (
     predicate: (...args: any[]) => unknown,
     subject: PredicateSubject,
     contract: string,
-    label: string,
+    label: () => string,
     index: number,
     options: ArmOptions | undefined,
 ): Admissibility => {
@@ -607,7 +628,7 @@ const evaluatePredicate = (
     // predicate that forgot to return a boolean.
     if (options?.awaitPredicate && typeof (verdict as { then?: unknown } | null)?.then === 'function')
         throw new TypeError(
-            `${contract} predicate #${index + 1} for ${label} declared awaitPredicate but returned a Promise, `
+            `${contract} predicate #${index + 1} for ${label()} declared awaitPredicate but returned a Promise, `
             + 'and the feature it guards is not `async`, so nothing can await it. Declare the feature `async`, '
             + 'or drop the option.',
         );
@@ -632,7 +653,7 @@ const evaluateSchema = (
     schema: StandardSchemaV1,
     subject: unknown,
     contract: string,
-    label: string,
+    label: () => string,
     index: number,
     options: ArmOptions | undefined,
 ): Admissibility => {
@@ -640,7 +661,7 @@ const evaluateSchema = (
 
     if (typeof result?.then === 'function')
         throw new TypeError(
-            `${contract} schema #${index + 1} for ${label} returned a Promise; `
+            `${contract} schema #${index + 1} for ${label()} returned a Promise; `
             + 'contract evaluation is synchronous, so use a synchronous schema.',
         );
 
@@ -679,6 +700,34 @@ export const recordFailure = (failures: ArmFailures, index: number, result: Admi
     if (result.issues) failures.issues.push(...result.issues);
     if ('thrown' in result) failures.thrown.push({ index, value: result.thrown });
 };
+
+/**
+ * A failure record that is allocated only once an arm rejects.
+ *
+ * A satisfied composition is the common case, and it would otherwise allocate three
+ * arrays it never reads. The log hands back the same interface as {@link ArmFailures},
+ * so the composition loops keep their rule rather than their bookkeeping, and
+ * `entries` stays `undefined` until something fails — which is the whole test a loop
+ * needs at the end.
+ *
+ * The methods live on the prototype rather than in a closure per call, because a
+ * closure pair allocated on every invocation costs more than the three arrays it is
+ * there to avoid.
+ */
+export class FailureLog {
+    #entries: ArmFailures | undefined;
+
+    /** Records a rejected arm, allocating the record on the first one. */
+    record(index: number, result: Admissibility): void {
+        recordFailure(this.#entries ??= armFailures(), index, result);
+    }
+
+    /** The record, or `undefined` when no arm has rejected. */
+    get entries(): ArmFailures | undefined { return this.#entries; }
+}
+
+/** Starts a failure log that allocates its record only when something fails. */
+export const failureLog = (): FailureLog => new FailureLog();
 
 /**
  * Renders schema `issues` for a message.

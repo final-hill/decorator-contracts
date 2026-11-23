@@ -390,9 +390,9 @@ describe('The declaration is read only to label a failure', () => {
         return counter.reads / 10;
     };
 
-    test('a class with no invariant arms pays only for the contract that names it', () => {
-        // One read per call is `@demands` building its label. Were the invariant
-        // check to resolve the name too, this would be three.
+    test('a passing call reads the declaration zero times', () => {
+        // The label is a thunk, so a satisfied call never builds it. A declaration
+        // may be an accessor, which is what makes the difference observable.
         const reads = readsPerCall(counter => {
             class Cart extends Contracted {
                 static get [contractName](): string { counter.reads++; return 'Cart'; }
@@ -406,12 +406,13 @@ describe('The declaration is read only to label a failure', () => {
             return () => cart.withdraw();
         });
 
-        nodeAssert.strictEqual(reads, 1);
+        nodeAssert.strictEqual(reads, 0);
     });
 
-    test('a class with an invariant arm pays for the entry and exit checks', () => {
-        // The contrast is what makes the first test meaningful rather than a
-        // tautology: the declaration is reachable, and an arm is what adds the two.
+    test('a passing call with an invariant arm reads the declaration zero times', () => {
+        // The invariant runs on entry and exit of every feature, so an eagerly built
+        // label would charge its declaration twice per call for a value no message
+        // consumes.
         const reads = readsPerCall(counter => {
             @invariant(() => true)
             class Ledger extends Contracted {
@@ -426,7 +427,28 @@ describe('The declaration is read only to label a failure', () => {
             return () => ledger.deposit();
         });
 
-        nodeAssert.strictEqual(reads, 3);
+        nodeAssert.strictEqual(reads, 0);
+    });
+
+    test('a failing call still names the class and the feature', () => {
+        // Laziness must not have removed the name from the message: the read happens
+        // where the message is built, so a failure pays for it exactly once per arm
+        // that reported.
+        const counter = { reads: 0 };
+
+        class Cart extends Contracted {
+            static get [contractName](): string { counter.reads++; return 'Cart'; }
+
+            @demands(() => false)
+            withdraw(): void { }
+        }
+
+        const cart = Cart.new() as any;
+
+        counter.reads = 0;
+
+        nodeAssert.throws(() => cart.withdraw(), /@demands failed for Cart\.withdraw/);
+        nodeAssert.ok(counter.reads > 0, 'a failure reads the declaration to label itself');
     });
 });
 
