@@ -18,6 +18,7 @@
 - [Contracts are Hoare triples](#contracts-are-hoare-triples)
 - [Contract failures](#contract-failures)
 - [Encapsulation](#encapsulation)
+- [Inspecting and serializing](#inspecting-and-serializing)
 - [Internal calls are not contracted](#an-internal-call-runs-none-of-the-callees-contracts)
 - [Invariants](#invariants)
 - [Demands](#demands)
@@ -620,6 +621,90 @@ Once an instance is frozen, a write it cannot accept **throws**, rather than bei
 ### Replacing the prototype
 
 `Object.setPrototypeOf` and `Reflect.setPrototypeOf` throw. A replacement changes which descriptors a feature resolves to, which would leave the instance running methods that do not match the contracts it reports.
+
+## Inspecting and serializing
+
+A contracted instance holds its state in `_`-prefixed properties, so the two ways of turning an instance into something printable behave differently on purpose: one shows a developer everything, and the other publishes a shape the class declares.
+
+### `util.inspect` shows the instance, not the proxy
+
+`util.inspect` renders the class name and the instance's own state:
+
+```text
+Account { _balance: 5, _orgId: 'o' }
+```
+
+Without this the fallback rendering labels it as a proxy — `Proxy(Account { ... })` — so a reader cannot tell a contracted instance from an accidental one, and a nested instance renders the same way again.
+
+The `_`-prefixed fields **are** shown. That is the point: `inspect` is the surface a developer uses to see what an object actually holds, and hiding the state would defeat it. It is not a serialization format.
+
+The rendering reads own property *descriptors*, so it runs no contract and cannot fail because one does. A contracted instance is therefore inspectable in exactly the situation a reader most needs it: when its invariant is broken, or when a getter throws.
+
+An accessor is not rendered, because it holds no state — its value is already visible through the field it reads. A reference back to an instance already being rendered is shown as `[Circular]`.
+
+The name reported is the class's [`contractName`](#naming-a-class-in-a-failure) when it declares one, and the constructor's name otherwise, so a class that named itself is named the same way in a debugger as in a failure.
+
+`depth` is honoured the way `util.inspect` honours it for a plain object: the instance itself is shown at `depth: 0`, each unit of depth shows one more level, and the first value with no budget left is rendered `[Object]`.
+
+Two options are **not** honoured, because the rendering reports state rather than evaluating it: `showHidden` does not filter the `_`-prefixed fields out (they are the state being shown), and `getters: true` cannot opt an accessor in.
+
+A subclass may replace the rendering by declaring its own method:
+
+```typescript
+class Account extends Contracted {
+    protected _balance = 0;
+
+    get balance() { return this._balance; }
+
+    [Symbol.for('nodejs.util.inspect.custom')]() {
+        return `Account(${this.balance})`;
+    }
+}
+```
+
+### `JSON.stringify` is opt-in
+
+By default `JSON.stringify` emits the instance's own data properties, which are the `_`-prefixed ones:
+
+```typescript
+JSON.stringify(Account.new());   // {"_balance":5,"_orgId":"o"}
+```
+
+That is a leak, but it cannot be fixed by a default `toJSON`. Which fields are *public* is a decision about your domain, and `_` is a convention this library enforces for assignment rather than a declaration of what may be published. A default would also change the output of every existing `JSON.stringify`, which is the kind of silent break a library must not make.
+
+So a class opts in with `@serializable`, naming the getters to publish:
+
+```typescript
+import { Contracted, serializable } from '@final-hill/decorator-contracts';
+
+@serializable('balance', 'orgId')
+class Account extends Contracted {
+    protected _balance = 0;
+    protected _orgId = 'o';
+
+    get balance() { return this._balance; }
+    get orgId() { return this._orgId; }
+}
+
+JSON.stringify(Account.new());   // {"balance":0,"orgId":"o"}
+```
+
+Naming **getters** rather than fields is deliberate: a field name is storage, while a getter is the class's own statement of what is observable, and it is already the only way a caller reads state the encapsulation rule protects. The published shape is therefore the shape a caller can already see. Every name is checked when the decorator runs, so a typo fails at the declaration rather than producing an empty object in whichever logger calls it.
+
+One class declares one shape. Applying `@serializable` twice, or applying it to a class that already declares its own `toJSON`, is a `TypeError` at decoration time — the two declarations cannot both be the shape the class publishes, and silently preferring one of them would publish a shape the author did not choose.
+
+The published shape follows substitution: a subclass that declares its own `@serializable` publishes its own list, and one that declares nothing inherits the base's, because the subclass *is* a base instance. `toJSON` is a public feature, so the entry and exit `@invariant` hold around the whole serialization.
+
+### What is not supported
+
+Neither of these produces a usable copy, and both are limitations rather than defects:
+
+| Expression | Result |
+| --- | --- |
+| `{ ...instance }` | own data only; methods live on the prototype, so they are lost, and the copy is not contracted |
+| `structuredClone(instance)` | `DataCloneError` |
+
+`structuredClone` fails on **any** `Proxy`, not just this library's — a bare `new Proxy({ a: 1 }, {})` fails the same way. A `toJSON` does not help it either, since cloning does not consult that method. A copy that is both useful and contracted needs an explicit copy protocol, which is a larger question than a serialization surface and is not provided here.
 
 ## Asynchronous features
 

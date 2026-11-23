@@ -25,6 +25,8 @@ export * from './metadata.mjs'
 // own failure paths and is not a capability a consumer needs: one building a
 // diagnostic already holds the constructor it would pass to it.
 export { contractName } from './name.mjs'
+// The decorator is the surface; the module's checks and helpers are not.
+export { serializable } from './serialization.mjs'
 // Declaration options are named by consumers that build an arm separately from
 // the decorator registering it, so the types are part of the surface. The
 // module's helpers stay internal: only the two option shapes are re-exported.
