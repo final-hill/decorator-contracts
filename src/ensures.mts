@@ -1,5 +1,6 @@
 import { violationFailure } from './assert.mjs';
 import { contractsEnabled, Contracted } from './Contracted.mjs';
+import { classNameOf } from './name.mjs';
 import { assertFeatureContractTarget } from './decorator.mjs';
 import {
     armFailures, assertNormalizable, assertNotWeakenable, assertViolationFactory, describeArm, evaluateArm,
@@ -140,7 +141,8 @@ export function assertEnsures(
 
     if (es.length === 0) return result;
 
-    const label = `${instance.constructor.name}.${String(propertyKey)}`,
+    const className = classNameOf(Class),
+        label = `${className}.${String(propertyKey)}`,
         failures = armFailures();
 
     let normalized = result;
@@ -179,7 +181,7 @@ export function assertEnsures(
 
     throw violationFailure(
         '@ensures',
-        instance.constructor.name,
+        className,
         String(propertyKey),
         es.map(entry => entry.arm),
         failures,

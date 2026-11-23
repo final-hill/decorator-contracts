@@ -199,4 +199,13 @@ describe('The entry point exposes the contract surface and not the runtime plumb
         for (const name of ['getContractMetadata', 'getFeatureContracts'])
             nodeAssert.ok(exported.includes(name), `${name} is missing from the entry point`);
     });
+
+    test('the class-name resolver stays internal while its symbol is published', () => {
+        const exported = entry();
+
+        nodeAssert.ok(exported.includes('contractName'), 'the declaration symbol is the API');
+        // A consumer building a diagnostic already holds the constructor it would pass
+        // here, so the resolver is plumbing rather than a capability the surface owes.
+        nodeAssert.ok(!exported.includes('classNameOf'), 'runtime plumbing, not API');
+    });
 });

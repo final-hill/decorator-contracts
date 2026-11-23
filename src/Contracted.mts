@@ -2,6 +2,7 @@ import { AssertionError } from './AssertionError.mjs';
 import { assertInvariants } from './invariant.mjs';
 import { assertDemands } from './demands.mjs';
 import { assertEnsures, EnsuresPredicate } from './ensures.mjs';
+import { classNameOf } from './name.mjs';
 import { applyRescueHandler as applyRescueHandler, getRescueDeclaration } from './rescue.mjs';
 import type { ContractMetadata } from './metadata.mjs';
 
@@ -885,7 +886,7 @@ const assertNotThenable = (result: unknown, target: Contracted, prop: PropertyKe
     if (typeof (result as any).then !== 'function') return;
 
     throw new AssertionError(
-        `${target.constructor.name}.${String(prop)} returned a promise but is not declared 'async', `
+        `${classNameOf(target.constructor)}.${String(prop)} returned a promise but is not declared 'async', `
         + "so its contracts were evaluated before its body finished. Declare the feature 'async'.",
     );
 }

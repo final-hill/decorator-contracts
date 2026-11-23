@@ -288,7 +288,7 @@ A failed contract throws an `AssertionError`. Its `name` is `AssertionError` reg
 @ensures failed for Account.withdraw (1 of 2 predicates unsatisfied: predicate #2: (self,[amount],old)=>self.balance===old.balance-amount). A postcondition was not satisfied after the feature ran.
 ```
 
-The predicate text is whatever the predicate's `toString()` returns, which is minified in a bundled build. The structured `violation` below is the reliable way to identify a failure.
+The predicate text is whatever the predicate's `toString()` returns, which is minified in a bundled build. The structured `violation` below is the reliable way to identify a failure. The class name in `violation.className` and in the message is likewise the build's output unless the class declares one — see [Naming a class in a failure](#naming-a-class-in-a-failure).
 
 The error also carries a `violation` property so callers can react without parsing the message:
 
@@ -321,6 +321,42 @@ interface ContractViolation {
 `@demands` is OR-composed, so a failure lists **every** arm that rejected the call — any of them could have permitted it. `@ensures` and `@invariant` are AND-composed, so a failure lists only the arms that broke.
 
 An `AssertionError` thrown by `assert()` itself has no `violation`.
+
+### Naming a class in a failure
+
+`className` is read from the constructor, so it is only as stable as the name the build emitted. Without minification that is the class's name. With it, it degrades: a minifier is free to rename the class, and the standard decorator lowering wraps a decorated class in an immediately invoked arrow that returns a **class expression**, which a compressor may leave anonymous outright. The message then reads:
+
+```text
+@demands failed for .withdraw (1 of 1 predicate unsatisfied: ...)
+```
+
+There is no earlier moment with a better name. The class object is created once, and a class decorator observes the same name the violation would report later, so capturing it at decoration time cannot improve it. A declaration is the only signal that survives a build:
+
+```typescript
+import { contractName, Contracted, demands } from '@final-hill/decorator-contracts';
+
+class Cart extends Contracted {
+    static [contractName] = 'Cart';
+
+    @demands(({ args: [quantity] }) => quantity > 0)
+    withdraw(quantity: number): number { return quantity; }
+}
+```
+
+Every failure that names the class uses the declaration: `violation.className`, the message, a non-boolean predicate diagnostic, and the "returned a promise but is not declared `async`" message. An empty or non-string declaration falls back to the constructor name, so a mistyped one cannot produce the empty label above. A declaration that throws falls back the same way, because a name is read on the way to reporting a failure and must not become the error the caller receives instead of it.
+
+Set it on the class, as with the enforcement switches: it is read from the constructor, so an instance write has no effect. The lookup is made once per contract that has arms to label, so a class with none of them never pays for it.
+
+**A name is declared, not inherited**, which parts company with `[checkedMode]` and `[encapsulationMode]`. Those inherit because they answer how a class *behaves*, and a subclass that says nothing about behaviour should behave like its base. A name answers who the class *is*, so applying the base's name to a subclass would report a failure in `Base` when it happened in `Derived`. A subclass that wants a stable name declares one.
+
+The **feature name is unaffected**, because it is not a name lookup: `@demands` receives `ctx.name`, which the lowering emits as a string literal in the decorator context, and a minifier does not touch it.
+
+If a declaration is not an option, a `keepNames` setting keeps the constructor name intact and nothing else is needed:
+
+- `esbuild`: `keepNames: true`
+- `terser`: `keep_classnames` is not sufficient on its own, because compression inlines the class expression and drops the name. Also set `compress: { keep_classnames: true }`, or disable compression.
+
+Neither setting reaches the feature names, which never needed help. Exclude the library and the decorator lowering helpers from property mangling (`mangle.properties`), which renames the context and descriptor fields the lowering reads.
 
 ### A predicate that throws is a failed predicate
 
