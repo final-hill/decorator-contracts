@@ -2,7 +2,7 @@ import type { Contracted } from './Contracted.mjs';
 import type { RegisteredDemands } from './demands.mjs';
 import type { RegisteredEnsures } from './ensures.mjs';
 import type { RegisteredInvariant } from './invariant.mjs';
-import type { RescueDeclaration } from './rescue.mjs';
+import { rescueDeclarationOf, type RescueDeclaration } from './rescue.mjs';
 
 /**
  * The contracts a class declares, as {@link getContractMetadata} reports them.
@@ -38,6 +38,17 @@ export interface ContractMetadata {
      * `@rescue` on the same feature replaces the first.
      */
     rescue: Readonly<Record<PropertyKey, RescueDeclaration<Contracted>>>;
+
+    /**
+     * The class-level rescue declaration, which applies to every feature that
+     * declares none of its own.
+     *
+     * Separate from {@link rescue} because the two forms are keyed differently: a
+     * feature declaration is stored under the feature's name, and a class
+     * declaration exists once for the whole class. `undefined` when neither this
+     * class nor an ancestor declared one.
+     */
+    classRescue: RescueDeclaration<Contracted> | undefined;
 }
 
 /**
@@ -55,7 +66,10 @@ export interface FeatureContracts {
     /** The feature's postcondition arms, in evaluation order. */
     ensures: readonly RegisteredEnsures[];
 
-    /** The feature's rescue declaration, absent when it declares none. */
+    /**
+     * The feature's effective rescue declaration, absent when neither it nor its
+     * class declares one.
+     */
     rescue: RescueDeclaration<Contracted> | undefined;
 }
 
@@ -66,6 +80,7 @@ const EMPTY: ContractMetadata = Object.freeze({
     demands: Object.freeze({}),
     ensures: Object.freeze({}),
     rescue: Object.freeze({}),
+    classRescue: undefined,
 });
 
 /**
@@ -165,6 +180,7 @@ export function getContractMetadata<Class extends typeof Contracted>(
         demands: copyEntries<RegisteredDemands>(metadata.demands),
         ensures: copyEntries<RegisteredEnsures>(metadata.ensures),
         rescue: copyRescueMap(metadata.rescue),
+        classRescue: metadata.classRescue && copyRescue(metadata.classRescue),
     });
 }
 
@@ -180,14 +196,15 @@ export function getContractMetadata<Class extends typeof Contracted>(
  * @param Class - The class to inspect.
  * @param feature - The feature's name.
  * @returns The feature's arms in evaluation order, or empty lists when it declares
- *   none. `rescue` is `undefined` when the feature declares no handler.
+ *   none. `rescue` is the declaration the runtime would actually apply: the
+ *   feature's own when it declares one, otherwise the class-level declaration.
  */
 export function getFeatureContracts<Class extends typeof Contracted>(
     Class: Class,
     feature: PropertyKey,
 ): FeatureContracts {
     const metadata = getContractMetadata(Class),
-        rescue = metadata.rescue[feature];
+        rescue = rescueDeclarationOf(metadata, feature);
 
     return Object.freeze({
         demands: (metadata.demands[feature] ?? NO_ARMS) as readonly RegisteredDemands[],

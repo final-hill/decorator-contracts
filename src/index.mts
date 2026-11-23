@@ -8,7 +8,18 @@ export * from './Contracted.mjs'
 export * from './invariant.mjs'
 export * from './demands.mjs'
 export * from './ensures.mjs'
-export * from './rescue.mjs'
+// Listed rather than `export *` so `rescueDeclarationOf` stays off the entry
+// point. It is the resolution rule the proxy and `getFeatureContracts` share, it
+// takes a raw metadata record, and it returns the live declaration — which is the
+// capability `getContractMetadata` exists to deny by returning copies. The names
+// below are the declaration surface plus the two helpers the surface already
+// carried.
+export {
+    applyRescueHandler, getRescueDeclaration, rescue,
+} from './rescue.mjs'
+export type {
+    RescueDecorator, RescueDeclaration, RescueHandler, RescueOptions, RescueSubject,
+} from './rescue.mjs'
 export * from './metadata.mjs'
 // Declaration options are named by consumers that build an arm separately from
 // the decorator registering it, so the types are part of the surface. The
