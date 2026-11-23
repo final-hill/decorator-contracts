@@ -18,6 +18,7 @@
 - [Contracts are Hoare triples](#contracts-are-hoare-triples)
 - [Contract failures](#contract-failures)
 - [Encapsulation](#encapsulation)
+- [Internal calls are not contracted](#an-internal-call-runs-none-of-the-callees-contracts)
 - [Invariants](#invariants)
 - [Demands](#demands)
 - [Ensures](#ensures)
@@ -445,6 +446,103 @@ class Example extends Contracted {
 A method calling another method of the same instance likewise does not start a second contract lifecycle. The enclosing invocation owns the assertions, so the invariant is evaluated once on entry and once on exit regardless of how many internal accesses the body performs.
 
 One consequence: a body that leaks `this` outward — passing it to a callback, storing it in a module-level variable, or returning it — hands out a reference that bypasses the traps. Do not do that; expose an explicit API instead.
+
+### An internal call runs none of the callee's contracts
+
+Replacing a guard call with a contract does not widen coverage: it **turns the check off** at every internal call site.
+
+```typescript
+import { Contracted, demands } from '@final-hill/decorator-contracts';
+
+class Range extends Contracted {
+    @demands(({ args: [x] }) => x > 0)
+    inner(x: number) { return x; }
+
+    outer(x: number) { return this.inner(x); }
+}
+
+Range.new().outer(-1);   // -1, and no error: `inner`'s @demands never ran
+```
+
+Every contract on `inner` is skipped this way — `@demands`, `@ensures`, and the `@invariant` around it. Only `outer` is a boundary, so only `outer` is checked, and it returns whatever `inner` produced.
+
+The mechanism is that a feature body runs against the **raw** instance, not the proxy (see above), so `this.inner(…)` reaches the undecorated function directly.
+
+### Why the body gets the raw instance
+
+Handing the body the proxy instead would contract the internal call, which sounds like strictly more checking. It is not available, and the reason is not a preference about cost.
+
+**A predicate is evaluated inside a trap, so its view must not start a lifecycle.** `@invariant(({ self }) => self.value >= 0)` reads `self.value` on every evaluation — twice for one getter read. A predicate therefore receives a purpose-built read-only proxy, not the instance's lifecycle proxy: reading through it is an ordinary property access, while assignment, deletion, and definition are refused. A feature body receives the raw target for the same reason — its internal accesses are not feature boundaries — and the two together are what keep one invocation to one lifecycle.
+
+**The alternative also changes what the contract is about.** `{ P } C { Q }` treats `C` as unconstrained. If `C` ran other features' contracts, `outer`'s postcondition would be asserted over a composition of `inner`'s pre- and postconditions; a failure would name `inner` while `outer` is what the caller invoked, and the caller has no way to act on it.
+
+**And it would make two ordinary shapes impossible.** A lenient façade delegating to a stricter core is a boundary today — a `@demands` of `x > 0` on `read` reaching a core requiring `x > 100` accepts `read(50)`, and the façade's arm runs exactly once. So is recursion: `down(n - 1)` is one lifecycle for the entry call. Contracting the internal call rejects the first and re-evaluates the invariant per frame for the second.
+
+The cost of the rule is per call rather than per internal access: three internal calls to contracted features measure **2** invariant evaluations, not 4 or 6.
+
+### The cross-instance case is checked
+
+A call on a **different** instance is a boundary, because the callee is reached through that instance's proxy. The same class, both directions:
+
+```typescript
+class Range extends Contracted {
+    @demands(({ args: [x] }) => x > 0)
+    inner(x: number) { return x; }
+
+    viaThis(x: number) { return this.inner(x); }        // `this` is raw: unchecked
+    viaPeer(peer: Range, x: number) { return peer.inner(x); }   // peer is a proxy: checked
+}
+
+const range = Range.new();
+
+range.viaThis(-1);           // -1
+range.viaPeer(range, -1);    // @demands failed
+```
+
+The second line fails even though `peer` is the same object, because what decides is whether the reference reaches the proxy, not whether the instances are equal. The rejection crosses the boundary as a throw into the calling feature's body, so the calling feature's `@rescue` observes it. A failure in the callee's own body runs the callee's handler first, on the callee's lifecycle; a failed `@demands` consults no handler at all, for the reason given under [What a `@rescue` observes](#what-a-rescue-observes).
+
+### Which shape to use
+
+A public feature that another public feature calls needs one of two shapes. Both are correct; they trade a redundant declaration against a longer call chain.
+
+**Every public verb declares its own arm.** The delegating verb declares the guard it would otherwise rely on the callee for, so the check is redundant by design:
+
+```typescript
+class Repository extends Contracted {
+    @demands(({ args: [id] }) => id.length > 0)
+    read(id: string): unknown { return { id }; }
+
+    @demands(({ args: [id] }) => id.length > 0)   // redundant, and the point
+    describe(id: string): unknown { return this.read(id); }
+}
+```
+
+This is the shape to reach for when a verb is cheap to describe and the precondition is short. The duplication is a property of the boundary rather than an accident, so it does not drift: a call from outside reaches `describe` and runs its arm, and the call it makes inward is the same computation it already authorised.
+
+**A public verb is a guard plus a delegation to a private core.** The guarded work lives in one place, and each public entry point guards it:
+
+```typescript
+class Repository extends Contracted {
+    @demands(({ args: [id] }) => id.length > 0)
+    read(id: string): unknown { return this.core(id); }
+
+    @demands(({ args: [id] }) => id.length > 0)
+    describe(id: string): unknown { return this.core(id); }
+
+    /** Not contracted: every public path to it is. */
+    core(id: string): unknown { return { id }; }
+}
+```
+
+The `core` method is deliberately undecorated. It is not a boundary a caller can reach, so a contract on it would be unreachable code; the guard belongs to the verbs that are reachable.
+
+### The declaration still reads as enforcement
+
+The consequence that follows from all of this is that `@demands` on a feature reached only internally declares an obligation nothing enforces, and the library cannot refuse it at the point it is written. Every other contract in this library refuses a declaration it cannot honour — `normalize` on a predicate arm, `normalize` on `@invariant`, `allowWeakening` on an AND-composed contract — because a declaration that cannot act reads as an intention that is in force when it is not. This is the one case where the check would have to see a call, and a decorator is handed the element and a context, never the body.
+
+A runtime warning cannot close it either. The body holds the raw target, so `this.inner(x)` is a direct function call with no trap to observe it, and making the body's `this` an observing proxy would fire on the redundant-arm shape above, which is correct code.
+
+So the rule is a review question about your class rather than something the compiler or this library can check: a feature that is only ever reached from inside the class needs its guard on the verb a caller actually invokes.
 
 ### Deletion
 
@@ -1274,7 +1372,7 @@ When `obj.feature` is called the happy path is:
 
 ![image](./docs/happy-path.png)
 
-The invariant is evaluated **twice** per successful call: once on entry and once on exit. Each of `@demands`, the feature body, and `@ensures` runs once. Accessors follow the same lifecycle as methods, and an accessor that reads another accessor or calls a method does not start a nested lifecycle.
+The invariant is evaluated **twice** per successful call: once on entry and once on exit. Each of `@demands`, the feature body, and `@ensures` runs once. Accessors follow the same lifecycle as methods, and an accessor that reads another accessor or calls a method does not start a nested lifecycle. That means the nested feature's own contracts do not run; see [An internal call runs none of the callee's contracts](#an-internal-call-runs-none-of-the-callees-contracts).
 
 An `async` feature follows the same order with the exit checks moved after the promise settles, so they observe the state the body actually reached; its failures reach the caller as a rejection. A generator applies the same order **once per step**, as described in [Generators](#generators).
 
