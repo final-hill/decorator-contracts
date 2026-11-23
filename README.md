@@ -329,6 +329,47 @@ A thrown primitive is raised unchanged, since it has nowhere to carry the violat
 
 An error the contract did not create is never damaged: a frozen or non-extensible one is raised without the annotation, and a `cause` the consumer set is left alone. A contract's own `cause` never replaces one.
 
+### Raising a typed error with `onViolation`
+
+A predicate must not throw, so a typed error cannot be raised from inside one. `@demands` and `@ensures` therefore accept an `onViolation` factory on their options, which runs **once, after every arm has failed**, and its result is what the caller receives:
+
+```typescript
+import { Contracted, demands, type ContractViolation, type DemandsSubject } from '@final-hill/decorator-contracts';
+
+class PermissionDenied extends Error {
+    override name = 'PermissionDenied';
+
+    constructor(message: string, readonly violation?: ContractViolation) {
+        super(message);
+    }
+}
+
+class Account extends Contracted {
+    private _balance = 0;
+
+    @demands(({ self }: DemandsSubject<Account>) => self._balance > 0, {
+        onViolation: violation => new PermissionDenied('insufficient funds', violation),
+    })
+    withdraw(): void {
+        this._balance--;
+    }
+}
+```
+
+The factory receives the full `ContractViolation`, which is the only machine-readable part of a failure. That is why the option takes a factory rather than a bare error constructor: an error boundary or a metadata-driven test needs `failedIndices`, `thrownIndices`, and the schema `issues`, and a constructor called without the violation would discard them.
+
+The returned error carries the violation as `violation` and the `AssertionError` naming every unsatisfied arm as `cause`, both non-enumerable. A factory may supply its own `violation` and `cause`; those are kept, so an error that records what actually went wrong underneath keeps its record. The factory must return an object, since a primitive has nowhere to hold either field — that is reported as a `TypeError` naming the contract and feature, with the contract failure as its `cause`.
+
+**Precedence across arms.** Scope is per contract, not per arm: there is no case where two arms of one contract need different error types, and per-arm would make precedence meaningless. When several arms declare a factory, the one belonging to the **first arm evaluated** decides — the same rule that makes the first passing arm decide a normalized value. Arms evaluate in the contract's composition order, so a decorator written last in source is evaluated first, and inherited arms come before a subclass's own. An arm that declares no factory defers to the next.
+
+**When an arm also throws.** The factory still decides. A declared factory is the caller's explicit choice of error type, and it is given `thrownIndices` and `thrown`, so preferring it loses nothing.
+
+**`@ensures` vs `@invariant`.** `@ensures` accepts the option on the same terms, with one difference at the boundary: when the body also leaves the instance invariant-invalid, the invariant failure is what the caller receives and the factory's error travels as its `cause`, because a broken instance is the state that has to surface. `@invariant` **refuses the option at decoration time**, because an invariant failure is what tells the lifecycle that the instance is in a state a `@rescue` handler must repair: the check is recognised by being an `AssertionError` whose `violation.contract` is `'@invariant'`. An error built by a factory is neither, so the repair protocol would not see it. Use a `@rescue` handler instead — it observes a failure a feature raised and can raise a typed error of its own.
+
+That route covers the entry and exit checks only. The invariant `Contracted.new()` evaluates before it proxies the instance is outside every handler, so a class whose initial state violates an invariant reports an untyped `AssertionError`.
+
+`checkedMode` disables the factory along with the contract, since a contract that does not run cannot fail.
+
 ## Encapsulation
 
 Encapsulation governs the **external surface**. Public property assignment is forbidden from outside a contracted class, so a caller cannot mutate state without a postcondition to catch it. All interactions must go through a method or getter/setter, and only properties starting with `_` (conventionally private) can be assigned to after construction.

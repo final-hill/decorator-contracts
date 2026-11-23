@@ -1,6 +1,6 @@
 import { AssertionError, type ContractKind, type ContractViolation } from "./AssertionError.mjs";
 import type { StandardSchemaV1 } from './standard-schema.mjs';
-import { isSchema, type ArmFailures } from './admissibility.mjs';
+import { isSchema, type ArmFailures, type ViolationFactory } from './admissibility.mjs';
 
 /**
  * An assertion is an expression of a property that must be true at a particular
@@ -266,14 +266,29 @@ const annotated = new WeakSet<object>();
  * - **`defineProperty` is used rather than assignment**, so the record is
  *   non-enumerable. A domain error that serialises its own properties for logging
  *   must not suddenly gain a contract record it never asked for.
+ * - **A violation the factory supplied is kept.** The factory is handed the record,
+ *   so it may carry a narrowed or extended one. What counts as supplying one is a
+ *   **value**, not an own property: an optional parameter property on the error class
+ *   holds `undefined` until it is assigned, and treating that as a deliberate
+ *   omission would strip the error of the record the factory exists to deliver.
  */
-const annotate = (raised: object, violation: ContractViolation, cause: AssertionError): void => {
+const annotate = (
+    raised: object,
+    violation: ContractViolation,
+    cause: AssertionError,
+    fromFactory = false,
+): void => {
     if (!Object.isExtensible(raised)) return;
 
-    const mine = annotated.has(raised);
+    const mine = annotated.has(raised),
+        supplied = (key: 'violation' | 'cause'): boolean => {
+            if (mine || !Object.hasOwn(raised, key)) return false;
+
+            return !(fromFactory && key === 'violation' && (raised as { violation?: unknown }).violation === undefined);
+        };
 
     for (const [key, value] of [['violation', violation], ['cause', cause]] as const)
-        if (mine || !Object.hasOwn(raised, key))
+        if (!supplied(key))
             Object.defineProperty(raised, key, {
                 value,
                 enumerable: false,
@@ -281,6 +296,50 @@ const annotate = (raised: object, violation: ContractViolation, cause: Assertion
             });
 
     annotated.add(raised);
+};
+
+/**
+ * Builds the value a declared factory raises.
+ *
+ * Split from {@link violationFailure} because what it decides is independent of
+ * which contract failed: the factory is the caller's own choice of error type, and
+ * the only thing this library adds to what it returns is the record it was given.
+ *
+ * A returned primitive has nowhere to hold either attachment, so it is refused here
+ * rather than silently degrading the report — the caller would otherwise receive a
+ * value they cannot inspect. Anything `typeof` calls an object is accepted, so an
+ * array passes and carries both fields; narrowing further would reject a
+ * consumer's own error-like object for no gain, since the fields are attached
+ * whether or not it extends `Error`.
+ *
+ * @param label - The contract, feature, and class, for the diagnostic.
+ * @param error - The `AssertionError` describing every unsatisfied arm.
+ */
+const factoryFailure = (
+    label: string,
+    violation: ContractViolation,
+    error: AssertionError,
+    factory: ViolationFactory,
+): unknown => {
+    const raised = factory(violation);
+
+    if (typeof raised !== 'object' || raised === null)
+        throw new TypeError(
+            `${label} returned ${typeof raised}; it must return an object so the violation can be attached.`,
+            // The defect replaces the contract failure at the caller, so the
+            // failure travels as `cause`: what the factory was asked to report is
+            // still readable.
+            { cause: error },
+        );
+
+    // The violation and the describing `AssertionError` are attached by the same
+    // defensive rules a re-raised predicate error gets, so a factory error that
+    // carries its own `cause` keeps it. A violation the factory supplied itself
+    // also wins, because the factory was given the record and may have narrowed or
+    // extended it.
+    annotate(raised, violation, error, true);
+
+    return raised;
 };
 
 /**
@@ -299,6 +358,12 @@ const annotate = (raised: object, violation: ContractViolation, cause: Assertion
  * When no arm threw, the failure is a verdict rather than a fault and an
  * `AssertionError` carrying the full violation is raised as usual.
  *
+ * A declared {@link ViolationFactory} supersedes both rules, because it is the
+ * caller's explicit choice of error type and it receives the violation — including
+ * `thrownIndices` — so nothing is lost by preferring it. It runs only here, after
+ * every arm has been evaluated, which is the one point where the failure is final.
+ *
+ * @param factory - The contract's declared factory, if any arm declared one.
  * @internal
  * Exported only because the three contract modules live in their own files and
  * import it. It takes an `ArmFailures`, which is not part of the published surface,
@@ -312,15 +377,22 @@ export function violationFailure(
     failures: ArmFailures,
     summary: string,
     describe: (arm: unknown) => string = String,
+    factory?: ViolationFactory,
 ): unknown {
     const error = violationError(
         contract, className, feature, arms, failures.failed, summary,
-        failures.issues, describe, failures.thrown);
+        failures.issues, describe, failures.thrown),
+        violation = error.violation as ContractViolation;
+
+    if (factory)
+        return factoryFailure(
+            `${contract} onViolation for ${feature === undefined ? className : `${className}.${feature}`}`,
+            violation, error, factory,
+        );
 
     if (failures.thrown.length === 0) return error;
 
-    const raised = failures.thrown[0].value,
-        violation = error.violation as ContractViolation;
+    const raised = failures.thrown[0].value;
 
     // A thrown primitive has nowhere to carry the payload, and replacing it with a
     // wrapper would change the value the contract chose to raise.

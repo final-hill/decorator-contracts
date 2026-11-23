@@ -1,6 +1,22 @@
 import { assertContractResult } from './assert.mjs';
+import type { ContractViolation } from './AssertionError.mjs';
 import { readOnlyView } from './read-only.mjs';
 import type { StandardSchemaV1 } from './standard-schema.mjs';
+
+/**
+ * Converts a failed contract into the error its caller receives.
+ *
+ * It is called once, after **every** arm has failed, with the structured
+ * violation. That position is the whole reason the option exists: a predicate
+ * must not throw, because an arm that throws is one opinion that the call should
+ * not proceed rather than an abort of the composition, so a typed error cannot be
+ * raised from inside one. A factory runs where the decision is already made.
+ *
+ * The return value must be an object. The violation and the `AssertionError` that
+ * describes every unsatisfied arm are attached to it, so an error that could carry
+ * neither would silently lose the contract details.
+ */
+export type ViolationFactory = (violation: ContractViolation) => object;
 
 /**
  * The result of checking a subject against one contract arm.
@@ -33,6 +49,34 @@ export interface ArmOptions {
      * validation. Only a schema can normalize.
      */
     normalize?: boolean;
+
+    /**
+     * Build the error raised when the arm's contract fails.
+     *
+     * Receives the full `ContractViolation`, because that record is the only
+     * machine-readable part of a failure: an error boundary or a metadata-driven
+     * test needs `failedIndices`, `thrownIndices`, and the schema `issues`, and a
+     * bare constructor would discard them.
+     *
+     * Scope is **per contract, not per arm.** When several arms declare a factory,
+     * the one belonging to the **first arm evaluated** decides, matching the rule
+     * that the first arm decides a normalized value. Arms evaluate in the contract's
+     * composition order — reverse source order within a class, inherited arms
+     * first — so the factory that wins is the one whose declaration is read first by
+     * the runtime.
+     *
+     * The returned error carries the violation as `violation` and the
+     * `AssertionError` describing every unsatisfied arm as `cause`, both
+     * non-enumerable. A factory that returns a non-object is refused when it runs,
+     * since neither field could be attached to it; what it produces depends on the
+     * violation, so there is nothing to check at decoration time. The guard admits
+     * anything `typeof` reports as an object, so an array passes and carries both
+     * fields — it is the author's choice whether an error boundary can branch on it.
+     *
+     * A `@rescue` that retries calls the factory once per failed attempt, because
+     * each attempt is a separate failure with its own violation.
+     */
+    onViolation?: ViolationFactory;
 }
 
 /**
@@ -119,6 +163,72 @@ export const assertNotNormalizable = (contract: string, options: ArmOptions | un
     if (!options?.normalize) return;
 
     throw new TypeError(`${contract} cannot normalize: its subject is the instance, which no arm can replace.`);
+}
+
+/**
+ * Rejects a factory that is not callable.
+ *
+ * The return value is checked when the factory runs, because what it produces
+ * depends on the violation it is given. What can be checked here is that the
+ * declaration names a function at all, which catches the mistake where it is
+ * written rather than on the first failed call.
+ */
+export const assertViolationFactory = (contract: string, options: ArmOptions | undefined): void => {
+    if (options?.onViolation === undefined || typeof options.onViolation === 'function') return;
+
+    throw new TypeError(`${contract} onViolation must be a function that returns an error object.`);
+}
+
+/**
+ * Rejects a factory on a contract whose failure cannot carry one.
+ *
+ * `@invariant` is checked on entry, on exit, and once per construction, and its
+ * failure is what tells the lifecycle that the instance is in a state a `@rescue`
+ * handler must repair: `isInvariantFailure` in `Contracted.mts` recognises it as an
+ * `AssertionError` whose `violation.contract` is `'@invariant'`. An error built by
+ * a factory has neither, so a failure it raised would be re-tested, the factory
+ * called a second time, and the first error replaced by the second. The repair
+ * protocol would then act on an error the handler never saw.
+ *
+ * `@invariant` also has its own route to a typed error for a failure a feature
+ * raises: the entry and exit checks run inside the rescuable scope, so a `@rescue`
+ * handler observes the failure and can translate it. The check in `Contracted.new`
+ * is outside every handler — the constructor has returned and no feature is in
+ * play — so a class whose initial state violates an invariant reports an untyped
+ * `AssertionError`. `@demands` has no route at all, because a rejected precondition
+ * never enters a body, which is why the factory exists for it.
+ */
+export const assertNotViolationFactory = (contract: string, options: ArmOptions | undefined): void => {
+    // Tested against `undefined` rather than for truthiness, so the same declarations
+    // `assertViolationFactory` refuses are refused here too: `false`, `0`, `''`, and
+    // `null` are not factories on either contract.
+    if (options?.onViolation === undefined) return;
+
+    throw new TypeError(
+        `${contract} cannot declare onViolation: its failure is what signals an unrecoverable instance, `
+        + 'so it must stay an AssertionError. Translate it with a `@rescue` handler instead (which does not '
+        + 'cover the check in `Contracted.new`).',
+    );
+}
+
+/**
+ * Picks the factory that decides a contract's error.
+ *
+ * Scope is per contract rather than per arm, so the arms have to agree on which
+ * declaration is authoritative. The **first arm evaluated** wins, matching the rule
+ * that the first passing arm decides a normalized value: an arm earlier in the
+ * composition is the one whose declaration the contract reads first, and an arm
+ * that declares no factory defers to the next.
+ *
+ * @param entries - The contract's registered arms, in evaluation order.
+ */
+export const selectViolationFactory = (
+    entries: ReadonlyArray<{ options?: ArmOptions }>,
+): ViolationFactory | undefined => {
+    for (const { options } of entries)
+        if (options?.onViolation) return options.onViolation;
+
+    return undefined;
 }
 
 /**
