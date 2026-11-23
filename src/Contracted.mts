@@ -128,6 +128,26 @@ const cloneState = (value: any, seen: WeakMap<object, any>): any => {
 
     if (value instanceof Date) return new Date(value.getTime());
 
+    const container = cloneContainer(value, seen);
+    if (container !== undefined) return container;
+
+    if (!isPlainObject(value)) return value;
+
+    const copy = Object.create(Object.getPrototypeOf(value));
+    seen.set(value, copy);
+    copyDescriptors(value, copy, seen);
+
+    return copy;
+}
+
+/**
+ * Clones one of the container types a contract routinely compares.
+ *
+ * Returns `undefined` when `value` is none of them, which is how `cloneState` falls
+ * through to the plain-object path. Each container registers its copy in `seen`
+ * before recursing, so a cycle in the data terminates.
+ */
+const cloneContainer = (value: any, seen: WeakMap<object, any>): any => {
     if (Array.isArray(value)) {
         const copy: any[] = [];
         seen.set(value, copy);
@@ -152,19 +172,30 @@ const cloneState = (value: any, seen: WeakMap<object, any>): any => {
         return copy;
     }
 
-    if (!isPlainObject(value)) return value;
+    return undefined;
+}
 
-    const copy = Object.create(Object.getPrototypeOf(value));
-    seen.set(value, copy);
-
-    for (const key of Reflect.ownKeys(value)) {
-        const descriptor = Object.getOwnPropertyDescriptor(value, key)!;
+/**
+ * Copies `source`'s own property descriptors onto `copy`, cloning each value.
+ *
+ * Descriptors are copied rather than values, so an accessor is never invoked while
+ * a snapshot is taken: a getter on the copy reads the historical own state through
+ * `this`. `seen` carries the identity map, so a value reached twice is one copy.
+ *
+ * The instance snapshot, the plain-object clone, and a contracted argument's copy
+ * are the same operation on different sources, which is why it is stated once here.
+ */
+const copyDescriptors = (
+    source: object,
+    copy: object,
+    seen: WeakMap<object, any>,
+): void => {
+    for (const key of Reflect.ownKeys(source)) {
+        const descriptor = Object.getOwnPropertyDescriptor(source, key)!;
         Reflect.defineProperty(copy, key, 'value' in descriptor
             ? { ...descriptor, value: cloneState(descriptor.value, seen) }
             : descriptor);
     }
-
-    return copy;
 }
 
 /**
@@ -181,15 +212,84 @@ const populateOld = (target: Contracted) => {
     const old = Object.create(target),
         seen = new WeakMap<object, any>();
 
-    for (const key of Reflect.ownKeys(target)) {
-        const descriptor = Object.getOwnPropertyDescriptor(target, key)!;
-        Reflect.defineProperty(old, key, 'value' in descriptor
-            ? { ...descriptor, value: cloneState(descriptor.value, seen) }
-            : descriptor);
-    }
+    copyDescriptors(target, old, seen);
 
     return old;
 }
+
+/**
+ * Copies one call argument for the `oldArgs` snapshot.
+ *
+ * A contracted argument is copied the way `populateOld` copies the instance: a new
+ * object sharing the argument's prototype, with its own descriptors cloned. The
+ * descriptors are read from the target below the proxy, so no lifecycle runs and an
+ * argument that is already invalid does not throw while it is being described. A
+ * prototype getter on the copy therefore reads the historical own state through
+ * `this`, exactly as it does on `old`.
+ *
+ * Every other value takes the `cloneState` policy, so an argument and a field are
+ * described by the same rule. The boundary is consequently the same as `old`'s: the
+ * instance at the top of the value is snapshotted, while a contracted instance
+ * reached through a plain container is shared by reference.
+ */
+const snapshotArgument = (value: any, seen: WeakMap<object, any>): any => {
+    if (typeof value !== 'object' || value === null) return value;
+
+    const already = seen.get(value);
+    if (already !== undefined) return already;
+
+    if (!(value instanceof Contracted)) return cloneState(value, seen);
+
+    const copy = Object.create(Object.getPrototypeOf(value));
+    seen.set(value, copy);
+    copyDescriptors(value, copy, seen);
+
+    return copy;
+}
+
+/**
+ * Snapshots a call's arguments for the `oldArgs` field of the `@ensures` subject.
+ *
+ * The arguments are the ones the body receives, so a `@demands` arm that normalized
+ * them has already run: a postcondition compares the body's result against the
+ * arguments the body was actually given. One `seen` map spans the list, so an object
+ * reached twice is one copy in the snapshot, as it was one object to the caller.
+ *
+ * A value that cannot be described fails here rather than part-way through the
+ * contracts. The error names the feature and the argument's position, because the
+ * alternative is a foreign error from a `Proxy` trap with nothing to say about which
+ * argument caused it.
+ */
+const snapshotArguments = (args: any[], prop: PropertyKey): any[] => {
+    const seen = new WeakMap<object, any>();
+
+    return args.map((arg, index) => {
+        try {
+            return snapshotArgument(arg, seen);
+        } catch (error) {
+            throw new TypeError(
+                `@ensures on '${String(prop)}' cannot snapshot argument ${index}: `
+                + `a postcondition that describes an argument's pre-state needs every argument to be readable.`,
+                { cause: error },
+            );
+        }
+    });
+}
+
+/**
+ * Takes the `oldArgs` snapshot for an invocation, or `undefined` when no arm needs it.
+ *
+ * `hasEnsures` decides whether the work is worth doing at all: with no postcondition
+ * there is nothing that could read the snapshot, so the copy is skipped. It is also
+ * what makes the snapshot follow the checks-mode switch, because `hasEnsures` is the
+ * same condition the postcondition itself runs under.
+ */
+const preStateOfArguments = (
+    hasEnsures: boolean,
+    args: any[],
+    prop: PropertyKey,
+): any[] | undefined =>
+    hasEnsures ? snapshotArguments(args, prop) : undefined;
 
 /**
  * Caches the contract wrapper per instance and feature, so `f.m === f.m`.
@@ -463,6 +563,12 @@ function runSyncLifecycle(
         // failed precondition therefore reaches the caller directly.
         args = assertDemands(target, prop, args);
 
+        // The pre-state of the arguments the body is about to receive. Taken after
+        // `@demands` so a normalizing arm is reflected, and before the body so a
+        // mutation it makes is not visible through `oldArgs`. A retry loops back here
+        // and takes a fresh snapshot, so an attempt is described by its own arguments.
+        const oldArgs = preStateOfArguments(hasEnsures, args, prop);
+
         let result: any;
         try {
             result = invoke(args);
@@ -471,7 +577,8 @@ function runSyncLifecycle(
                 assertNotThenable(result, target, prop);
 
             if (hasEnsures)
-                result = assertEnsures(target, old, prop, ensuresArgs(descriptorType, result, args), result);
+                result = assertEnsures(
+                    target, old, prop, ensuresArgs(descriptorType, result, args), result, oldArgs);
 
             assertInvariants(Class, target);
         } catch (error) {
@@ -509,6 +616,7 @@ function runExit(
     args: any[],
     result: unknown,
     old: Contracted | undefined,
+    oldArgs: any[] | undefined,
     hasEnsures: boolean,
     awaitEnsures: boolean,
 ): unknown {
@@ -521,14 +629,16 @@ function runExit(
     const subject = ensuresArgs(descriptorType, result, args);
 
     if (!awaitEnsures) {
-        const checked = assertEnsures(target, old!, prop, subject, result);
+        const checked = assertEnsures(
+            target, old!, prop, subject, result, oldArgs);
 
         assertInvariants(Class, target);
 
         return checked;
     }
 
-    return runAwaitedPostcondition(Class, target, assertEnsuresAsync(target, old!, prop, subject, result));
+    return runAwaitedPostcondition(Class, target, assertEnsuresAsync(
+        target, old!, prop, subject, result, oldArgs));
 }
 
 /**
@@ -619,6 +729,10 @@ async function runAsyncLifecycle(
             ? await assertDemandsAsync(target, prop, args)
             : assertDemands(target, prop, args);
 
+        // Taken after `@demands` and before the body, exactly as in the synchronous
+        // lifecycle, so it describes the arguments this attempt's body receives.
+        const oldArgs = preStateOfArguments(hasEnsures, args, prop);
+
         let result: any;
         try {
             result = await invoke(args);
@@ -629,7 +743,7 @@ async function runAsyncLifecycle(
             // alone decides the wait: it is false when there is no postcondition to
             // check as well as when none of its arms asked to be awaited.
             const exit = runExit(
-                Class, descriptorType, target, prop, args, result, old, hasEnsures, awaitEnsures);
+                Class, descriptorType, target, prop, args, result, old, oldArgs, hasEnsures, awaitEnsures);
 
             result = awaitEnsures ? await exit : exit;
         } catch (error) {
@@ -750,9 +864,13 @@ function runGeneratorLifecycle(
 
     /**
      * Runs the exit contracts for a step that produced a value.
+     *
+     * A generator's `@ensures` describes the value the step yielded, so there is no
+     * argument whose pre-state it could compare: `oldArgs` is empty, on the same
+     * grounds as a getter's. The step's pre-state is already `old`.
      */
     const exit = (value: any, old: Contracted | undefined) => {
-        if (hasEnsures) assertEnsures(target, old!, prop, [value], value);
+        if (hasEnsures) assertEnsures(target, old!, prop, [value], value, []);
 
         assertInvariants(Class, target);
 

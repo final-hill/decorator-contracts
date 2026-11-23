@@ -9,10 +9,15 @@
  * @param q - The second boolean value (the consequent).
  * @returns - The result (biconditional) of p and q, always a `boolean`.
  *
- * A non-boolean operand is coerced rather than rejected, because this is a
- * general-purpose logical helper. Inside a contract the coercion is redundant:
- * `@demands` and the other contracts already require a literal `true` or `false`
- * and will report a non-boolean result by name.
+ * A non-boolean operand is coerced rather than rejected, because the parameters are
+ * already `boolean`: a typed non-boolean operand does not compile. The coercion
+ * therefore decides only what a value that reached the helper through `any` or
+ * untyped JavaScript means, and there it is the ordinary JavaScript rule — a truthy
+ * operand answers `true` rather than being named.
+ *
+ * A contract names a non-boolean *result*, but it cannot see inside the helper to
+ * name an operand. State a contract through this helper only when both operands are
+ * already booleans, or write the comparison directly instead.
  *
  * @example
  * ```ts

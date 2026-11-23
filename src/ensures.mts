@@ -17,6 +17,22 @@ import type { FeatureDecoratorContext } from './types.mjs';
  * `Readonly`, and is deliberately not the same object as `self`: it is a detached
  * copy, so a predicate writing to it corrupts nothing.
  *
+ * `oldArgs` is the snapshot of the **call's arguments** from before the body ran,
+ * taken on the same terms as `old`. It is what lets a predicate state a property
+ * over an object it was *given*, rather than only over the instance whose feature
+ * it is: `oldArgs[0].onHold` is the argument's state before the call, while
+ * `args[0].onHold` is its state now.
+ *
+ * `oldArgs` mirrors the arguments the caller supplied, which is why a getter has
+ * none: `args` describes a getter's *result*, and a result has no pre-state. A
+ * generator is the same case from the other end — `args` describes the value the
+ * step yielded — so it has none either. Every other feature pairs them:
+ * `oldArgs[i]` is the pre-state of `args[i]`.
+ *
+ * The field is typed `Args` because that is the only tuple the subject carries.
+ * A generator's `oldArgs` is therefore empty where its annotation says otherwise,
+ * which is why a generator's `@ensures` is annotated for its `args` alone.
+ *
  * `result` is the value the feature body produced, which is what the caller
  * receives unless a schema arm normalizes it. Every arm is given the **same**
  * unnormalized value, because `@ensures` is AND-composed: "every arm must hold" is
@@ -38,6 +54,7 @@ export interface EnsuresSubject<This, Args extends any[] = any[], Result = unkno
     readonly self: This;
     readonly args: Args;
     readonly old: This;
+    readonly oldArgs: Args;
     readonly result: Result;
 }
 
@@ -149,14 +166,24 @@ export const ensures: EnsuresDecorator = (arm, options) => (feature, ctx) => {
 /**
  * What a postcondition arm observes.
  *
- * A predicate sees the invocation, the historical instance, and the result; a
- * schema validates the result. Every arm is given the same `result`, including a
- * normalizing schema arm, which validates it before replacing it. Supplying the raw
- * value to all of them is what makes AND-composition a claim about one thing rather
- * than several.
+ * A predicate sees the invocation, the historical instance, the invocation's
+ * historical arguments, and the result; a schema validates the result. Every arm is
+ * given the same `result`, including a normalizing schema arm, which validates it
+ * before replacing it. Supplying the raw value to all of them is what makes
+ * AND-composition a claim about one thing rather than several.
+ *
+ * `oldArgs` arrives on the subject rather than as a parameter because the subject is
+ * where a predicate reads it, and because this function is published: a caller that
+ * builds a subject already supplies it, and its signature stays as it was.
  */
-const ensuresSubjects = (instance: Contracted, args: any[], old: Contracted, result: unknown): ArmSubjects => ({
-    predicate: () => ({ self: instance, args, old, result }),
+const ensuresSubjects = (
+    instance: Contracted,
+    args: any[],
+    old: Contracted,
+    oldArgs: any[],
+    result: unknown,
+): ArmSubjects => ({
+    predicate: () => ({ self: instance, args, old, oldArgs, result }),
     schema: () => result,
 });
 
@@ -217,6 +244,9 @@ const foldOutcome = (
  * strengthen a postcondition, so every inherited arm has to keep holding.
  *
  * @param result - The value the caller receives. A schema arm validates it.
+ * @param oldArgs - The pre-state of the arguments the body received. Optional and
+ *   trailing so the signature stays additive: a caller that predates the field
+ *   omits it, and the subject reports an empty list.
  * @returns The result to hand the caller, which is the original unless an arm
  *   normalized it.
  */
@@ -226,6 +256,7 @@ export function assertEnsures(
     propertyKey: PropertyKey,
     args: any[],
     result: unknown,
+    oldArgs: any[] = [],
 ): unknown {
     const Class = instance.constructor as typeof Contracted;
 
@@ -245,7 +276,7 @@ export function assertEnsures(
     for (const [index, entry] of es.entries())
         normalized = foldOutcome(failures, index, evaluateArm(
             entry.arm,
-            ensuresSubjects(instance, args, old, result),
+            ensuresSubjects(instance, args, old, oldArgs, result),
             '@ensures',
             label,
             index,
@@ -287,6 +318,9 @@ export function ensuresAwaitable(instance: Contracted, propertyKey: PropertyKey)
  * failed.
  *
  * @param result - The value the caller receives. A schema arm validates it.
+ * @param oldArgs - The pre-state of the arguments the body received. Optional and
+ *   trailing so the signature stays additive: a caller that predates the field
+ *   omits it, and the subject reports an empty list.
  * @returns The result to hand the caller, which is the original unless an arm
  *   normalized it.
  */
@@ -296,6 +330,7 @@ export async function assertEnsuresAsync(
     propertyKey: PropertyKey,
     args: any[],
     result: unknown,
+    oldArgs: any[] = [],
 ): Promise<unknown> {
     const Class = instance.constructor as typeof Contracted;
 
@@ -314,7 +349,7 @@ export async function assertEnsuresAsync(
     for (const [index, entry] of es.entries())
         normalized = foldOutcome(failures, index, await evaluateArmAsync(
             entry.arm,
-            ensuresSubjects(instance, args, old, result),
+            ensuresSubjects(instance, args, old, oldArgs, result),
             '@ensures',
             label,
             index,

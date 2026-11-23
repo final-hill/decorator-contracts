@@ -28,6 +28,7 @@
 - [Rescue](#rescue)
 - [Standard Schema](#standard-schema)
 - [Inspecting contracts](#inspecting-contracts)
+- [Contracts and your test suite](#contracts-and-your-test-suite)
 - [The order of assertions](#the-order-of-assertions)
 - [The subject a predicate is called with](#the-subject-a-predicate-is-called-with)
 - [Further Reading](#further-reading)
@@ -258,7 +259,18 @@ implies(weather.isSunny, person.visitsBeach);
 // Logically equivalent to: !weather.isSunny || person.visitsBeach
 ```
 
-Both functions always return a `boolean`, even when an operand is not a boolean: a truthy object is coerced rather than passed through. Inside a contract this is redundant, because `@demands` and friends already require a literal `true` or `false` and name the offending feature.
+Both functions always return a `boolean`, even when an operand is not a boolean: a truthy object is coerced rather than passed through. Their parameters are `boolean` as well, so a typed non-boolean operand does not compile. The coercion therefore decides only what a value means when it reached the helper past the type system — typed `any`, or plain JavaScript — where a truthy operand answers `true` instead of being named:
+
+```typescript
+@invariant(({ self }) => implies(true, self._entry))   // passes: the object is truthy
+class CacheEntry extends Contracted {
+    public _entry: any = { loaded: false };            // `any`: the operand type is not checked
+}
+```
+
+A contract names a non-boolean *result*, but it cannot inspect an operand, so state a contract through a helper only when both operands are already booleans, and write the comparison when you want the operand itself checked.
+
+Use these combinators to state a **relationship between two properties**, which is what an invariant and a precondition are. Do not use one in place of a postcondition's target-state conjunction: it weakens the obligation. A body that does nothing satisfies `iff(self.onHold, !self.available)` and `implies(!self.available, self.onHold)`, while `self.onHold && !self.available` rejects it.
 
 ## Iff
 
@@ -271,7 +283,7 @@ iff(person.hasTicket, person.ridesTrain);
 // Logically equivalent to: implies(p, q) && implies(q, p)
 ```
 
-Both functions always return a `boolean`, even when an operand is not a boolean: a truthy object is coerced rather than passed through. Inside a contract this is redundant, because `@demands` and friends already require a literal `true` or `false` and name the offending feature.
+It returns a `boolean`, coerces a non-boolean operand, and must not stand in for a postcondition's target-state conjunction — all three stated under [Implies](#implies), which applies to both.
 
 ## Contracts are Hoare triples
 
@@ -1019,6 +1031,53 @@ Class instances and functions are shared deliberately. They carry behaviour, so 
 
 Accessors are copied as descriptors rather than evaluated, so snapshotting never invokes a getter.
 
+### The `oldArgs` arguments
+
+`oldArgs` is the same snapshot, taken over the call's arguments instead of the
+instance. It is what lets a postcondition describe an object it was *given*: a
+consequence that spans two objects belongs to neither one, so it is stated by a class
+that takes both as arguments, and `oldArgs` is how that class asks what its argument
+was before the call.
+
+```typescript
+class Usage extends Contracted {
+    @demands(({ args: [book] }) => !book.onHold)
+    @ensures(({ args: [book], oldArgs: [before] }) => book.onHold && !before.onHold)
+    holdForPatron(book: Book, _patron: string): void { book.placeHold(_patron); }
+}
+```
+
+Without `oldArgs` the only spelling of that property is `book.onHold && !book.onHold`,
+which is false for every book, or a comparison against the argument itself, which is
+vacuously true: `old` shares a class instance by reference, so `old.…` and `self.…` are
+the same object when the instance is held in a field.
+
+It follows `old`'s policy exactly, and one detail is worth stating because it differs
+from the instance case: a **contracted argument** is copied the way `old` is. The copy
+is a new object that shares the argument's prototype and its own state, so a getter on
+it reads the historical value. Its descriptors are read below the proxy, so
+snapshotting an argument does not run that object's contracts and does not fail on an
+instance that is already invalid. Every other argument takes the field rule: plain
+containers are cloned, class instances are shared by reference.
+
+The snapshot is taken **after `@demands` and before the body**, so it is the argument
+the body actually receives — a normalizing precondition has already replaced it — and
+a mutation the body makes is not visible through it. A `@rescue` that retries takes a
+fresh snapshot for the retried attempt.
+
+It is taken whenever the feature declares any `@ensures`, whether or not an arm reads
+`oldArgs`, because the arms are not inspectable for what they reference. Two
+consequences follow:
+
+- An argument that cannot be described fails the call. A `Proxy` with a throwing
+  `getPrototypeOf`, for instance, raises a `TypeError` naming the feature and the
+  argument's position before the body runs.
+- A large plain-data argument is deep-cloned on every call. A 200 000-element array
+  measured 1.4 ms per call, against about 1 µs for the same feature with no `@ensures`.
+
+A getter and a generator carry an empty `oldArgs`: their `args` describes a result or
+a yielded value, neither of which has a pre-state.
+
 ### Subcontracting and Ensures
 
 When subclassing, if a subclass defines its own `@ensures` for a method, the resulting postcondition is **strengthened**: the subclass and base class ensures are AND-ed together. The method's result must satisfy **all** ensures in the inheritance chain.
@@ -1339,9 +1398,9 @@ The subject is the subject the contract already describes, so the two kinds of a
 
 | Decorator | A schema validates | A predicate receives | Composition |
 | --- | --- | --- | --- |
-| `@invariant` | the instance | `(self)` | AND |
-| `@demands` | the **argument tuple** | `(self, args)` | OR |
-| `@ensures` | the **result** | `(self, args, old)` | AND |
+| `@invariant` | the instance | `({ self })` | AND |
+| `@demands` | the **argument tuple** | `({ self, args })` | OR |
+| `@ensures` | the **result** | `({ self, args, old, oldArgs, result })` | AND |
 
 Because `@demands` validates the argument tuple rather than the first argument, a one-parameter method is written as a tuple of one (`z.tuple([...])`). This keeps the subject unambiguous for any arity, and it is what makes an issue's `path` point at the argument that failed.
 
@@ -1511,6 +1570,24 @@ is the handler a [class-level declaration](#one-handler-for-a-whole-class) gives
 and `getFeatureContracts` returns that one. A `_`-prefixed feature has neither, so
 both report `undefined` for it.
 
+### A predicate arm and a schema arm are not equally readable
+
+The arm you get back is the one you declared, so a test can compare it against the
+declaration by identity. What it can then *do* with it depends on the kind:
+
+- A **predicate** is opaque. Calling it is the whole interface: `({ args }) => args[0] > 0`
+  describes its domain nowhere else, and reading its source text would be a second
+  implementation of the predicate that also breaks under minification.
+- A **schema** may describe its own input when its provider carries the Standard JSON
+  Schema trait, `schema['~standard'].jsonSchema.input({ target: 'draft-2020-12' })`. That
+  is a *separate* trait layered on Standard Schema V1, so it is optional and its
+  coverage varies by provider; and it is lossy, because it reports bounds and `enum` but
+  not refinements, transforms, or a `Date`.
+
+So a schema arm can *propose* candidate inputs for a contract, and a predicate arm
+cannot. The verdict is still the contract's either way: a proposed value is only
+plausible until `validate` accepts it.
+
 ### The stability guarantee
 
 The shape of `ContractMetadata` and `FeatureContracts` is stable for the major
@@ -1518,6 +1595,41 @@ version: fields may be added, but an existing field will not change meaning
 without one. The *arms* are whatever you declared — a predicate, a schema, and the
 options passed alongside it — so their identity is preserved and comparing an arm
 against the one you wrote works.
+
+## Contracts and your test suite
+
+A contracted class already *is* a specification: `@demands` states what every
+permitted call assumes, `@ensures` what it guarantees, and `@invariant` what holds
+throughout. A test that restates one of those is a second copy of the same claim, and
+the copy is the one that drifts.
+
+Three roles split the work. A **requirements class** declares the contracts and does
+not sequence them. A **specification driver** is a `Contracted` class with no state of
+its own whose features take the objects they relate as arguments; it states what no
+single class can, such as *a patron cannot hold a book that is already held*, using
+`@demands` over its own arguments and `@ensures` over `oldArgs`. A **scenario** is a
+test that supplies the inputs and shows the behaviour; it validates the
+specification and does not provide it.
+
+The rule for a test you already have:
+
+- An arrange block that only establishes a precondition → the precondition belongs in
+  `@demands`, and the test goes.
+- An assertion that restates an `@ensures` or an `@invariant` → the test goes.
+- A property spanning two objects → keep it as a scenario, and if it is not yet a
+  declaration, add the driver that states it.
+- A house rule over a set of classes → keep it; it reads `getContractMetadata` and no
+  class's contracts can state it.
+- A regression or an interaction with the environment → keep it; no contract can
+  state either.
+
+What contracts cannot do is *show behaviour*: they say a property must hold, never
+what the system does or which inputs are interesting. So a sweep of inputs whose
+verdicts are the contract's is still a test, and a property over inputs the contract
+has already approved is still the strongest form of one. [Testing a contracted
+class](./docs/testing.md) is the long form: arranging state, asserting a failure,
+mocking, `async`, and generating inputs — including where a schema arm can propose
+them and a predicate arm cannot.
 
 ## The order of assertions
 
@@ -1556,7 +1668,7 @@ parameter so a `max-params: 1` configuration is satisfied.
 | Contract | Subject fields |
 | --- | --- |
 | `@demands` | `{ self, args }` |
-| `@ensures` | `{ self, args, old, result }` |
+| `@ensures` | `{ self, args, old, oldArgs, result }` |
 | `@invariant` | `{ self }` |
 | `@rescue` | `{ self, error, args, retry, feature }` |
 
