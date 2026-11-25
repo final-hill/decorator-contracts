@@ -248,6 +248,43 @@ str.toUpperCase(); // str is now a string
 
 Use the `@demands` decorator for this purpose.
 
+### Raising your own error type
+
+`assert` raises an `AssertionError` by default. A third argument supplies the
+constructor it calls instead, so a refusal can be the type an application's error
+boundary already branches on:
+
+```typescript
+import { assert } from '@final-hill/decorator-contracts';
+
+class NotFoundException extends Error {
+    override name = 'NotFoundException';
+}
+
+const findUser = (id: number): { name: string } | undefined =>
+    id === 1 ? { name: 'ada' } : undefined;
+
+const user = findUser(1);
+
+assert(user, 'User with id 1 not found', NotFoundException);
+
+user.name; // narrowed; no non-null assertion and no second check
+```
+
+Only the message is passed to the constructor, so a constructor whose second
+argument is optional — an error carrying a `code`, say — satisfies the parameter
+and builds an error with that argument unset. One that *requires* a second
+argument is a compile error, because nothing here could supply it. The parameter
+is a constructor and not a factory: a class and a bound constructor are accepted,
+while a plain `(message) => Error` arrow or a `function` declaration is not,
+because a call signature is not a construct signature and `new` is what raises
+the error.
+
+The contracts need nothing new here. `@demands`, `@ensures`, and `@invariant`
+already take an [`onViolation`](#raising-a-typed-error-with-onviolation) factory,
+which is handed the structured violation. `assert` has no violation to report, so
+a constructor is the whole of what it needs.
+
 ## Implies
 
 When defining predicates it is a common use case to encode [material implication](https://en.wikipedia.org/wiki/Material_conditional):
@@ -335,7 +372,10 @@ interface ContractViolation {
 
 `@demands` is OR-composed, so a failure lists **every** arm that rejected the call — any of them could have permitted it. `@ensures` and `@invariant` are AND-composed, so a failure lists only the arms that broke.
 
-An `AssertionError` thrown by `assert()` itself has no `violation`.
+An `AssertionError` raised by `assert()` itself has no `violation`, and supplies
+none of the fields above. An error the caller's own constructor builds is not an
+`AssertionError` at all and carries nothing the library adds — see
+[Raising your own error type](#raising-your-own-error-type).
 
 ### Naming a class in a failure
 
