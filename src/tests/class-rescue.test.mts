@@ -172,7 +172,7 @@ describe('A class-level handler serves every kind of feature', () => {
                 _internal(): void { }
             }
             void Bar;
-        }, /@rescue decorator cannot be applied to private\/protected features/);
+        }, /@rescue decorator cannot be applied to a '_'-prefixed feature/);
     });
 
     test('an `async` feature rejects into the handler', async () => {

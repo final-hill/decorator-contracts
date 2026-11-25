@@ -233,6 +233,13 @@ contracted class in the project.
 A subclass reports the base's arms and its own, so an inherited verb is not falsely
 reported as undeclared.
 
+Enumerate the verbs the rule is about, as above, rather than iterating the keys of
+`metadata.demands`. A key is present for every member a decorator accepted, and that
+includes a `protected` or `private` member: the modifier is erased, so the decorator
+registers an arm for a feature no external caller can reach. Iterating keys would
+certify those dead arms alongside the live ones, while naming the public verbs asks the
+question the rule is actually about.
+
 **A corpus probe per feature.** The declaration decides each verdict; the test supplies
 only the inputs:
 
