@@ -595,6 +595,12 @@ A runtime warning cannot close it either. The body holds the raw target, so `thi
 
 So the rule is a review question about your class rather than something the compiler or this library can check: a feature that is only ever reached from inside the class needs its guard on the verb a caller actually invokes.
 
+**A `protected` or `private` member has no external path, only a peer path.** The modifier is a compile-time refinement of an ordinary public property: the emitted JavaScript carries no record of it, and a standard decorator context reports `private: false` for both (`context.private` is true only for a native `#private` member). A caller outside the class cannot name the member, and the usual access inside it is `this.member`, which runs against the raw target and starts no lifecycle.
+
+The arm is therefore reachable only through the [cross-instance case](#the-cross-instance-case-is-checked): a subclass method that reads the member on another instance, as `peer.member`, does cross a proxy and does evaluate it. When no such call exists, the declaration describes a boundary no invocation can reach.
+
+The decorator cannot refuse that declaration, because it never sees the modifier, and a check keyed on it would also refuse the public member it is indistinguishable from. The `_` prefix is the one signal the runtime does have, which is why a `_`-prefixed feature is refused outright. Write a member that only the class calls as an undecorated method, as `core` is above; the guard belongs on the public verb, and a declaration that names a member nothing can reach reads as a guarantee it does not give.
+
 ### Deletion
 
 Deletion is an external mutation, so it follows exactly the same rule as assignment: `_`-prefixed properties may be deleted, public properties may not, and the invariant is evaluated around the deletion.

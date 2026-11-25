@@ -48,6 +48,13 @@ export function assertDecoratorContext(
  * The rule lives here rather than in each decorator so that a constraint added to
  * one applies to all three, instead of being easy to miss in the others.
  *
+ * The name is the only visibility the runtime can see, and it is deliberately the
+ * only one checked. A `protected` or `private` keyword member is an ordinary public
+ * property in the emitted JavaScript, and a standard context reports `private: false`
+ * for it; `context.private` is true only for a native `#private` member. The `_`
+ * convention is therefore what carries the guarantee, not the modifier: a contract on
+ * a non-public keyword member is accepted here, and the documentation says why.
+ *
  * The name of the contract is passed in so the messages stay specific.
  *
  * `context` is `unknown` because the protocol is diagnosed here rather than by
@@ -63,7 +70,7 @@ export function assertFeatureContractTarget(contract: string, feature: unknown, 
 
     assert(context.static === false, `${contract} decorator cannot be applied to static features`);
     assert(context.private === false, `${contract} decorator cannot be applied to private features`);
-    assert(!String(context.name).startsWith('_'), `${contract} decorator cannot be applied to private/protected features`);
+    assert(!String(context.name).startsWith('_'), `${contract} decorator cannot be applied to a '_'-prefixed feature`);
 
     // Registration happens at decoration time rather than in `addInitializer`,
     // which runs once per instance: doing it there appended the same predicate on
