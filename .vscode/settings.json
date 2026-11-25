@@ -7,9 +7,11 @@
     "explorer.fileNesting.expand": false,
     "explorer.fileNesting.patterns": {
         "*.mjs": "${basename}.mjs.map, ${basename}.d.mts",
-        "*.mts": "${basename}.test.mts"
+        "*.mts": "${basename}.test.mts",
+        "devcontainer.json": "devcontainer-lock.json"
     },
-    "typescript.tsdk": "node_modules/typescript/lib",
+    "js/ts.tsdk.path": "node_modules/typescript/lib",
+    "ollama.endpoint": "http://host.docker.internal:11434",
     "cSpell.ignorePaths": [
         "node_modules",
         "package.json"
