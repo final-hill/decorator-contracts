@@ -61,10 +61,9 @@ export const contractName = Symbol.for('Contracted.contractName');
  * declaration is read on the way to reporting it, so a throwing accessor must not
  * replace the failure with its own error. The constructor name is what is left.
  *
- * @param Class - The class to name, passed as the constructor itself (`Cart`). Do
- *   not pass `instance.constructor`: through the proxy that resolves to a wrapper
- *   rather than the class, so the declaration is not on it and the name reported
- *   is the wrapper's.
+ * @param Class - The class to name, passed as the constructor itself (`Cart`).
+ *   `instance.constructor` is the same object and may be passed instead, but a
+ *   caller that already holds the class needs no instance to name it.
  * @internal
  * Exported only because the contract modules and the proxy live in their own files
  * and import it. Read {@link contractName} instead; it is the published surface.

@@ -1,11 +1,20 @@
 {
     "name": "decorator-contracts",
     "image": "mcr.microsoft.com/devcontainers/typescript-node:26",
+    // Ollama runs on the host, not in the container, so the container needs a
+    // name for the host that plain Linux Docker does not provide. Docker Desktop
+    // resolves host.docker.internal on its own, but declaring the alias keeps the
+    // same endpoint working on a plain-Docker host, where the name would
+    // otherwise not resolve at all.
+    "runArgs": ["--add-host=host.docker.internal:host-gateway"],
     "features": {
         "ghcr.io/devcontainers/features/common-utils:2": {
             "installZsh": false,
             "installOhMyZsh": false,
             "upgradePackages": false
+        },
+        "ghcr.io/devcontainers/features/github-cli:1": {
+            "version": "latest"
         }
     },
     "postCreateCommand": "npm ci",
@@ -14,11 +23,20 @@
             "extensions": [
                 "editorconfig.editorconfig",
                 "dbaeumer.vscode-eslint",
-                "davidanson.vscode-markdownlint"
+                "davidanson.vscode-markdownlint",
+                "github.vscode-github-actions",
+                "GitHub.vscode-pull-request-github",
+                "Ollama.ollama",
+                "xadamxk.prune-stale-git-branches"
             ],
             "settings": {
+                // The extension defaults to 127.0.0.1, which inside the container
+                // is the container, not the machine running Ollama. This override
+                // is scoped to the container so a checkout opened directly on the
+                // host keeps the loopback default.
+                "ollama.endpoint": "http://host.docker.internal:11434",
                 "files.eol": "\r\n",
-                "typescript.tsdk": "node_modules/typescript/lib"
+                "js/ts.tsdk.path": "node_modules/typescript/lib"
             }
         }
     },

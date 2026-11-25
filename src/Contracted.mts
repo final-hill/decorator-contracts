@@ -1355,6 +1355,18 @@ const wrapperFor = (
  * callback that is not a feature, and would report a replaced callback through the
  * wrapper cached against the property name.
  *
+ * `constructor` is read the same way, for its own reason: it is the class's
+ * **identity**, not a feature. A decorator cannot target it — a class body's
+ * `constructor` is the constructor itself, which `assertFeatureContractTarget`
+ * refuses — so there is no contract to bracket and no feature for a wrapper to
+ * dispatch to. Returning the class is what keeps `instance.constructor === Class`
+ * and `instance.constructor.name` true for code that inspects an instance from
+ * outside; a wrapper is an anonymous function that is neither.
+ *
+ * `Reflect.get` on the raw target rather than a read of the prototype keeps the
+ * language's own rule: an own `constructor` a body installed shadows the inherited
+ * one, exactly as it would on a plain object.
+ *
  * @param own - The target's own descriptor, if it has one.
  */
 const readMember = (
@@ -1363,7 +1375,7 @@ const readMember = (
     receiver: unknown,
     own: PropertyDescriptor | undefined,
 ): any => {
-    if (own) return Reflect.get(target, prop, receiver);
+    if (prop === 'constructor' || own) return Reflect.get(target, prop, receiver);
 
     const descriptor = getPropertyDescriptor(Object.getPrototypeOf(target), prop);
 

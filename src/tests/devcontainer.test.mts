@@ -90,9 +90,15 @@ describe('The container pins the same Node version as CI and `engines`', () => {
 });
 
 describe('Editor settings work on a POSIX filesystem', () => {
-    test('`typescript.tsdk` is a relative path, not a Windows path', () => {
-        const tsdk: string = readJson(join('.vscode', 'settings.json'))['typescript.tsdk'];
+    test('`js/ts.tsdk.path` is a relative path, not a Windows path', () => {
+        const settings: any = readJson(join('.vscode', 'settings.json')),
+            tsdk: string = settings['js/ts.tsdk.path'];
 
+        nodeAssert.strictEqual(
+            settings['typescript.tsdk'],
+            undefined,
+            '`typescript.tsdk` is deprecated in favour of `js/ts.tsdk.path`'
+        );
         nodeAssert.doesNotMatch(tsdk, /\\\\/, 'a backslash path does not resolve in the container');
         nodeAssert.strictEqual(tsdk, 'node_modules/typescript/lib');
     });
