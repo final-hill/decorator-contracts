@@ -3,28 +3,74 @@ import type { StandardSchemaV1 } from './standard-schema.mjs';
 import { isSchema, type ArmFailures, type ViolationFactory } from './admissibility.mjs';
 
 /**
- * An assertion is an expression of a property that must be true at a particular
- * point of step of program execution. It consists of a boolean expression
- * and a message. This function tests the provided condition. If the condition
- * is false an AssertionError is raised with an optional message.
- * If the provided condition is true then the function returns without raising an error
+ * Asserts that a property holds at a point in the program's execution.
  *
- * @param condition - The condition to test. If it is false an error is raised.
- * @param message - The message to display if the condition is false. If not provided a default message is used.
- * @throws {AssertionError} If the condition is false an AssertionError is raised.
+ * The condition is tested and, when it is false, an error carrying the message is
+ * raised. A true condition returns, so the call costs nothing on the path a
+ * caller expects. The `asserts` modifier applies to the condition, which is what
+ * lets a caller read a value after the call that they could not read before it.
+ *
+ * The error is built by `error`, which defaults to {@link AssertionError}. A
+ * consumer whose application maps its own error classes to responses supplies its
+ * own constructor, so a refusal raised here is the type its boundary branches on
+ * rather than an `AssertionError` the boundary does not know.
+ *
+ * A construct signature is what the parameter accepts rather than a call
+ * signature, because the error is raised with `new`. A class and a bound
+ * constructor satisfy it; a `(message) => Error` arrow and a `function`
+ * declaration do not, so the choice between a constructor and a factory is made
+ * by the signature rather than left to each call. The message is the only
+ * argument passed, so the compiler refuses a constructor that requires a second
+ * one — nothing could supply it — while a constructor whose second argument is
+ * optional, an error carrying a `code` say, satisfies the parameter and leaves
+ * that argument unset. Which parameter the message belongs to is not something the
+ * compiler can check, so a constructor that takes the message in some position
+ * other than the first — `AggregateError`, whose first parameter is the errors —
+ * is accepted and receives the message in the wrong place.
+ *
+ * At runtime a non-constructible value raises the `TypeError` that `new` raises.
+ * The type system already refuses one, so this is reached only from plain
+ * JavaScript.
+ *
+ * @param condition - The condition to test. A false condition raises the error.
+ * @param message - The message carried by the raised error. Defaults to
+ *   `Assertion Error`.
+ * @param error - Builds the error to raise. Defaults to {@link AssertionError}.
+ *   Only `message` is passed to it. Pass `undefined` for this argument to keep the
+ *   default while omitting a message.
+ * @throws The value `error` constructs. When it is not supplied, that is an
+ *   {@link AssertionError}.
  *
  * @example
  * ```ts
- * import assert from "assert.mjs";
+ * import { assert } from '@final-hill/decorator-contracts';
  *
- * let x = 15;
+ * const x = 15;
  * assert(x > 5, `Expected: x > 5. Actual: x = ${x}`);
  * ```
+ *
+ * @example
+ * A refusal raised as the caller's own error type, with the narrowing in reach:
+ * ```ts
+ * import { assert } from '@final-hill/decorator-contracts';
+ *
+ * class NotFoundException extends Error { }
+ *
+ * const findUser = (id: number): { name: string } | undefined =>
+ *     id === 1 ? { name: 'ada' } : undefined;
+ *
+ * const user = findUser(1);
+ * assert(user, 'User with id 1 not found', NotFoundException);
+ * user.name; // narrowed: no non-null assertion, no second check
+ * ```
  */
-
-export function assert(condition: unknown, message: string = 'Assertion Error'): asserts condition {
+export function assert(
+    condition: unknown,
+    message: string = 'Assertion Error',
+    error: new (message: string) => Error = AssertionError,
+): asserts condition {
     if (Boolean(condition) == false)
-        throw new AssertionError(message);
+        throw new error(message);
 }
 
 const describeContractResult = (value: unknown): string => {

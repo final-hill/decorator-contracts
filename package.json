@@ -1,6 +1,6 @@
 {
     "name": "@final-hill/decorator-contracts",
-    "version": "3.1.0",
+    "version": "3.2.0",
     "description": "Code Contracts for TypeScript and ECMAScript classes",
     "type": "module",
     "exports": {
@@ -78,5 +78,8 @@
     ],
     "overrides": {
         "katex": "^0.19.1"
+    },
+    "allowScripts": {
+        "esbuild@0.28.2": true
     }
 }
