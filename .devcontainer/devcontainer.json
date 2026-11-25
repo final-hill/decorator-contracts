@@ -12,6 +12,9 @@
             "installZsh": false,
             "installOhMyZsh": false,
             "upgradePackages": false
+        },
+        "ghcr.io/devcontainers/features/github-cli:1": {
+            "version": "latest"
         }
     },
     "postCreateCommand": "npm ci",
